@@ -27,20 +27,55 @@ class TrailingStopManager:
     Expected Impact: Lock in +3-5% more profits annually
     """
     
-    def __init__(self, config: Dict):
-        self.config = config
-        
+    def __init__(self, event_bus=None, config: Dict = None):
+        # Accept (event_bus, config) OR legacy (config,) / (config_dict,)
+        if config is None and isinstance(event_bus, dict):
+            config = event_bus
+            event_bus = None
+        self.event_bus = event_bus
+        self.config = config or {}
+
         # Configuration
-        self.activation_profit_pct = config.get('ACTIVATION_PROFIT_PCT', 0.02)  # 2% profit
-        self.trail_atr_multiplier = config.get('TRAIL_ATR_MULTIPLIER', 1.5)
-        self.trail_pct = config.get('TRAIL_PCT', 0.03)  # 3% trailing
-        
+        self.activation_profit_pct = self.config.get('ACTIVATION_PROFIT_PCT', 0.02)
+        self.trail_atr_multiplier  = self.config.get('TRAIL_ATR_MULTIPLIER', 1.5)
+        self.trail_pct             = self.config.get('TRAIL_PCT', 0.03)
+
         # Track trailing stops for each position
-        self.trailing_stops = {}
-        
+        self.trailing_stops     = {}
+        self.total_locked_profit = 0.0   # exposed to main.py / dashboard
+
         logger.info(f"Trailing Stop Manager initialized - Activation: {self.activation_profit_pct:.1%}")
-    
-    def update_trailing_stops(self, positions: List[Dict], market_data: Dict) -> Dict:
+
+    def update_trailing_stops(self, market_data_or_positions, market_data: Dict = None) -> Dict:
+        """
+        Flexible signature — called two ways from main.py:
+          update_trailing_stops(stop_data)          # {symbol: {price, atr}}
+          update_trailing_stops(positions, market)  # original signature
+        """
+        # New-style call: update_trailing_stops({symbol: {price, atr}})
+        if market_data is None:
+            stop_data = market_data_or_positions  # {symbol: {price, atr, ...}}
+            updated = {}
+            for symbol, info in stop_data.items():
+                price = info.get('price', 0)
+                atr   = info.get('atr',   price * 0.01)
+                if symbol in self.trailing_stops:
+                    ts = self.trailing_stops[symbol]
+                    entry      = ts.get('entry_price', price)
+                    old_stop   = ts.get('stop_loss', entry * 0.95)
+                    profit_pct = (price - entry) / entry if entry else 0
+                    if profit_pct >= self.activation_profit_pct:
+                        atr_stop = price - atr * self.trail_atr_multiplier
+                        pct_stop = price * (1 - self.trail_pct)
+                        new_stop = max(atr_stop, pct_stop, old_stop)
+                        if new_stop > old_stop:
+                            self.trailing_stops[symbol]['stop_loss'] = new_stop
+                            self.total_locked_profit = max(
+                                0, (new_stop - entry) * ts.get('quantity', 1)
+                            )
+                            updated[symbol] = new_stop
+            return updated
+        # Legacy call: update_trailing_stops(positions, market_data)
         """
         Update trailing stops for all positions
         

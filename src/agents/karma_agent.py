@@ -118,6 +118,10 @@ class KarmaAgent(BaseAgent):
         """Return the strategy with the highest current weight."""
         return max(self.strategy_weights, key=self.strategy_weights.get)  # type: ignore[arg-type]
 
+    def update(self):
+        """Periodic housekeeping — called each main loop iteration."""
+        pass  # KARMA updates reactively via learn_from_outcome(); nothing to poll
+
     def get_stats(self) -> Dict[str, Any]:
         """Get KARMA statistics."""
         return {

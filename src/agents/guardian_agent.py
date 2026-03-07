@@ -24,10 +24,10 @@ logger = logging.getLogger(__name__)
 # FIX: Build a reverse lookup {symbol → sector} from sectors.py at import time.
 # This avoids a hard-coded 4-stock dict.
 try:
-    from ...sectors import SECTORS as _SECTORS
+    from config.sectors import SECTORS as _SECTORS
 except ImportError:
     try:
-        from sectors import SECTORS as _SECTORS
+        from config.sectors import SECTORS as _SECTORS
     except ImportError:
         _SECTORS = {}
 

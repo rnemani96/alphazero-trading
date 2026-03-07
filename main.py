@@ -1,637 +1,456 @@
 """
-AlphaZero Capital v17 - Complete Main Orchestration
-Integrates ALL agents: v15 base + v16 enhancements + v17 LLM
+AlphaZero Capital v17 — Main Orchestrator
+main.py
 
-AGENT COUNT: 16 agents working together!
+Entry point. Starts all agents, reporters, and the trading loop.
+All LLM calls go through LLMProvider.create() — fully generic.
 
-FIXES:
-1. _initialize_agents() used self.executor before it was created.
-   Fixed by splitting initialisation: executor is created first inside
-   _initialize_managers(), which is now called BEFORE _initialize_agents().
-
-2. self.event_bus.start() / .stop() called but methods didn't exist in EventBus.
-   Fixed by adding start() / stop() to EventBus (see event_bus.py).
-
-3. Duplicate / conflicting stdout reconfiguration (reconfigure() then
-   TextIOWrapper) — removed the TextIOWrapper lines; reconfigure() is enough.
-
-4. Market data format mismatch: _fetch_market_data() returned a flat 'prices'
-   dict but TrailingStopManager expected per-symbol nested dicts with 'price'
-   and 'atr' keys.  Fixed by using DataFetcher which returns both formats.
-
-5. _generate_trading_signals() never called TITAN for technical signals.
-   Fixed — TITAN.generate_signals() is now called and its signals are merged.
-
-6. Import of DataFetcher pointed to a non-existent file src/data/fetch.py.
-   Fixed by creating that file.
-
-7. SigmaAgent was imported but the file sigma_agent.py was missing.
-   Fixed by creating the file.
+Usage:
+    python main.py              # paper trading (default)
+    python main.py --live       # live trading
 """
 
-import os
-import sys
-import logging
+import sys, os, time, signal, logging, argparse, threading, subprocess
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Any
 
-# Fix stdout encoding once, cleanly
-sys.stdout.reconfigure(encoding='utf-8')
+ROOT = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, ROOT)
 
-# Core infrastructure
+from config.settings import settings
+from config.sectors  import SECTORS
+
 from src.event_bus.event_bus import EventBus, EventType
 
-# v15 Base Agents
-from src.agents.chief_agent import ChiefAgent
-from src.agents.sigma_agent import SigmaAgent          # FIX: file now exists
-from src.agents.sector_agent import SectorAgent
-from src.agents.intraday_regime_agent import IntradayRegimeAgent
-from src.agents.news_sentiment_agent import NewsSentimentAgent
-from src.agents.titan_agent import TitanAgent
-from src.agents.guardian_agent import GuardianAgent
-from src.agents.mercury_agent import MercuryAgent
-from src.agents.lens_agent import LensAgent
-from src.agents.karma_agent import KarmaAgent
+from src.agents.chief_agent             import ChiefAgent
+from src.agents.sector_agent            import SectorAgent
+from src.agents.sigma_agent             import SigmaAgent
+from src.agents.titan_agent             import TitanAgent
+from src.agents.guardian_agent          import GuardianAgent
+from src.agents.mercury_agent           import MercuryAgent
+from src.agents.lens_agent              import LensAgent
+from src.agents.karma_agent             import KarmaAgent
+from src.agents.news_sentiment_agent    import NewsSentimentAgent
+from src.agents.intraday_regime_agent   import IntradayRegimeAgent
+from src.agents.options_flow_agent      import OptionsFlowAgent
+from src.agents.multi_timeframe_agent   import MultiTimeframeAgent
+from src.agents.llm_earnings_analyzer   import EarningsCallAnalyzer
+from src.agents.llm_strategy_generator  import StrategyGenerator
+from src.agents.llm_provider            import LLMProvider
 
-# v16 Enhanced Agents
-from src.agents.options_flow_agent import OptionsFlowAgent
-from src.agents.multi_timeframe_agent import MultiTimeframeAgent
-
-# v17 LLM Agents
-from src.agents.llm_earnings_analyzer import EarningsCallAnalyzer
-from src.agents.llm_strategy_generator import StrategyGenerator
-
-# Risk Management
-from src.risk.risk_manager import RiskManager
+from src.risk.risk_manager          import RiskManager
 from src.risk.trailing_stop_manager import TrailingStopManager
-
-# Execution
+from src.execution.paper_executor   import PaperExecutor
 from src.execution.openalgo_executor import OpenAlgoExecutor
-from src.execution.paper_executor import PaperExecutor
 
-# Monitoring
-from src.monitoring.logger import TradeLogger
-from src.monitoring.monitor import SystemMonitor
+from src.data.fetch import DataFetcher
 
-# Data
-from src.data.fetch import DataFetcher          # FIX: file now exists
+from src.reporting.telegram_reporter   import TelegramReporter
+from src.reporting.email_reporter       import EmailReporter
+from src.reporting.pdf_generator        import PDFReportGenerator
+from src.reporting.agent_performance    import AgentPerformanceTracker
+from src.reporting.scheduler            import ReportScheduler
+from src.reporting.telegram_reporter   import TelegramCommandHandler
 
+from src.monitoring import state as live_state
 
-# Configure logging
-os.makedirs('logs', exist_ok=True)
+os.makedirs(os.path.join(ROOT, 'logs'), exist_ok=True)
+os.makedirs(os.path.join(ROOT, 'logs', 'reports'), exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format='%(asctime)s [%(name)s] %(levelname)s: %(message)s',
     handlers=[
-        logging.FileHandler('logs/alphazero.log', encoding='utf-8'),
-        logging.StreamHandler(sys.stdout)
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler(os.path.join(ROOT, 'logs', 'alphazero.log'), encoding='utf-8'),
     ]
 )
+logger = logging.getLogger('MAIN')
 
-logger = logging.getLogger(__name__)
 
+class AlphaZeroSystem:
 
-class AlphaZeroOrchestrator:
-    """
-    Main Orchestrator for AlphaZero Capital v17
+    def __init__(self, mode: str = None):
+        self.mode       = mode or settings.MODE
+        self.running    = False
+        self.start_time = datetime.now()
+        self.iteration  = 0
 
-    Coordinates 16 agents:
+        logger.info("=" * 70)
+        logger.info(f"  AlphaZero Capital v17  |  Mode: {self.mode}")
+        logger.info("=" * 70)
 
-    BASE LAYER (v15):
-    - CHIEF: Portfolio selection
-    - SIGMA: Stock scoring
-    - ATLAS: Sector allocation
-    - NEXUS: Regime detection
-    - TITAN: Strategy execution
-    - GUARDIAN: Risk management
-    - MERCURY: Order execution
-    - LENS: Performance tracking
-    - HERMES: News sentiment
-    - KARMA: RL learning
+        self._init_event_bus()
+        self._init_llm()             # generic LLM — must come before agents that use it
+        self._init_data()
+        self._init_managers()
+        self._init_agents()
+        self._init_reporting()
+        self._init_subscriptions()
 
-    ENHANCED LAYER (v16):
-    - OPTIONS_FLOW: Unusual activity detection
-    - MULTI_TIMEFRAME: Cross-timeframe confirmation
+        self._start_dashboard()
+        live_state.update({'system': {'status': 'STARTING', 'mode': self.mode, 'version': 'v17'}})
+        logger.info("✅ System initialised")
 
-    INTELLIGENCE LAYER (v17):
-    - EARNINGS_ANALYZER: LLM-powered earnings calls
-    - STRATEGY_GENERATOR: Auto-discovers new strategies
+    # ── Boot ──────────────────────────────────────────────────────────────────
 
-    MANAGERS:
-    - TRAILING_STOP: Profit locking
-    - SYSTEM_MONITOR: Health tracking
-    """
-
-    def __init__(self, config: Dict):
-        self.config = config
-        self.mode = config.get('MODE', 'PAPER')
-
-        logger.info("=" * 80)
-        logger.info("🚀 AlphaZero Capital v17 Initializing...")
-        logger.info("=" * 80)
-
-        # Initialize Event Bus (central nervous system)
+    def _init_event_bus(self):
         self.event_bus = EventBus()
-
-        # FIX: Initialize managers FIRST so self.executor exists before agents need it
-        self._initialize_managers()
-
-        # Then initialize agents (MERCURY needs self.executor)
-        self.agents: Dict = {}
-        self._initialize_agents()
-
-        # Tracking
-        self.positions: List[Dict] = []
-        self.daily_pnl = 0.0
-        self.total_trades = 0
-        self.running = False
-
-        logger.info(f"✅ AlphaZero v17 Ready - {len(self.agents)} agents active!")
-        logger.info(f"Mode: {self.mode}")
-        logger.info("=" * 80)
-
-    # ── Initialization ───────────────────────────────────────────────────────
-
-    def _initialize_managers(self):
-        """
-        Initialize risk, execution, and monitoring managers.
-
-        FIX: Called BEFORE _initialize_agents() so self.executor is available
-        when MercuryAgent is constructed.
-        """
-        logger.info("\n🛡️ Initializing Managers...")
-
-        # Risk management
-        self.risk_manager = RiskManager(self.config)
-        self.trailing_stop_manager = TrailingStopManager(self.config)
-
-        # FIX: Executor created here so _initialize_agents() can reference it
-        if self.mode == 'LIVE':
-            self.executor = OpenAlgoExecutor(self.config)
-            logger.warning("  🔴 LIVE MODE - Real money trading!")
-        else:
-            self.executor = PaperExecutor(self.config)
-            logger.info("  📄 PAPER MODE - Safe simulation")
-
-        # Data fetcher
-        self.data_fetcher = DataFetcher(self.config)
-
-        # Monitoring (system monitor created after agents exist — set later)
-        self.trade_logger = TradeLogger()
-        self.system_monitor = None   # set at end of _initialize_agents
-
-        logger.info("  ✅ Managers initialized")
-
-    def _initialize_agents(self):
-        """Initialize all 16 agents."""
-        logger.info("\n📦 Initializing Agents...")
-
-        # Base agents (v15)
-        self.agents['CHIEF'] = ChiefAgent(self.event_bus, self.config)
-        self.agents['SIGMA'] = SigmaAgent(self.event_bus, self.config)
-        self.agents['ATLAS'] = SectorAgent(self.event_bus, self.config)
-        self.agents['NEXUS'] = IntradayRegimeAgent(self.event_bus, self.config)
-        self.agents['HERMES'] = NewsSentimentAgent(self.event_bus, self.config)
-        self.agents['TITAN'] = TitanAgent(self.event_bus, self.config)
-        self.agents['GUARDIAN'] = GuardianAgent(self.event_bus, self.config)
-        # FIX: self.executor now exists because _initialize_managers ran first
-        self.agents['MERCURY'] = MercuryAgent(self.event_bus, self.config, self.executor)
-        self.agents['LENS'] = LensAgent(self.event_bus, self.config)
-        self.agents['KARMA'] = KarmaAgent(self.event_bus, self.config)
-
-        # v16 Enhanced agents
-        logger.info("  🔥 Loading v16 enhancements...")
-        self.agents['OPTIONS_FLOW'] = OptionsFlowAgent(self.event_bus, self.config)
-        self.agents['MULTI_TIMEFRAME'] = MultiTimeframeAgent(self.event_bus, self.config)
-
-        # v17 LLM agents (if API key available)
-        anthropic_key = os.getenv('ANTHROPIC_API_KEY')
-        if anthropic_key:
-            logger.info("  🧠 Loading v17 LLM agents...")
-            self.agents['EARNINGS_ANALYZER'] = EarningsCallAnalyzer(anthropic_key)
-            self.agents['STRATEGY_GENERATOR'] = StrategyGenerator(anthropic_key, None)
-        else:
-            logger.warning("  ⚠️ ANTHROPIC_API_KEY not found - LLM agents disabled")
-
-        # Now wire up system monitor with full agent dict
-        self.system_monitor = SystemMonitor(self.agents)
-
-        logger.info(f"  ✅ {len(self.agents)} agents initialized")
-
-    # ── Lifecycle ────────────────────────────────────────────────────────────
-
-    def start(self):
-        """Start the trading system."""
-        logger.info("\n🚀 Starting AlphaZero Capital v17...")
-
-        # FIX: start() now exists in EventBus
         self.event_bus.start()
 
-        # Start all agents that support it
-        for name, agent in self.agents.items():
-            if hasattr(agent, 'start'):
-                agent.start()
-                logger.info(f"  ✅ {name} started")
+    def _init_llm(self):
+        """Create one shared LLM provider used by all agents. 100% generic."""
+        self.llm = LLMProvider.create()
+        logger.info(f"  LLM: {self.llm}")
+        # Inject into config so agents can pick it up
+        self._cfg = {**settings.to_dict(), 'llm': self.llm}
 
+    def _init_data(self):
+        self.data_fetcher = DataFetcher(self._cfg)
+
+    def _init_managers(self):
+        cfg = self._cfg
+        self.executor = (
+            OpenAlgoExecutor(cfg)
+            if self.mode == 'LIVE'
+            else PaperExecutor(cfg)
+        )
+        self.risk_manager   = RiskManager(self.event_bus, cfg)
+        self.trailing_stops = TrailingStopManager(self.event_bus, cfg)
+
+    def _init_agents(self):
+        cfg, eb = self._cfg, self.event_bus
+        self.agents = {
+            'CHIEF':              ChiefAgent(eb, cfg),
+            'SIGMA':              SigmaAgent(eb, cfg),
+            'SECTOR':             SectorAgent(eb, cfg),
+            'NEXUS':              IntradayRegimeAgent(eb, cfg),
+            'HERMES':             NewsSentimentAgent(eb, cfg),
+            'TITAN':              TitanAgent(eb, cfg),
+            'GUARDIAN':           GuardianAgent(eb, cfg),
+            'MERCURY':            MercuryAgent(eb, cfg, self.executor),
+            'LENS':               LensAgent(eb, cfg),
+            'KARMA':              KarmaAgent(eb, cfg),
+            'OPTIONS_FLOW':       OptionsFlowAgent(eb, cfg),
+            'MULTI_TIMEFRAME':    MultiTimeframeAgent(eb, cfg),
+            'EARNINGS_ANALYZER':  EarningsCallAnalyzer(eb, cfg),
+            'STRATEGY_GENERATOR': StrategyGenerator(eb, cfg),
+        }
+        logger.info(f"  {len(self.agents)} agents ready")
+
+    def _init_reporting(self):
+        self.telegram         = TelegramReporter()
+        self.email            = EmailReporter()
+        self.pdf              = PDFReportGenerator()
+        self.agent_tracker    = AgentPerformanceTracker()
+        self.report_scheduler = ReportScheduler(
+            telegram     = self.telegram,
+            email        = self.email,
+            pdf          = self.pdf,
+            agent_tracker= self.agent_tracker,
+            get_state    = live_state.read,
+        )
+        self.report_scheduler.start()
+        self._cmd_handler = TelegramCommandHandler(self.telegram, self.report_scheduler)
+        self._cmd_handler.start()
+        logger.info(f"  Telegram: {'✓' if self.telegram.is_enabled() else '✗ (configure TELEGRAM_BOT_TOKEN)'}")
+        logger.info(f"  Email:    {'✓' if self.email.is_enabled()    else '✗ (configure EMAIL_SENDER)'}")
+
+    def _init_subscriptions(self):
+        eb = self.event_bus
+        eb.subscribe(EventType.SIGNAL_GENERATED, self._on_signal)
+        eb.subscribe(EventType.TRADE_EXECUTED,   self._on_trade_executed)
+        eb.subscribe(EventType.RISK_ALERT,        self._on_risk_alert)
+        eb.subscribe(EventType.STOP_LOSS_HIT,     self._on_stop_hit)
+        eb.subscribe(EventType.TARGET_REACHED,    self._on_target_reached)
+
+    # ── Main loop ─────────────────────────────────────────────────────────────
+
+    def _start_dashboard(self):
+        """Auto-start the Flask dashboard in a background process."""
+        import sys, os, time
+        server_path = os.path.join(ROOT, 'dashboard', 'server.py')
+        if not os.path.exists(server_path):
+            logger.warning("Dashboard server not found, skipping auto-start")
+            return
+        try:
+            proc = subprocess.Popen(
+                [sys.executable, server_path],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            self._dashboard_proc = proc
+            time.sleep(1.0)   # give Flask a moment to bind
+            port = getattr(settings, 'DASHBOARD_PORT', 8080)
+            host = getattr(settings, 'DASHBOARD_HOST', 'localhost')
+            url  = f"http://{host}:{port}"
+            logger.info(f"✅ Dashboard started → {url}")
+            # Open browser automatically
+            def _open():
+                import webbrowser, time
+                time.sleep(1.5)
+                webbrowser.open(url)
+            threading.Thread(target=_open, daemon=True).start()
+        except Exception as e:
+            logger.warning(f"Dashboard auto-start failed: {e}")
+
+    def run(self):
         self.running = True
-        self._main_loop()
-
-    def stop(self):
-        """Stop the trading system."""
-        logger.info("\n⏹️ Stopping AlphaZero Capital...")
-
-        self.running = False
-
-        for name, agent in self.agents.items():
-            if hasattr(agent, 'stop'):
-                agent.stop()
-                logger.info(f"  ✅ {name} stopped")
-
-        # FIX: stop() now exists in EventBus
-        self.event_bus.stop()
-
-        logger.info("\n📊 Final Report:")
-        logger.info(f"  Total Trades:    {self.total_trades}")
-        logger.info(f"  Open Positions:  {len(self.positions)}")
-        logger.info(f"  Daily P&L:       ₹{self.daily_pnl:,.2f}")
-        logger.info("\n✅ AlphaZero Capital stopped successfully")
-
-    # ── Main Loop ────────────────────────────────────────────────────────────
-
-    def _main_loop(self):
-        """
-        Main trading loop.
-
-        Flow:
-        1.  Fetch market data
-        2.  OPTIONS_FLOW checks for unusual activity
-        3.  NEXUS determines market regime
-        4.  HERMES provides news sentiment
-        5.  EARNINGS_ANALYZER processes any new earnings calls
-        6.  CHIEF selects portfolio (long-term)
-        7.  TITAN generates trading signals (intraday)
-        8.  MULTI_TIMEFRAME confirms signals
-        9.  GUARDIAN checks risk limits
-        10. TRAILING_STOP manages stops
-        11. MERCURY executes approved trades
-        12. LENS tracks performance
-        13. STRATEGY_GENERATOR discovers new patterns (nightly)
-        """
-        import time
-
-        logger.info("\n▶️ Main Loop Started")
-        logger.info("=" * 80)
-
-        iteration = 0
+        signal.signal(signal.SIGINT,  self._shutdown_handler)
+        signal.signal(signal.SIGTERM, self._shutdown_handler)
+        logger.info(f"\n▶  Main loop started  (interval: {settings.ITERATION_INTERVAL}s)\n")
+        live_state.update({'system': {'status': 'RUNNING'}})
 
         while self.running:
             try:
-                iteration += 1
-                current_time = datetime.now()
-                logger.info(f"\n🔄 Iteration {iteration} - {current_time.strftime('%H:%M:%S')}")
-
-                # ── STEP 1: Market Data ────────────────────────────────────
-                # FIX: use DataFetcher which returns both 'prices' (flat) and
-                # 'data' (nested with price/atr per symbol) for all consumers
-                market_data = self._fetch_market_data()
-
-                # ── STEP 2: OPTIONS FLOW ───────────────────────────────────
-                if 'OPTIONS_FLOW' in self.agents:
-                    options_signals = self._check_options_flow(market_data)
-                    logger.info(f"  💰 Options Flow: {len(options_signals)} signals")
-                else:
-                    options_signals = []
-
-                # ── STEP 3: REGIME DETECTION ───────────────────────────────
-                # FIX: pass the per-symbol data dict (with adx/vix keys)
-                regime_input = {**market_data, **market_data.get('data', {}).get(
-                    market_data['symbols'][0], {}
-                )} if market_data['symbols'] else market_data
-                regime = self.agents['NEXUS'].detect_regime(regime_input)
-                logger.info(f"  🌊 Market Regime: {regime}")
-
-                # ── STEP 4: NEWS SENTIMENT ─────────────────────────────────
-                news_sentiment = self.agents['HERMES'].get_sentiment(market_data['symbols'])
-                logger.info(f"  📰 News Sentiment: {news_sentiment.get('overall', 'NEUTRAL')}")
-
-                # ── STEP 5: EARNINGS ANALYSIS ──────────────────────────────
-                if 'EARNINGS_ANALYZER' in self.agents:
-                    earnings_signals = self._check_earnings(market_data)
-                    logger.info(f"  📊 Earnings Signals: {len(earnings_signals)}")
-                else:
-                    earnings_signals = []
-
-                # ── STEP 6: GENERATE SIGNALS ───────────────────────────────
-                signals = self._generate_trading_signals(
-                    market_data, regime, news_sentiment,
-                    options_signals, earnings_signals
-                )
-
-                # ── STEP 7: MULTI-TIMEFRAME FILTER ─────────────────────────
-                if 'MULTI_TIMEFRAME' in self.agents:
-                    signals = self._apply_multi_timeframe_filter(signals)
-                    logger.info(f"  ⏱️ Multi-Timeframe: {len(signals)} signals passed")
-
-                # ── STEP 8: RISK CHECK ─────────────────────────────────────
-                approved_signals = self._check_risk_limits(signals)
-                logger.info(f"  🛡️ Risk Check: {len(approved_signals)} approved")
-
-                # ── STEP 9: UPDATE TRAILING STOPS ─────────────────────────
-                self._update_trailing_stops(market_data)
-
-                # ── STEP 10: EXECUTE TRADES ────────────────────────────────
-                if approved_signals:
-                    self._execute_trades(approved_signals)
-
-                # ── STEP 11: MONITOR POSITIONS ─────────────────────────────
-                self._monitor_positions(market_data)
-
-                # ── STEP 12: SYSTEM HEALTH ─────────────────────────────────
-                if self.system_monitor:
-                    health = self.system_monitor.check_health()
-                    if health['status'] != 'HEALTHY':
-                        logger.warning(f"  ⚠️ System Health: {health['status']}")
-
-                # ── STEP 13: STRATEGY DISCOVERY (nightly at 20:00) ─────────
-                if current_time.hour == 20 and 'STRATEGY_GENERATOR' in self.agents:
-                    self._discover_new_strategies(market_data)
-
-                time.sleep(self.config.get('ITERATION_INTERVAL', 900))
-
-            except KeyboardInterrupt:
-                logger.info("\n⏸️ Shutdown signal received...")
-                self.stop()
-                break
-
+                self._run_iteration()
             except Exception as e:
-                logger.error(f"❌ Error in main loop: {e}", exc_info=True)
-                time.sleep(60)
+                logger.error(f"Iteration error: {e}", exc_info=True)
+            if self.running:
+                time.sleep(settings.ITERATION_INTERVAL)
 
-    # ── Step Implementations ─────────────────────────────────────────────────
+    def _run_iteration(self):
+        self.iteration += 1
+        t0 = time.time()
+        logger.info(f"\n{'─'*60}\nIteration {self.iteration}  |  {datetime.now().strftime('%H:%M:%S')}")
 
-    def _fetch_market_data(self) -> Dict:
-        """
-        Fetch latest market data via DataFetcher.
+        market_data      = self._fetch_market_data()
+        options_signals  = self._check_options_flow(market_data)
+        regime           = self.agents['NEXUS'].detect_regime(market_data)
+        sentiment        = self.agents['HERMES'].get_sentiment(settings.SYMBOLS)
+        earnings_signals = []
+        titan_signals    = self.agents['TITAN'].generate_signals(market_data, regime)
 
-        FIX: Previously returned a hand-coded dict with only flat 'prices'.
-        Now returns DataFetcher output which has both 'prices' (flat) and
-        'data' (nested per-symbol with price/atr) so all consumers are happy.
-        """
-        symbols = self.config.get(
-            'SYMBOLS',
-            ['RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK']
-        )
-        return self.data_fetcher.get_market_data(symbols)
+        all_signals = options_signals + earnings_signals + titan_signals
+        confirmed   = self._apply_mtf_filter(all_signals)
+        approved    = self._check_risk_and_execute(confirmed, market_data)
 
-    def _check_options_flow(self, market_data: Dict) -> List[Dict]:
-        """Check for unusual options activity."""
+        self._update_trailing_stops(market_data)
+        self.agents['LENS'].update()
+        self.agents['KARMA'].update()
+
+        self._write_state(regime, sentiment, confirmed)
+        logger.info(f"  Done in {time.time()-t0:.1f}s — "
+                    f"{len(confirmed)} signals, {len(approved)} executed")
+
+    # ── Step helpers ──────────────────────────────────────────────────────────
+
+    def _fetch_market_data(self) -> Dict[str, Any]:
+        prices, data = {}, {}
+        for sym in settings.SYMBOLS:
+            candles = self.data_fetcher.get_ohlcv(sym, interval='15min', bars=100)
+            if candles:
+                latest = candles[-1]
+                prices[sym] = latest.get('close', 0.0)
+                data[sym]   = {**latest, 'symbol': sym}
+        return {'symbols': settings.SYMBOLS, 'prices': prices,
+                'data': data, 'timestamp': datetime.now().isoformat()}
+
+    def _check_options_flow(self, market_data) -> List[Dict]:
         signals = []
-        for symbol in market_data['symbols']:
-            result = self.agents['OPTIONS_FLOW'].analyze_unusual_options_activity(symbol)
-            if result.get('has_unusual_activity'):
-                strength = result.get('signal_strength', 0)
-                if strength > 0.6:
-                    signals.append({
-                        'symbol': symbol,
-                        'signal': result.get('signal'),
-                        'strength': strength,
-                        'source': 'OPTIONS_FLOW',
-                        'details': result
-                    })
-                    logger.info(
-                        f"    🔥 {symbol}: {result.get('signal')} "
-                        f"(Strength: {strength:.1%}, Sweeps: {len(result.get('sweeps', []))})"
-                    )
+        for sym in settings.SYMBOLS:
+            try:
+                res = self.agents['OPTIONS_FLOW'].analyze_unusual_options_activity(sym)
+                if res and res.get('signal_strength', 0) > 0.6:
+                    sig = res.get('signal', 'NEUTRAL')
+                    if sig != 'NEUTRAL':
+                        s = {'symbol': sym, 'signal': sig, 'strength': res['signal_strength'],
+                             'source': 'OPTIONS_FLOW', 'timestamp': datetime.now().strftime('%H:%M:%S')}
+                        signals.append(s)
+                        if self.telegram.is_enabled():
+                            self.telegram.options_signal(sym, sig, res['signal_strength'],
+                                len(res.get('sweeps',[])), res.get('dark_pool',{}).get('signal','—'))
+            except Exception:
+                pass
         return signals
 
-    def _check_earnings(self, market_data: Dict) -> List[Dict]:
-        """Check for earnings call signals (stub; extend for live use)."""
-        return []
-
-    def _generate_trading_signals(
-        self,
-        market_data: Dict,
-        regime: str,
-        news_sentiment: Dict,
-        options_signals: List[Dict],
-        earnings_signals: List[Dict]
-    ) -> List[Dict]:
-        """
-        Generate trading signals from all sources.
-
-        FIX: Previously never called TITAN — technical signals were always empty.
-        Now calls TITAN.generate_signals() and merges with options/earnings signals.
-        """
-        all_signals = []
-
-        # Options flow signals (highest conviction)
-        all_signals.extend(options_signals)
-
-        # Earnings-driven signals
-        all_signals.extend(earnings_signals)
-
-        # FIX: Generate TITAN technical signals
-        # TITAN expects {symbol: {indicator_data}} — use the 'data' sub-dict
-        titan_input = market_data.get('data', {})
-        if titan_input and 'TITAN' in self.agents:
-            try:
-                titan_signals = self.agents['TITAN'].generate_signals(titan_input, regime)
-                for sig in titan_signals:
-                    # Standardise key: TITAN uses 'action', rest of system uses 'signal'
-                    sig.setdefault('signal', sig.get('action', 'BUY'))
-                    sig.setdefault('source', 'TITAN')
-                all_signals.extend(titan_signals)
-                logger.info(f"  📈 TITAN: {len(titan_signals)} technical signals")
-            except Exception as e:
-                logger.warning(f"  ⚠️ TITAN signal generation failed: {e}")
-
-        # Apply news sentiment bias
-        if news_sentiment.get('overall') == 'BEARISH':
-            all_signals = [s for s in all_signals if s.get('signal') != 'BUY']
-        elif news_sentiment.get('overall') == 'BULLISH':
-            all_signals = [s for s in all_signals if s.get('signal') != 'SELL']
-
-        return all_signals
-
-    def _apply_multi_timeframe_filter(self, signals: List[Dict]) -> List[Dict]:
-        """Apply multi-timeframe confirmation (require 4/5 timeframes aligned)."""
+    def _apply_mtf_filter(self, signals) -> List[Dict]:
         confirmed = []
-        for signal in signals:
-            mtf = self.agents['MULTI_TIMEFRAME'].check_timeframe_alignment(signal['symbol'])
-            if mtf['buy_votes'] >= 4 or mtf['sell_votes'] >= 4:
-                signal['mtf_confirmed'] = True
-                signal['mtf_confidence'] = mtf['confidence']
-                signal['mtf_quality'] = mtf['alignment_quality']
-                confirmed.append(signal)
-                logger.info(
-                    f"    ✅ {signal['symbol']} CONFIRMED: "
-                    f"{mtf['buy_votes']}/5 timeframes agree"
-                )
-            else:
-                logger.info(
-                    f"    ❌ {signal['symbol']} BLOCKED: "
-                    f"Only {max(mtf['buy_votes'], mtf['sell_votes'])}/5 agree"
-                )
+        for sig in signals:
+            try:
+                r = self.agents['MULTI_TIMEFRAME'].check_timeframe_alignment(sig['symbol'])
+                if r.get('buy_votes', 0) >= 3 or r.get('sell_votes', 0) >= 3:
+                    sig['mtf_confirmed'] = True
+                    sig['mtf_confidence'] = r.get('confidence', 0)
+                    confirmed.append(sig)
+            except Exception:
+                confirmed.append(sig)
         return confirmed
 
-    def _check_risk_limits(self, signals: List[Dict]) -> List[Dict]:
-        """Check signals against risk limits via RiskManager."""
+    def _check_risk_and_execute(self, signals, market_data) -> List[Dict]:
         approved = []
-        for signal in signals:
-            check = self.risk_manager.check_trade(signal, self.positions)
-            if check['approved']:
-                approved.append(signal)
-                logger.info(f"    ✅ {signal['symbol']} APPROVED")
-            else:
-                logger.info(f"    🛑 {signal['symbol']} BLOCKED: {check['reason']}")
+        positions = self.executor.get_positions() if hasattr(self.executor, 'get_positions') else {}
+        capital   = self.risk_manager.get_available_capital()
+        for sig in signals:
+            try:
+                pos_list = list(positions.values()) if isinstance(positions, dict) else (positions or [])
+                approval = self.agents['GUARDIAN'].check_trade(sig, capital, pos_list)
+                if approval.get('approved'):
+                    result = self.agents['MERCURY'].execute_trade(sig, approval.get('position_size', 0))
+                    if result:
+                        approved.append(sig)
+                        self.agent_tracker.record_signal(
+                            sig.get('source', 'TITAN'),
+                            sig['symbol'], sig['signal'],
+                            sig.get('confidence', 0)
+                        )
+                        self.risk_manager.update_pnl(0, False)
+            except Exception as e:
+                logger.warning(f"Execution error: {sig.get('symbol')}: {e}")
         return approved
 
-    def _update_trailing_stops(self, market_data: Dict):
-        """
-        Update trailing stops for open positions.
+    def _update_trailing_stops(self, market_data):
+        try:
+            stop_data = {
+                sym: {'price': info.get('close', 0), 'atr': info.get('atr', 0)}
+                for sym, info in market_data.get('data', {}).items()
+            }
+            self.trailing_stops.update_trailing_stops(stop_data)
+        except Exception:
+            pass
 
-        FIX: TrailingStopManager.update_trailing_stops() expects
-        market_data[symbol] = {'price': ..., 'atr': ...}.
-        Pass the 'data' sub-dict (nested per-symbol format) not the flat 'prices' dict.
-        """
-        if not self.positions:
-            return
+    def _write_state(self, regime, sentiment, signals):
+        uptime    = int((datetime.now() - self.start_time).total_seconds())
+        positions = []
+        try:
+            pos = self.executor.get_positions() if hasattr(self.executor, 'get_positions') else {}
+            for sym, p in pos.items():
+                positions.append({
+                    'symbol': sym, 'side': p.get('side','LONG'),
+                    'quantity': p.get('quantity',0),
+                    'entry_price': p.get('entry_price',0),
+                    'stop_loss': p.get('stop_loss',0),
+                    'current_price': p.get('current_price',0),
+                    'unrealised_pnl': p.get('unrealised_pnl',0),
+                    'source': p.get('source','—'),
+                    'mtf_confirmed': p.get('mtf_confirmed',False),
+                })
+        except Exception:
+            pass
 
-        # FIX: use nested per-symbol data dict
-        nested_data = market_data.get('data', {})
-        updated = self.trailing_stop_manager.update_trailing_stops(
-            self.positions, nested_data
-        )
+        lens_summary = {}
+        try: lens_summary = self.agents['LENS'].get_performance_summary()
+        except Exception: pass
 
-        for symbol, update in updated.items():
-            logger.info(
-                f"    🔒 {symbol} trailing stop → ₹{update['new_stop']:.2f} "
-                f"(Locked: {update['locked_profit_pct']:.1%})"
+        agent_perf = self.agent_tracker.get_summary()
+
+        live_state.update({
+            'system': {
+                'status': 'RUNNING', 'mode': self.mode,
+                'iteration': self.iteration, 'uptime_s': uptime,
+                'symbols': settings.SYMBOLS,
+            },
+            'portfolio': {
+                'initial_capital': settings.INITIAL_CAPITAL,
+                'current_value':   settings.INITIAL_CAPITAL + self.risk_manager.daily_pnl,
+                'daily_pnl':       self.risk_manager.daily_pnl,
+                'daily_pnl_pct':   self.risk_manager.daily_pnl / settings.INITIAL_CAPITAL,
+                'total_trades':    lens_summary.get('total_trades', 0),
+                'open_positions':  len(positions),
+                'win_rate':        lens_summary.get('win_rate', 0),
+                'profit_locked':   getattr(self.trailing_stops, 'total_locked_profit', 0),
+            },
+            'regime':          regime,
+            'sentiment':       sentiment.get('overall','NEUTRAL') if isinstance(sentiment,dict) else 'NEUTRAL',
+            'positions':       positions,
+            'recent_signals':  signals[-20:],
+            'agents':          {n: {'active': True} for n in self.agents},
+            'agent_performance': agent_perf,
+            'risk': {
+                'kill_switch':        getattr(self.risk_manager, 'kill_switch_active', False),
+                'daily_loss_pct':     abs(self.risk_manager.daily_pnl) / settings.INITIAL_CAPITAL,
+                'trades_today':       self.agents['GUARDIAN'].trades_today,
+                'consecutive_losses': self.agents['GUARDIAN'].consecutive_losses,
+            },
+            'telegram_enabled':   self.telegram.is_enabled(),
+            'email_enabled':      self.email.is_enabled(),
+            'telegram_chat_id':   os.getenv('TELEGRAM_CHAT_ID', ''),
+            'email_recipient':    os.getenv('EMAIL_RECIPIENT', ''),
+            'email_smtp_host':    os.getenv('EMAIL_SMTP_HOST', 'smtp.gmail.com'),
+            'llm_provider':       str(self.llm).split('(')[0].replace('Provider',''),
+            'llm_model':          self.llm.model,
+            'llm_cost_today':     0.0,
+            'suggestions':        [],
+        })
+
+    # ── Event handlers ────────────────────────────────────────────────────────
+
+    def _on_signal(self, event):
+        logger.info(f"  [EVENT] Signal: {event.payload.get('symbol')} {event.payload.get('signal')} (p={event.priority})")
+
+    def _on_trade_executed(self, event):
+        p = event.payload
+        logger.info(f"  [TRADE] {p}")
+        if self.telegram.is_enabled():
+            self.telegram.trade_executed(
+                p.get('symbol','?'), p.get('side','BUY'), p.get('quantity',0),
+                p.get('price',0), p.get('strategy','—'), p.get('confidence',0),
+                p.get('target',0), p.get('stop_loss',0)
             )
-            for pos in self.positions:
-                if pos['symbol'] == symbol:
-                    pos['stop_loss'] = update['new_stop']
+        sym = p.get('symbol')
+        if sym:
+            self.agent_tracker.record_signal(p.get('source','TITAN'), sym, p.get('side','BUY'), p.get('confidence',0))
 
-    def _execute_trades(self, signals: List[Dict]):
-        """Execute approved trades via the executor."""
-        for signal in signals:
+    def _on_risk_alert(self, event):
+        logger.warning(f"  [RISK] {event.payload}")
+        if self.telegram.is_enabled():
+            self.telegram.risk_alert(
+                event.payload.get('action','RISK'),
+                str(event.payload)
+            )
+
+    def _on_stop_hit(self, event):
+        p = event.payload
+        logger.info(f"  [STOP] {p}")
+        if self.telegram.is_enabled():
+            self.telegram.stop_loss_hit(
+                p.get('symbol','?'), p.get('entry',0),
+                p.get('exit',0), p.get('quantity',0), p.get('pnl',0)
+            )
+        sym = p.get('symbol')
+        if sym:
+            self.agent_tracker.record_outcome(p.get('source','TITAN'), sym, p.get('pnl',0), False)
+
+    def _on_target_reached(self, event):
+        p = event.payload
+        logger.info(f"  [TARGET] {p}")
+        if self.telegram.is_enabled():
+            self.telegram.target_reached(
+                p.get('symbol','?'), p.get('entry',0),
+                p.get('exit',0), p.get('quantity',0), p.get('pnl',0)
+            )
+        sym = p.get('symbol')
+        if sym:
+            self.agent_tracker.record_outcome(p.get('source','TITAN'), sym, p.get('pnl',0), True)
+
+    # ── Shutdown ──────────────────────────────────────────────────────────────
+
+    def _shutdown_handler(self, sig, frame):
+        logger.info("\n🛑  Shutdown signal received"); self.shutdown()
+
+    def shutdown(self):
+        self.running = False
+        self.report_scheduler.stop()
+        if hasattr(self, '_dashboard_proc'):
+            try: self._dashboard_proc.terminate()
+            except Exception: pass
+        self._cmd_handler.stop()
+        for agent in self.agents.values():
             try:
-                result = self.executor.execute_trade(signal)
-                if result['success']:
-                    self.total_trades += 1
-                    new_pos = {
-                        'symbol': signal['symbol'],
-                        'side': 'LONG' if 'BUY' in str(signal.get('signal', '')) else 'SHORT',
-                        'entry_price': result['fill_price'],
-                        'quantity': result['quantity'],
-                        'entry_time': datetime.now(),
-                        'stop_loss': result.get('stop_loss'),
-                        'source': signal.get('source', 'UNKNOWN'),
-                        'value': result['fill_price'] * result['quantity']
-                    }
-                    self.positions.append(new_pos)
-                    self.trade_logger.log_trade(signal, result)
-                    logger.info(
-                        f"  ✅ EXECUTED: {signal['symbol']} "
-                        f"{signal.get('signal')} @ ₹{result['fill_price']}"
-                    )
-                else:
-                    logger.error(f"  ❌ FAILED: {signal['symbol']} - {result.get('error')}")
-            except Exception as e:
-                logger.error(f"  ❌ Execution error for {signal['symbol']}: {e}")
+                if hasattr(agent, 'shutdown'): agent.shutdown()
+            except Exception: pass
+        self.event_bus.stop()
+        live_state.update({'system': {'status': 'STOPPED'}})
+        logger.info("✅ Shut down cleanly")
 
-    def _monitor_positions(self, market_data: Dict):
-        """Monitor open positions and check stops."""
-        if not self.positions:
-            return
-
-        # FIX: pass nested data format to check_stop_hit
-        nested_data = market_data.get('data', {})
-        stops_hit = self.trailing_stop_manager.check_stop_hit(self.positions, nested_data)
-
-        for symbol in stops_hit:
-            logger.warning(f"  🛑 STOP HIT: {symbol} - Closing position")
-            self._close_position(symbol)
-
-        # Calculate current unrealised P&L using flat prices dict
-        flat_prices = market_data.get('prices', {})
-        total_pnl = 0.0
-        for pos in self.positions:
-            current_price = flat_prices.get(pos['symbol'], pos['entry_price'])
-            if pos['side'] == 'LONG':
-                pnl = (current_price - pos['entry_price']) * pos['quantity']
-            else:
-                pnl = (pos['entry_price'] - current_price) * pos['quantity']
-            total_pnl += pnl
-
-        self.daily_pnl = total_pnl
-        # Keep RiskManager in sync
-        self.risk_manager.daily_pnl = total_pnl
-
-        logger.info(
-            f"  💰 Open Positions: {len(self.positions)}, "
-            f"Unrealised P&L: ₹{total_pnl:,.2f}"
-        )
-
-    def _close_position(self, symbol: str):
-        """Close a position and update tracking."""
-        position = next((p for p in self.positions if p['symbol'] == symbol), None)
-        if position:
-            result = self.executor.close_position(position)
-            pnl = result.get('pnl', 0)
-            self.risk_manager.update_pnl(pnl)
-            self.positions.remove(position)
-            logger.info(f"  ✅ CLOSED: {symbol} - P&L: ₹{pnl:,.2f}")
-
-    def _discover_new_strategies(self, market_data: Dict):
-        """Run strategy discovery (nightly at 8 PM)."""
-        logger.info("\n🧠 Running Strategy Discovery...")
-        context = {
-            'winning_strategies': ['EMA Cross', 'Options Flow'],
-            'losing_strategies':  ['RSI Reversion'],
-            'observations': {'trend': 'Strong momentum', 'regime': 'TRENDING'}
-        }
-        strategy = self.agents['STRATEGY_GENERATOR'].discover_strategy(
-            market_context=market_data,
-            recent_performance=context,
-            regime='TRENDING'
-        )
-        if strategy.get('successful'):
-            logger.info(
-                f"  🎉 NEW STRATEGY: {strategy['name']} "
-                f"(Sharpe: {strategy['backtest_results']['sharpe']:.2f})"
-            )
-        else:
-            logger.info("  📝 Strategy didn't meet criteria - continuing research")
-
-
-# ── Entry Point ──────────────────────────────────────────────────────────────
 
 def main():
-    """Main entry point."""
-    config = {
-        'MODE':                   os.getenv('MODE', 'PAPER'),
-        'ITERATION_INTERVAL':     int(os.getenv('ITERATION_INTERVAL', '900')),  # 15 min
-        'MAX_DAILY_LOSS_PCT':     float(os.getenv('MAX_DAILY_LOSS_PCT', '0.02')),
-        'MAX_POSITION_SIZE_PCT':  float(os.getenv('MAX_POSITION_SIZE_PCT', '0.05')),
-        'MAX_POSITIONS':          int(os.getenv('MAX_POSITIONS', '10')),
-        'INITIAL_CAPITAL':        float(os.getenv('INITIAL_CAPITAL', '1000000')),
-        'ACTIVATION_PROFIT_PCT':  float(os.getenv('ACTIVATION_PROFIT_PCT', '0.02')),
-        'TRAIL_ATR_MULTIPLIER':   float(os.getenv('TRAIL_ATR_MULTIPLIER', '1.5')),
-        'TRAIL_PCT':              float(os.getenv('TRAIL_PCT', '0.03')),
-        'SYMBOLS': [
-            'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK',
-            'KOTAKBANK', 'SBIN', 'BHARTIARTL', 'ITC', 'HINDUNILVR'
-        ]
-    }
+    parser = argparse.ArgumentParser(description='AlphaZero Capital v17')
+    parser.add_argument('--live', action='store_true')
+    args = parser.parse_args()
+    mode = 'LIVE' if args.live else 'PAPER'
+    if mode == 'LIVE' and not settings.OPENALGO_API_KEY:
+        logger.error("LIVE mode requires OPENALGO_API_KEY in .env"); sys.exit(1)
+    AlphaZeroSystem(mode=mode).run()
 
-    orchestrator = AlphaZeroOrchestrator(config)
-
-    try:
-        orchestrator.start()
-    except KeyboardInterrupt:
-        orchestrator.stop()
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
