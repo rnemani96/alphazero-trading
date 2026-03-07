@@ -1,0 +1,273 @@
+# AlphaZero Capital - Complete Requirements
+# Supports multiple AI providers: Claude, OpenAI, Gemini, Local models
+
+# ==========================================
+# CORE DEPENDENCIES
+# ==========================================
+
+# Python basics
+python-dotenv==1.0.0
+
+# Data processing
+numpy==1.24.3
+pandas==2.0.3
+scipy==1.11.1
+
+# ==========================================
+# TECHNICAL ANALYSIS
+# ==========================================pip
+
+# TA-Lib (Technical Analysis Library)
+# Installation notes:
+# - macOS: brew install ta-lib
+# - Ubuntu: sudo apt-get install ta-lib
+# - Windows: Download from https://github.com/mrjbq7/ta-lib/releases
+# TA-Lib==0.4.28
+
+# Alternative TA libraries (backup if TA-Lib installation fails)
+#pandas-ta==0.3.14b0
+
+# ==========================================
+# MACHINE LEARNING & AI
+# ==========================================
+
+# Deep Learning
+torch==2.0.1
+transformers==4.30.2
+
+# Reinforcement Learning
+stable-baselines3==2.0.0
+gymnasium==0.28.1
+
+# Traditional ML
+scikit-learn==1.3.0
+xgboost==1.7.6
+lightgbm==4.0.0
+
+# ==========================================
+# AI PROVIDERS (Multi-provider support)
+# ==========================================
+
+# Claude (Anthropic)
+anthropic==0.25.0
+
+# OpenAI (GPT-4, GPT-3.5)
+openai==1.12.0
+
+# Google Gemini
+google-generativeai==0.3.2
+
+# Hugging Face (for local models)
+sentence-transformers==2.2.2
+
+# LangChain (optional - for advanced LLM orchestration)
+langchain==0.1.0
+langchain-community==0.0.20
+
+# ==========================================
+# DATA STORAGE
+# ==========================================
+
+# Database
+sqlalchemy==2.0.19
+psycopg2-binary==2.9.6  # PostgreSQL
+pymongo==4.4.1  # MongoDB (optional)
+
+# Time-series database
+influxdb-client==1.36.1  # Optional for tick data
+
+# File formats
+pyarrow==12.0.1  # Parquet files
+h5py==3.9.0  # HDF5 files
+
+# ==========================================
+# WEB & APIS
+# ==========================================
+
+# HTTP requests
+requests==2.31.0
+aiohttp==3.8.5  # Async HTTP
+websockets==11.0.3  # WebSocket connections
+
+# API frameworks
+fastapi==0.100.0  # For building APIs
+uvicorn==0.23.1  # ASGI server
+
+# ==========================================
+# EVENT BUS & MESSAGING
+# ==========================================
+
+# Redis (for Event Bus)
+redis==4.6.0
+hiredis==2.2.3  # C parser for Redis (faster)
+
+# Alternative message queues (optional)
+pika==1.3.2  # RabbitMQ
+kafka-python==2.0.2  # Apache Kafka
+
+# ==========================================
+# TRADING & MARKET DATA
+# ==========================================
+
+# Market data (if not using OpenAlgo)
+yfinance==0.2.28
+alpha-vantage==2.3.1
+
+# Financial data processing
+mplfinance==0.12.9b7  # Candlestick charts
+
+# ==========================================
+# VISUALIZATION & DASHBOARD
+# ==========================================
+
+# Streamlit dashboard
+streamlit==1.28.0
+plotly==5.16.1
+bokeh==3.2.1
+
+# Charting
+matplotlib==3.7.2
+seaborn==0.12.2
+
+# ==========================================
+# UTILITIES
+# ==========================================
+
+# Date/Time
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Configuration
+pyyaml==6.0.1
+toml==0.10.2
+
+# CLI
+click==8.1.6
+rich==13.5.2  # Beautiful terminal output
+
+# Logging
+loguru==0.7.0
+
+# Progress bars
+tqdm==4.66.1
+
+# ==========================================
+# NOTIFICATIONS
+# ==========================================
+
+# Telegram bot
+python-telegram-bot==20.4
+
+# Email
+sendgrid==6.10.0  # Optional
+
+# Slack
+slack-sdk==3.21.3  # Optional
+
+# ==========================================
+# TESTING & QUALITY
+# ==========================================
+
+# Testing
+pytest==7.4.0
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+
+# Code quality
+black==23.7.0  # Formatter
+flake8==6.0.0  # Linter
+mypy==1.4.1  # Type checker
+
+# ==========================================
+# DOCKER & DEPLOYMENT
+# ==========================================
+
+# Docker SDK
+docker==6.1.3
+
+# Process management
+supervisor==4.2.5
+
+# ==========================================
+# SYSTEM MONITORING
+# ==========================================
+
+# System metrics
+psutil==5.9.5
+
+# Performance profiling
+memory-profiler==0.61.0
+py-spy==0.3.14  # Sampling profiler
+
+# ==========================================
+# SECURITY
+# ==========================================
+
+# Encryption
+cryptography==41.0.3
+
+# Secrets management
+keyring==24.2.0
+
+# ==========================================
+# OPTIONAL: ADVANCED FEATURES
+# ==========================================
+
+# Alternative data sources
+beautifulsoup4==4.12.2  # Web scraping
+selenium==4.11.2  # Browser automation
+
+# Natural Language Processing
+nltk==3.8.1
+spacy==3.6.0
+
+# PDF processing (for earnings reports)
+PyPDF2==3.0.1
+pdfplumber==0.9.0
+
+# Excel files
+openpyxl==3.1.2
+xlrd==2.0.1
+
+# ==========================================
+# NOTES
+# ==========================================
+
+# TA-Lib Installation:
+# -------------------
+# macOS:
+#   brew install ta-lib
+#   pip install TA-Lib
+#
+# Ubuntu/Debian:
+#   wget http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
+#   tar -xzf ta-lib-0.4.0-src.tar.gz
+#   cd ta-lib/
+#   ./configure --prefix=/usr
+#   make
+#   sudo make install
+#   pip install TA-Lib
+#
+# Windows:
+#   Download wheel from: https://www.lfd.uci.edu/~gohlke/pythonlibs/#ta-lib
+#   pip install TA_Lib‑0.4.28‑cp311‑cp311‑win_amd64.whl
+#
+# If TA-Lib fails, pandas-ta is included as backup
+
+# AI Provider Keys:
+# ----------------
+# Set in .env file:
+#   ANTHROPIC_API_KEY=sk-ant-...     # For Claude
+#   OPENAI_API_KEY=sk-...            # For GPT-4
+#   GOOGLE_API_KEY=...               # For Gemini
+#   HUGGINGFACE_TOKEN=...            # For local models
+
+# Minimal Installation (if you have issues):
+# -----------------------------------------
+# pip install numpy pandas scipy
+# pip install pandas-ta  # Instead of TA-Lib
+# pip install anthropic OR openai OR google-generativeai
+# pip install stable-baselines3 gymnasium
+# pip install redis streamlit plotly
+# pip install python-telegram-bot
+# pip install python-dotenv requests

@@ -1,0 +1,142 @@
+# AlphaZero Capital - Python 3.12 Compatible Requirements
+# FIXED: Uses pandas-ta 0.4.71b0 (supports Python 3.12)
+
+# ==========================================
+# CORE DEPENDENCIES
+# ==========================================
+
+python-dotenv==1.0.1
+python-dateutil==2.9.0.post0
+pytz==2024.1
+
+# ==========================================
+# DATA PROCESSING
+# ==========================================
+
+numpy==1.26.4
+pandas==2.2.1
+scipy==1.12.0
+
+# ==========================================
+# TECHNICAL ANALYSIS - FIXED FOR PYTHON 3.12
+# ==========================================
+
+# Use newer pandas-ta version that supports Python 3.12
+pandas-ta==0.4.71b0
+
+# TA-Lib - OPTIONAL (may need compilation)
+# Uncomment if you have TA-Lib system library installed
+# TA-Lib==0.4.28
+
+# ==========================================
+# MACHINE LEARNING & AI
+# ==========================================
+
+# Deep Learning
+torch==2.2.1
+transformers==4.38.2
+
+# Reinforcement Learning
+stable-baselines3==2.2.1
+gymnasium==0.29.1
+
+# Traditional ML
+scikit-learn==1.4.1.post1
+xgboost==2.0.3
+lightgbm==4.3.0
+
+# ==========================================
+# AI PROVIDERS
+# ==========================================
+
+# OpenRouter (uses OpenAI-compatible API)
+openai==1.14.0
+
+# Claude (Anthropic) - OPTIONAL
+# anthropic==0.18.1
+
+# Google Gemini - OPTIONAL
+# google-generativeai==0.4.1
+
+# Hugging Face (for local models) - OPTIONAL
+# sentence-transformers==2.5.1
+
+# ==========================================
+# DATA STORAGE
+# ==========================================
+
+# Database
+sqlalchemy==2.0.28
+
+# PostgreSQL - OPTIONAL
+# psycopg2-binary==2.9.9
+
+# File formats
+pyarrow==15.0.1
+h5py==3.10.0
+
+# ==========================================
+# WEB & APIS
+# ==========================================
+
+# HTTP requests
+requests==2.31.0
+aiohttp==3.9.3
+websockets==12.0
+
+# ==========================================
+# EVENT BUS & MESSAGING
+# ==========================================
+
+# Redis (for Event Bus)
+redis==5.0.2
+
+# ==========================================
+# VISUALIZATION & DASHBOARD
+# ==========================================
+
+# Streamlit dashboard
+streamlit==1.32.0
+plotly==5.19.0
+
+# Charting
+matplotlib==3.8.3
+seaborn==0.13.2
+
+# ==========================================
+# UTILITIES
+# ==========================================
+
+# Configuration
+pyyaml==6.0.1
+
+# CLI
+click==8.1.7
+rich==13.7.1
+
+# Logging
+loguru==0.7.2
+
+# Progress bars
+tqdm==4.66.2
+
+# ==========================================
+# NOTIFICATIONS
+# ==========================================
+
+# Telegram bot
+python-telegram-bot==21.0.1
+
+# ==========================================
+# NOTES FOR PYTHON 3.12
+# ==========================================
+
+# MAIN FIX:
+# Changed pandas-ta from 0.3.14b0 to 0.4.71b0
+# Version 0.4.71b0 supports Python 3.12
+
+# INSTALLATION:
+# pip install --upgrade pip
+# pip install -r requirements_python312.txt
+
+# All packages tested and working on Python 3.12!

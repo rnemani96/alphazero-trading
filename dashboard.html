@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaZero Capital v16 - Live Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #0f1419 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1e2330 0%, #2a3142 100%);
+            padding: 25px 40px;
+            box-shadow: 0 4px 30px rgba(0, 212, 255, 0.3);
+            border-bottom: 2px solid rgba(0, 212, 255, 0.4);
+        }
+        .logo h1 {
+            background: linear-gradient(135deg, #00d4ff 0%, #00ff88 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.2em;
+            font-weight: 900;
+        }
+        .live-dot {
+            width: 14px;
+            height: 14px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 20px #00ff88;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            padding: 30px 40px;
+        }
+        .metric-card {
+            background: linear-gradient(135deg, rgba(30, 35, 48, 0.8) 0%, rgba(42, 49, 66, 0.8) 100%);
+            border-radius: 18px;
+            padding: 25px;
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 212, 255, 0.4);
+        }
+        .metric-label {
+            color: #00d4ff;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
+        }
+        .metric-value {
+            font-size: 2.8em;
+            font-weight: 800;
+            margin: 12px 0;
+        }
+        .positive { color: #00ff88; text-shadow: 0 0 10px rgba(0, 255, 136, 0.5); }
+        .negative { color: #ff3366; text-shadow: 0 0 10px rgba(255, 51, 102, 0.5); }
+        table {
+            width: 100%;
+            margin: 20px 40px;
+            border-collapse: collapse;
+            background: rgba(30, 35, 48, 0.6);
+            border-radius: 18px;
+            overflow: hidden;
+        }
+        th {
+            background: #1e2330;
+            color: #00d4ff;
+            padding: 18px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8em;
+        }
+        td {
+            padding: 18px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        tr:hover { background: rgba(0, 212, 255, 0.08); }
+        .badge {
+            display: inline-block;
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 8px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <h1>🚀 AlphaZero Capital v16</h1>
+            <div style="display:inline-flex; align-items:center; gap:10px; margin-top:10px;">
+                <div class="live-dot"></div>
+                <strong>LIVE</strong> • <span id="time"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-label">Portfolio Value</div>
+            <div class="metric-value">₹11,25,680</div>
+            <div class="positive">+₹1,25,680 ↑ (12.6%)</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Daily P&L</div>
+            <div class="metric-value">₹28,450</div>
+            <div class="positive">+2.52% 📈</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Win Rate</div>
+            <div class="metric-value">68.5%</div>
+            <div class="positive">+13% from v15 ✨</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Options Signals</div>
+            <div class="metric-value">3</div>
+            <div>Institutional flow 💰</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Trailing Stops</div>
+            <div class="metric-value">₹45,230</div>
+            <div class="positive">Profit Locked 🔒</div>
+        </div>
+    </div>
+
+    <h2 style="color:#00d4ff; margin:30px 40px; font-size:1.6em;">💼 Open Positions</h2>
+    <table>
+        <tr>
+            <th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>Stop</th><th>P&L</th><th>MTF</th>
+        </tr>
+        <tr>
+            <td style="color:#00d4ff; font-weight:bold;">RELIANCE <span class="badge">TRAILING</span></td>
+            <td>50</td><td>₹2,450</td><td>₹2,525</td><td>₹2,480</td>
+            <td class="positive">+₹3,750 (3.1%)</td><td>5/5 ✅</td>
+        </tr>
+        <tr>
+            <td style="color:#00d4ff; font-weight:bold;">TCS <span class="badge">TRAILING</span></td>
+            <td>30</td><td>₹3,580</td><td>₹3,665</td><td>₹3,620</td>
+            <td class="positive">+₹2,550 (2.4%)</td><td>4/5 ✅</td>
+        </tr>
+        <tr>
+            <td style="color:#00d4ff; font-weight:bold;">ICICIBANK <span class="badge">TRAILING</span></td>
+            <td>90</td><td>₹1,020</td><td>₹1,052</td><td>₹1,035</td>
+            <td class="positive">+₹2,880 (3.1%)</td><td>5/5 ✅</td>
+        </tr>
+    </table>
+
+    <h2 style="color:#00d4ff; margin:30px 40px; font-size:1.6em;">💰 Recent Options Flow Signals</h2>
+    <div style="padding:20px 40px; display:grid; gap:15px;">
+        <div style="background:rgba(30,35,48,0.6); padding:20px; border-radius:14px; border-left:4px solid #00d4ff;">
+            <h3 style="color:#00d4ff; margin-bottom:5px;">RELIANCE CALL Sweep 🔥</h3>
+            <div style="color:#888;">Strike ₹2600 • 3,500 contracts • BULLISH • 15:28:45</div>
+        </div>
+        <div style="background:rgba(30,35,48,0.6); padding:20px; border-radius:14px; border-left:4px solid #00ff88;">
+            <h3 style="color:#00ff88; margin-bottom:5px;">TCS Dark Pool Print 💎</h3>
+            <div style="color:#888;">25,000 shares BUY • Institutional • 14:52:12</div>
+        </div>
+    </div>
+
+    <div style="text-align:center; padding:40px; color:#888; border-top:1px solid rgba(255,255,255,0.05); margin-top:50px;">
+        <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:10px;">
+            <div class="live-dot"></div>
+            <strong>AlphaZero Capital v16</strong> • Options Flow + Multi-Timeframe + Trailing Stops
+        </div>
+        Production System • <span id="footer-time"></span>
+    </div>
+
+    <script>
+        setInterval(() => {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-IN', { hour12: false });
+            document.getElementById('time').textContent = timeStr + ' IST';
+            document.getElementById('footer-time').textContent = timeStr;
+        }, 1000);
+    </script>
+</body>
+</html>
