@@ -1,0 +1,32 @@
+# Environment
+.env
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Data
+data/raw/*
+data/clean/*
+data/features/*
+!.gitkeep
+
+# Logs
+logs/*
+!.gitkeep
+
+# Models
+models/*
+!.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Database
+*.db
+*.sqlite
