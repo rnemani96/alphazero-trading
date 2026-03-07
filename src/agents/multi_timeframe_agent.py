@@ -258,7 +258,7 @@ class MultiTimeframeAgent(BaseAgent):
             self.publish_event(
                 EventType.SIGNAL_GENERATED,
                 enhanced_payload,
-              #  priority=event.priority + 1  # Higher priority for confirmed signals
+              priority=event.priority + 1
             )
         else:
             logger.info(

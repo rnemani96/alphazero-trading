@@ -6,7 +6,8 @@ MASSIVE EDGE: Management tone predicts stock moves 1-2 days ahead!
 Expected Impact: +8-12% annual returns
 """
 
-import anthropic
+#import anthropic
+from openai import OpenAI
 import json
 import os
 from datetime import datetime
@@ -32,14 +33,28 @@ class EarningsCallAnalyzer:
     → LLM caught the tone shift!
     """
     
-    def __init__(self, api_key: str):
-        self.client = anthropic.Anthropic(api_key=api_key)
-        self.model = "claude-sonnet-4-20250514"  # Latest model
-        
+    def __init__(self, event_bus, config):
+        self.event_bus = event_bus
+        self.config = config
+        api_key = config.get("openrouter_api_key") or os.getenv("OPENROUTER_API_KEY")
+
+        if not api_key:
+            raise ValueError("openrouter API key not found in config or environment")
+
+        self.client = OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=api_key,)
+    
+        self.model = config.get(
+        "llm_model",
+        "anthropic/claude-3.5-sonnet",)
+    
+
+
         # Store historical analyses for trend detection
         self.historical_analyses = {}
-        
-        logger.info("Earnings Call Analyzer initialized with Claude API")
+
+        logger.info("Earnings Call Analyzer initialized with openrouter API")
     
     def analyze_earnings_call(
         self, 
@@ -62,20 +77,17 @@ class EarningsCallAnalyzer:
         logger.info(f"Analyzing {symbol} {quarter} earnings call...")
         
         # Call Claude API
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=4000,
-            temperature=0.3,  # Lower = more consistent
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
+        response = self.client.chat.completions.create(
+        model=self.model,
+        messages=[
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3,
+        max_tokens=4000,)
+
         
         # Parse response
-        analysis_text = response.content[0].text
+        analysis_text = response.choices[0].message.content
         
         try:
             # Extract JSON from response
@@ -85,7 +97,7 @@ class EarningsCallAnalyzer:
             analysis['symbol'] = symbol
             analysis['quarter'] = quarter
             analysis['timestamp'] = datetime.now().isoformat()
-            analysis['tokens_used'] = response.usage.input_tokens + response.usage.output_tokens
+            analysis['tokens_used'] = response.usage.total_tokens
             
             # Store for historical comparison
             self.historical_analyses[f"{symbol}_{quarter}"] = analysis

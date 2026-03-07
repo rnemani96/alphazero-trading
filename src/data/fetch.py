@@ -9,12 +9,27 @@ without a live broker connection.
 FIXES / NEW FILE:
 - main.py imports `from src.data.fetch import DataFetcher` but this file
   was completely missing from the project.  Created from scratch.
+- Now imports indicators.py (add_all_indicators) so all candle DataFrames
+  are enriched by the single canonical indicator engine, exactly as specified
+  in stock_ai_design.docx ("Same code used in: Backtest | Replay | Live").
 """
 
 import logging
 import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
+
+import pandas as pd
+import numpy as np
+
+# Canonical indicator engine (single source of truth for all indicator math)
+try:
+    from .indicators import add_all_indicators
+except ImportError:
+    try:
+        from src.data.indicators import add_all_indicators
+    except ImportError:
+        add_all_indicators = None   # graceful degradation — agents fall back to raw data
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +57,7 @@ class DataFetcher:
 
     def __init__(self, config: Dict):
         self.config = config
-        self.mode = config.get('MODE', 'PAPER')
+        self.mode = config.get('MODE', 'PAPER').upper()
         self.openalgo_url = config.get('OPENALGO_URL', 'http://127.0.0.1:5000')
         self.api_key = config.get('OPENALGO_API_KEY', '')
 
@@ -115,16 +130,34 @@ class DataFetcher:
         bars: int = 50
     ) -> List[Dict]:
         """
-        Return a list of OHLCV candles.
+        Return OHLCV candles enriched with technical indicators (via indicators.py).
+
+        The canonical indicator engine is used so backtest, replay, and live all
+        compute indicators identically — as required by stock_ai_design.docx.
 
         Args:
             symbol:   e.g. 'RELIANCE'
             interval: '1min' | '5min' | '15min' | '1hour' | '1day'
             bars:     number of candles to return
         """
-        if self.mode == 'PAPER':
-            return self._simulate_ohlcv(symbol, interval, bars)
-        return self._fetch_ohlcv_live(symbol, interval, bars)
+        raw_candles = (
+            self._simulate_ohlcv(symbol, interval, bars)
+            if self.mode == 'PAPER'
+            else self._fetch_ohlcv_live(symbol, interval, bars)
+        )
+
+        # Enrich with canonical indicators (single source of truth)
+        if add_all_indicators is not None and len(raw_candles) >= 30:
+            try:
+                df = pd.DataFrame(raw_candles)
+                for col in ['open', 'high', 'low', 'close', 'volume']:
+                    df[col] = pd.to_numeric(df[col], errors='coerce')
+                enriched = add_all_indicators(df)
+                return enriched.to_dict('records')
+            except Exception as e:
+                logger.warning(f"Indicator enrichment failed for {symbol}: {e} — returning raw")
+
+        return raw_candles
 
     def get_options_chain(self, symbol: str) -> Optional[Dict]:
         """Fetch options chain data (stub in PAPER mode)."""

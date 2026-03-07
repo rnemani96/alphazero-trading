@@ -142,6 +142,10 @@ class LensAgent(BaseAgent):
         gross_loss = abs(sum(t['pnl'] for t in self.trades if t.get('pnl', 0) < 0))
         return (gross_profit / gross_loss) if gross_loss > 0 else 0.0
 
+    def update(self):
+        """Periodic housekeeping — called each main loop iteration."""
+        pass  # LENS updates reactively via record_trade(); nothing to poll
+
     def get_stats(self) -> Dict[str, Any]:
         """Get LENS statistics."""
         total_trades = self.winning_trades + self.losing_trades

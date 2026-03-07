@@ -9,6 +9,10 @@ import logging
 from typing import Dict, List, Any
 from datetime import datetime
 
+from numpy import iterable
+
+from src import data
+
 from ..event_bus.event_bus import BaseAgent, EventType
 
 logger = logging.getLogger(__name__)
@@ -86,20 +90,37 @@ class TitanAgent(BaseAgent):
         weights = self.regime_weights.get(regime, {'trend_following': 0.5, 'mean_reversion': 0.5})
         
         # Run strategies
-        for symbol, data in market_data.items():
-            # Trend following strategies
+        # Support both dict and list formats
+        # Normalize market data
+        if isinstance(market_data, list):
+            iterable = market_data
+        else:
+            iterable = market_data.values()
+
+        for item in iterable:
+
+    # ensure we always pass a dict to strategies
+            if isinstance(item, dict):
+                symbol = item.get("symbol")
+                data = item
+            else:
+                continue
+
+    # If indicators nested under another key
+            if isinstance(data.get("data"), dict):
+                data = data["data"]
+
+            if isinstance(data, list):
+                continue
+
             trend_signal = self._trend_strategies(data)
-            
-            # Mean reversion strategies
+
             reversion_signal = self._mean_reversion_strategies(data)
-            
-            # Breakout strategies
+
             breakout_signal = self._breakout_strategies(data)
-            
-            # Volume strategies
+
             volume_signal = self._volume_strategies(data)
-            
-            # Aggregate signals with regime weights
+
             final_signal = self._aggregate_signals(
                 symbol,
                 [trend_signal, reversion_signal, breakout_signal, volume_signal],
