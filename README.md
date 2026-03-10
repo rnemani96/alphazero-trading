@@ -74,7 +74,7 @@ nano .env  # or vim, code, etc.
 # - Choose ONE AI provider:
 #   ANTHROPIC_API_KEY=sk-ant-...  (Claude)
 #   OR OPENAI_API_KEY=sk-...      (GPT-4)
-# openrouter key ="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"
+# 
 #   OR GOOGLE_API_KEY=...         (Gemini)
 #   OR leave blank for local model
 ```
