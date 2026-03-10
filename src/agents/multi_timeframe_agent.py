@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 class MultiTimeframeAgent(BaseAgent):
 
-    TIMEFRAMES = ['1min', '5min', '15min', '1hour', '1day']
+    TIMEFRAMES = ['1min', '5min', '15min', '1h', '1D']
 
     def __init__(self, event_bus: EventBus, config: Dict, data_fetcher=None):
         super().__init__(event_bus=event_bus, config=config, name="MULTI_TIMEFRAME")

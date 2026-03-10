@@ -43,6 +43,7 @@ class EventType(Enum):
     OPTIONS_FLOW        = "options_flow"
     EARNINGS_ANALYZED   = "earnings_analyzed"
     STRATEGY_DISCOVERED = "strategy_discovered"
+    SIGNAL_EVALUATED    = "signal_evaluated"
 
     # SYSTEM
     SYSTEM_COMMAND      = "system_command"

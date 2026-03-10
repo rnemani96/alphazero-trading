@@ -70,6 +70,9 @@ class KarmaAgent(BaseAgent):
         # Off-hours training log
         self.training_sessions: List[Dict] = []
 
+        # Subscriptions
+        self.subscribe(EventType.SIGNAL_EVALUATED, self._on_signal_evaluated)
+
         logger.info("KARMA Agent initialized - Learning engine ready")
 
     # ── Core learning ─────────────────────────────────────────────────────────
@@ -147,6 +150,17 @@ class KarmaAgent(BaseAgent):
         self._try_discover_pattern(sym, strategy, regime, pnl, signal)
 
         logger.debug(f"KARMA learned: {strategy}/{sym} → {outcome_label} ₹{pnl:+.0f} (ep {self.learning_episodes})")
+
+    def _on_signal_evaluated(self, event):
+        """Handler for evaluation events from LENS."""
+        p = event.payload
+        signal = p.get('signal', {})
+        outcome = p.get('outcome', {})
+        
+        # Karma expects 'pnl' in absolute terms or scaled. 
+        # Evaluation outcomes use % PnL, which is fine for reinforcement learning.
+        self.learn_from_outcome(signal, outcome)
+        logger.info(f"🧠 KARMA reinforcement learning: {signal.get('strategy')} on {signal.get('symbol')} → {outcome.get('event')}")
 
     def _try_discover_pattern(self, sym, strategy, regime, pnl, signal):
         """Detect repeating profitable patterns and log them."""

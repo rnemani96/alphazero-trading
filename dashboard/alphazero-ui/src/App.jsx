@@ -663,7 +663,7 @@ function PositionsTab({positions,mode}) {
             </thead>
             <tbody>
               {closed.map((pos,i)=>{
-                const ch=calcNetPnl({...pos,cp:p.exitPrice??pos.cp??pos.entryPrice});
+                const ch=calcNetPnl({...pos,cp:pos.exitPrice??pos.cp??pos.entryPrice});
                 return (
                   <tr key={pos.id||i} style={{borderBottom:`1px solid ${G.border}`}}
                     onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
@@ -919,8 +919,9 @@ function EvaluationTab({evalStats,evalHistory,agentScores}) {
   const wr=evalStats?.win_rate??0,total=evalStats?.total_evaluated??0;
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
-      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 20px"}}>
-        <div style={{color:G.textSec,fontSize:12,lineHeight:1.7}}>{F.description||"No company description available."}</div>
+      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 20px",marginBottom:20}}>
+        <div style={{color:G.text,fontSize:14,fontWeight:700}}>Evaluation Leaderboard</div>
+        <div style={{color:G.textSec,fontSize:11,marginTop:4}}>Performance of 16 AlphaZero agents tracked against real-time NSE data.</div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12}}>
         {[
@@ -1899,7 +1900,7 @@ export default function App() {
   useEffect(()=>{
     if(connStatus==="live") return;
     const r=["TRENDING","SIDEWAYS","VOLATILE","RISK_OFF"];
-    setKarmaStats&&setKarma({
+    setKarma({
       episodes:847,win_rate:0.61,best_strategy:"T2 Triple EMA",
       training_active:new Date().getHours()<9||new Date().getHours()>=18,
       last_training:new Date().getHours()>=18?"Today "+new Date().getHours()+":00":"Yesterday 22:30",

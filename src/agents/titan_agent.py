@@ -283,31 +283,51 @@ class TitanAgent(BaseAgent):
             'strategies': strategies_fired
         }
     
+    def update_strategy_weights(self, weights: Dict[str, Dict[str, float]], regime: str = None):
+        """Update strategy weights, optionally for a specific regime."""
+        if regime:
+            if regime not in self.regime_weights:
+                self.regime_weights[regime] = {}
+            self.regime_weights[regime].update(weights)
+        else:
+            # Update all regimes with these base weights if applicable
+            for r in self.regime_weights:
+                self.regime_weights[r].update(weights)
+        
+        logger.info(f"TITAN updated strategy weights for regime: {regime or 'ALL'}")
+
     def _aggregate_signals(
         self,
         symbol: str,
         strategy_signals: List[Dict],
         weights: Dict[str, float]
     ) -> Dict[str, Any]:
-        """Aggregate signals from multiple strategies"""
+        """Aggregate signals from multiple strategies using weighted average."""
         
-        total_signal = 0
-        total_confidence = 0
+        # Maps strategy indicators to weight keys
+        # strategy_signals are [trend, reversion, breakout, volume]
+        keys = ['trend_following', 'mean_reversion', 'breakout', 'volume']
+        
+        total_signal = 0.0
+        total_confidence = 0.0
+        total_weight = 0.0
         all_strategies = []
         
-        for sig in strategy_signals:
-            total_signal += sig['signal']
-            total_confidence += sig['confidence']
+        for i, sig in enumerate(strategy_signals):
+            weight = weights.get(keys[i], 0.25)
+            total_signal += sig['signal'] * weight
+            total_confidence += sig['confidence'] * weight
+            total_weight += weight
             all_strategies.extend(sig['strategies'])
         
-        # Normalize
-        avg_signal = total_signal / len(strategy_signals) if strategy_signals else 0
-        avg_confidence = total_confidence / len(strategy_signals) if strategy_signals else 0
+        # Normalize by weight
+        avg_signal = total_signal / total_weight if total_weight > 0 else 0
+        avg_confidence = total_confidence / total_weight if total_weight > 0 else 0
         
         # Determine action
-        if avg_signal > 0.5:
+        if avg_signal > 0.4:  # Slightly lower threshold for weighted signals
             action = 'BUY'
-        elif avg_signal < -0.5:
+        elif avg_signal < -0.4:
             action = 'SELL'
         else:
             action = 'HOLD'
@@ -318,8 +338,8 @@ class TitanAgent(BaseAgent):
         return {
             'symbol': symbol,
             'action': action,
-            'confidence': avg_confidence,
-            'signal_strength': abs(avg_signal),
+            'confidence': round(min(avg_confidence, 1.0), 2),
+            'signal_strength': round(abs(avg_signal), 2),
             'strategies': all_strategies,
             'timestamp': datetime.now().isoformat()
         }

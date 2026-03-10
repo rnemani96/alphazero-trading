@@ -203,21 +203,20 @@ class AlphaZeroSystem:
     def _start_dashboard(self):
         """Start the dashboard backend + React frontend (Vite dev server) automatically."""
 
-        # ── 1. Start Flask backend ───────────────────────────
-        backend_path = os.path.join(ROOT, 'dashboard', 'backend.py')
-        if not os.path.exists(backend_path):
-            logger.warning("Dashboard backend not found, skipping auto-start")
-        else:
-            try:
-                backend_proc = subprocess.Popen(
-                    [sys.executable, backend_path],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                self._dashboard_backend_proc = backend_proc
-                logger.info("✅ Dashboard backend started (Flask)")
-            except Exception as e:
-                logger.warning(f"Dashboard backend failed to start: {e}")
+        # ── 1. Start FastAPI backend via uvicorn on port 8000 ──
+        backend_module = 'dashboard.backend:app'
+        try:
+            backend_proc = subprocess.Popen(
+                [sys.executable, '-m', 'uvicorn', backend_module,
+                 '--host', '0.0.0.0', '--port', '8000', '--log-level', 'warning'],
+                cwd=ROOT,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            self._dashboard_backend_proc = backend_proc
+            logger.info("✅ Dashboard backend started (FastAPI/uvicorn on :8000)")
+        except Exception as e:
+            logger.warning(f"Dashboard backend failed to start: {e}")
 
         # ── 2. Start Vite React frontend (dashboard/alphazero-ui) ────
         frontend_dir = os.path.join(ROOT, 'dashboard', 'alphazero-ui')
@@ -241,9 +240,7 @@ class AlphaZeroSystem:
         # ── 3. Open browser after short delay ───────────────
         def _open_browser():
             time.sleep(4)  # wait for backend + Vite to initialise
-            port = getattr(settings, 'DASHBOARD_PORT', 8080)
-            host = getattr(settings, 'DASHBOARD_HOST', 'localhost')
-            url = f"http://{host}:{port}"
+            url = "http://localhost:8000"
             webbrowser.open(url)
             logger.info(f"🌐 Browser opened at {url}")
 
@@ -382,8 +379,10 @@ class AlphaZeroSystem:
         self._last_market_data = md   # cache for _write_state TA enrichment
         # Push live prices into PaperExecutor for P&L and stop/target monitoring
         try:
-            if hasattr(self.agents.get('MERCURY'), 'update_prices'):
+            if 'MERCURY' in self.agents and hasattr(self.agents['MERCURY'], 'update_prices'):
                 self.agents['MERCURY'].update_prices(prices)
+            if 'LENS' in self.agents and hasattr(self.agents['LENS'], 'update_prices'):
+                self.agents['LENS'].update_prices(prices)
         except Exception:
             pass
         return md
