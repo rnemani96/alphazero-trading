@@ -1858,7 +1858,7 @@ export default function App() {
   const [evalHistory,setHistory] = useState([]);
   const [agentScores,setAgtScores]= useState([]);
   const [agentKpi,setAgentKpi]   = useState({});
-  const [karmaStats,setKarma]    = useState({});
+  const [karmaStats,setKarmaStats] = useState({});
   const [fundamentals,setFundamentals]=useState({});
   const [news,setNews]           = useState([]);
   const [events,setEvents]       = useState([]);
@@ -1899,7 +1899,7 @@ export default function App() {
           if(msg.quotes)setQuotes(msg.quotes);
           if(msg.indices)setIndices(msg.indices);
           if(msg.regime)setRegime(msg.regime);
-          if(msg.karma)setKarma(msg.karma);
+          if(msg.karma)setKarmaStats(msg.karma);
           if(msg.fundamentals)setFundamentals(prev=>({...prev,...msg.fundamentals}));
           if(msg.news)setNews(msg.news);
           if(msg.eval_stats)setEvalStats(msg.eval_stats);
@@ -1923,7 +1923,7 @@ export default function App() {
   useEffect(()=>{
     if(connStatus==="live") return;
     const r=["TRENDING","SIDEWAYS","VOLATILE","RISK_OFF"];
-    setKarmaStats&&setKarma({
+    setKarmaStats({
       episodes:847,win_rate:0.61,best_strategy:"T2 Triple EMA",
       training_active:new Date().getHours()<9||new Date().getHours()>=18,
       last_training:new Date().getHours()>=18?"Today "+new Date().getHours()+":00":"Yesterday 22:30",

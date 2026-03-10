@@ -201,11 +201,10 @@ class AlphaZeroSystem:
     # ── Main loop ─────────────────────────────────────────────────────────────
 
     def _start_dashboard(self):
-        """Start the dashboard backend + React frontend automatically."""
-        import webbrowser, time
+        """Start the dashboard backend + React frontend (Vite dev server) automatically."""
 
-        # ── 1. Start backend.py ─────────────────────────────
-        backend_path = os.path.join(ROOT,'dashboard', 'backend.py')
+        # ── 1. Start Flask backend ───────────────────────────
+        backend_path = os.path.join(ROOT, 'dashboard', 'backend.py')
         if not os.path.exists(backend_path):
             logger.warning("Dashboard backend not found, skipping auto-start")
         else:
@@ -216,36 +215,39 @@ class AlphaZeroSystem:
                     stderr=subprocess.DEVNULL,
                 )
                 self._dashboard_backend_proc = backend_proc
-                logger.info(f"✅ Dashboard backend started")
+                logger.info("✅ Dashboard backend started (Flask)")
             except Exception as e:
                 logger.warning(f"Dashboard backend failed to start: {e}")
-        '''# ── 2. Start React frontend (alphazero_v4.jsx) ────
-        frontend_dir = os.path.join(ROOT, 'dashboard')  # folder containing package.json & JSX
+
+        # ── 2. Start Vite React frontend (dashboard/alphazero-ui) ────
+        frontend_dir = os.path.join(ROOT, 'dashboard', 'alphazero-ui')
         if os.path.exists(os.path.join(frontend_dir, 'package.json')):
             try:
+                # Use 'npm' on Windows, works everywhere
+                npm_cmd = 'npm.cmd' if os.name == 'nt' else 'npm'
                 frontend_proc = subprocess.Popen(
-                    ["npm", "start"],
+                    [npm_cmd, 'run', 'dev', '--', '--port', '5173'],
                     cwd=frontend_dir,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
                 self._dashboard_frontend_proc = frontend_proc
-                logger.info(f"✅ Dashboard frontend starting (React dev server)")
+                logger.info("✅ Dashboard frontend starting (Vite dev server on :5173)")
             except Exception as e:
                 logger.warning(f"Dashboard frontend failed to start: {e}")
         else:
-            logger.warning("Frontend folder/package.json not found; skipping React start") '''
+            logger.warning("dashboard/alphazero-ui/package.json not found; skipping frontend start")
 
-            # ── 3. Open browser after short delay ───────────────
-    def _open_browser():
-        time.sleep(3)  # wait for backend/frontend to initialize
-        port = getattr(settings, 'DASHBOARD_PORT', 8000)
-        host = getattr(settings, 'DASHBOARD_HOST', 'localhost')
-        url = f"http://{host}:{port}"
-        webbrowser.open(url)
-        logger.info(f"🌐 Browser opened at {url}")
+        # ── 3. Open browser after short delay ───────────────
+        def _open_browser():
+            time.sleep(4)  # wait for backend + Vite to initialise
+            port = getattr(settings, 'DASHBOARD_PORT', 8080)
+            host = getattr(settings, 'DASHBOARD_HOST', 'localhost')
+            url = f"http://{host}:{port}"
+            webbrowser.open(url)
+            logger.info(f"🌐 Browser opened at {url}")
 
-    threading.Thread(target=_open_browser, daemon=True).start()
+        threading.Thread(target=_open_browser, daemon=True).start()
 
     def run(self):
         self.running = True
@@ -332,9 +334,6 @@ class AlphaZeroSystem:
         except Exception as e:
             logger.warning(f"SIGMA/CHIEF error: {e}")
             self._selected_stocks = []
-        self._capital_alloc: dict = {}   # per-stock capital from CapitalAllocator
-        initial_cap = getattr(settings, 'INITIAL_CAPITAL', 1_000_000)
-        self.capital_allocator = CapitalAllocator(total_capital=initial_cap)
         # ─────────────────────────────────────────────────────────────────────
 
         all_signals = options_signals + earnings_signals + titan_signals
