@@ -9,7 +9,19 @@ FIXED: Replaced all random/simulated data with real NSE data via yfinance.
 
 Public API is 100% identical to the original — no other files need changing.
 """
+import os
+import time
+import logging
+import urllib.request
 
+from datetime import datetime, timedelta
+
+# typing
+from typing import *
+
+# data
+import pandas as pd
+import numpy as np
 # nsepython for real-time NSE data
 try:
     from nsepython import *
