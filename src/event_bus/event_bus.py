@@ -23,18 +23,28 @@ logger = logging.getLogger(__name__)
 
 
 class EventType(Enum):
+    SIGNAL_RAW          = "signal_raw"
     SIGNAL_GENERATED    = "signal_generated"
+    SIGNAL_CONFIRMED    = "signal_confirmed"
+
+    # TRADING EVENTS
     TRADE_EXECUTED      = "trade_executed"
+    POSITION_OPENED     = "position_opened"
+    POSITION_CLOSED     = "position_closed"
+
+    # RISK EVENTS
     RISK_ALERT          = "risk_alert"
+    STOP_LOSS_HIT       = "stop_loss_hit"
+    TARGET_REACHED      = "target_reached"
+
+    # MARKET INTELLIGENCE
     REGIME_CHANGE       = "regime_change"
     NEWS_UPDATE         = "news_update"
     OPTIONS_FLOW        = "options_flow"
     EARNINGS_ANALYZED   = "earnings_analyzed"
     STRATEGY_DISCOVERED = "strategy_discovered"
-    POSITION_OPENED     = "position_opened"
-    POSITION_CLOSED     = "position_closed"
-    STOP_LOSS_HIT       = "stop_loss_hit"
-    TARGET_REACHED      = "target_reached"
+
+    # SYSTEM
     SYSTEM_COMMAND      = "system_command"
 
 
