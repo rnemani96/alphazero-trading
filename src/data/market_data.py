@@ -39,6 +39,8 @@ IST = ZoneInfo("Asia/Kolkata")
 
 # ── Optional deps ──────────────────────────────────────────────────────────────
 try:
+    # Disable nsepython for now to fix backend freeze
+    raise ImportError("Bypassing nsepython to prevent import hang")
     from nsepython import *
     NSE_PYTHON_AVAILABLE = True
 except ImportError:
