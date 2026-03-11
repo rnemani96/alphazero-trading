@@ -22,16 +22,18 @@ OPENALGO_KEY  = os.getenv("OPENALGO_KEY", "")
 @dataclass
 class OrderResult:
     order_id:     str
-    symbol:       str
-    direction:    str   # BUY / SELL
-    qty:          int
-    entry_price:  float
-    filled_price: float
-    slippage_pct: float
-    status:       str   # FILLED / REJECTED / PENDING
-    mode:         str   # PAPER / LIVE
+    external_id:  str   = ""    # Broker's ID
+    symbol:       str   = ""
+    direction:    str   = ""   # BUY / SELL
+    qty:          int   = 0
+    entry_price:  float = 0.0
+    filled_price: float = 0.0
+    slippage_pct: float = 0.0
+    status:       str   = "PENDING"   # FILLED / REJECTED / PENDING / COMPLETED
+    mode:         str   = "PAPER"     # PAPER / LIVE
     timestamp:    str   = field(default_factory=lambda: datetime.now().isoformat())
     reason:       str   = ""
+    data:         dict  = field(default_factory=dict) # Raw response from broker
 
 
 class PaperExecutor:
@@ -142,10 +144,11 @@ class OpenAlgoExecutor:
                 logger.warning("[LIVE] Partial fill: requested=%d  filled=%d  symbol=%s",
                                qty, qty_filled, symbol)
             result = OrderResult(
-                order_id=oid, symbol=symbol, direction=direction, qty=qty_filled,
+                order_id=oid, external_id=oid, symbol=symbol, direction=direction, qty=qty_filled,
                 entry_price=entry_price, filled_price=fill,
                 slippage_pct=slip, status=status, mode="LIVE",
-                reason=f"OpenAlgo fill @ ₹{fill:.2f} ({qty_filled}/{qty} filled)"
+                reason=f"OpenAlgo fill @ ₹{fill:.2f} ({qty_filled}/{qty} filled)",
+                data=data
             )
             self.fills.append(result)
             logger.info("[LIVE] %s %s ×%d @₹%.2f", direction, symbol, qty, fill)
@@ -175,8 +178,8 @@ class OpenAlgoExecutor:
             "ordertype":   "MARKET",
             "product":     "BO",
             "price":       "0",
-            "stoploss":    str(round(sl_pts, 2)),
-            "squareoff":   str(round(tgt_pts, 2)),
+            "stoploss":    str(round(sl_pts, 2)) if sl_pts > 0 else "0",
+            "squareoff":   str(round(tgt_pts, 2)) if tgt_pts > 0 else "0",
             "trailing_sl": "0",
         }
         try:
@@ -260,6 +263,40 @@ class OpenAlgoExecutor:
         except Exception as e:
             logger.error("P&L fetch failed: %s", e)
             return {}
+
+    def get_balance(self) -> float:
+        """Fetch available margin/balance from broker."""
+        try:
+            # OpenAlgo endpoint for margin/funds
+            resp = requests.get(f"{self.host}/funds", headers=self._headers(), timeout=5)
+            data = resp.json()
+            if data.get("status") == "success":
+                # Typical format: {"status": "success", "data": {"available_margin": 123000}}
+                return float(data.get("data", {}).get("available_margin", 0))
+            return 0.0
+        except Exception as e:
+            logger.error(f"Balance fetch failed: {e}")
+            return 0.0
+
+    def sync_positions(self) -> list:
+        """Fetch live positions and standardize format."""
+        try:
+            positions = self.get_positions()
+            # Standardize: AlphaZero expects [{symbol, qty, entry, pnl, ...}]
+            standardized = []
+            for p in positions:
+                standardized.append({
+                    "symbol": p.get("symbol"),
+                    "qty": int(p.get("quantity", 0)),
+                    "entry": float(p.get("average_price", 0)),
+                    "pnl": float(p.get("pnl", 0)),
+                    "product": p.get("product"),
+                    "raw": p
+                })
+            return standardized
+        except Exception as e:
+            logger.error(f"Position sync failed: {e}")
+            return []
 
     def mass_cancel(self) -> bool:
         """Kill switch: cancel ALL open orders immediately."""

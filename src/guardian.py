@@ -63,11 +63,20 @@ class GuardianRiskEngine:
             self.state.shutdown     = False
             logger.info("GUARDIAN: Daily counters reset for %s", date.today())
 
+    def update_capital(self, new_capital: float):
+        """Update the base capital for risk calculations."""
+        if new_capital > 0:
+            # Smooth update to prevent sizing shocks
+            if self.state.capital == 100000.0: # initial default
+                self.state.capital = new_capital
+                self.state.cash = new_capital
+            else:
+                self.state.capital = new_capital
+            logger.info(f"GUARDIAN: Capital updated to ₹{new_capital:,.2f}")
+
     def validate_trade(self, proposal: dict, vix: float, regime: str) -> tuple[bool, str, int]:
         """
         Validate a trade proposal against all hard rules.
-        proposal = {symbol, direction, qty, entry_price, stop_loss, target, sector, confidence}
-        Returns (approved, reason, adjusted_qty)
         """
         self.reset_daily()
         sym   = proposal["symbol"]
@@ -101,17 +110,15 @@ class GuardianRiskEngine:
         # ── Hard Rule 6: Max concurrent positions ─────────────────────────────
         if len(self.state.open_positions) >= self.cfg.max_positions:
             return False, f"Max positions ({self.cfg.max_positions}) open", 0
+            
+        # ── Hard Rule 6b: Avoid duplicate positions ───────────────────────────
+        if sym in self.state.open_positions:
+            return False, f"Position already open for {sym}", 0
 
         # ── Hard Rule 7: Cooldown check ───────────────────────────────────────
         if self.state.cooldown_until and datetime.now() < self.state.cooldown_until:
             mins = (self.state.cooldown_until - datetime.now()).seconds // 60
-            return False, f"Cooldown active — {mins}min remaining after 3 consecutive losses", 0
-
-        # ── Hard Rule 8: Min trade gap ────────────────────────────────────────
-        if self.state.last_trade_time:
-            gap = (datetime.now() - self.state.last_trade_time).seconds / 60
-            if gap < self.cfg.min_trade_gap_minutes:
-                return False, f"Trade too soon — wait {self.cfg.min_trade_gap_minutes - gap:.0f}min", 0
+            return False, f"Cooldown active — {mins}min remaining after consecutive losses", 0
 
         # ── Hard Rule 9: Risk:Reward validation ───────────────────────────────
         if entry > sl:  # long
@@ -152,11 +159,39 @@ class GuardianRiskEngine:
         risk_per_share = abs(entry - sl)
         if risk_per_share == 0:
             return min(requested_qty, max(1, int(max_value / entry)))
-        # Risk 1% of capital per trade
+        # Risk 1% of equity per trade
         risk_budget = self.state.capital * 0.01
         atr_qty = max(1, int(risk_budget / risk_per_share))
         cap_qty = max(1, int(max_value / entry))
         return min(atr_qty, cap_qty, requested_qty)
+
+    def sync_with_broker(self, broker_positions: list):
+        """Reconciliate internal state with reality (from Mercury)."""
+        logger.info(f"GUARDIAN: Syncing with {len(broker_positions)} broker positions")
+        
+        # 1. Update internal position map
+        # We keep the one that's "truer" - usually the broker
+        new_positions = {}
+        for bp in broker_positions:
+            sym = bp['symbol']
+            # If we already track it, keep our metadata (sl, tgt, sector) but update qty/entry
+            if sym in self.state.open_positions:
+                pos = self.state.open_positions[sym]
+                pos['qty'] = bp['qty']
+                pos['entry'] = bp['entry']
+                new_positions[sym] = pos
+            else:
+                # Discovered a position (manual trade?)
+                new_positions[sym] = {
+                    "qty": bp['qty'],
+                    "entry": bp['entry'],
+                    "sl": bp['entry'] * 0.95, # default SL
+                    "target": bp['entry'] * 1.10, # default TGT
+                    "sector": "Unknown",
+                    "time": datetime.now()
+                }
+        
+        self.state.open_positions = new_positions
 
     def record_trade(self, symbol: str, qty: int, entry: float, sl: float, tgt: float, sector: str):
         """Record a trade once MERCURY confirms execution."""

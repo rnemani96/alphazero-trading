@@ -332,55 +332,18 @@ class OptionsFlowAgent(BaseAgent):
     
     def get_options_chain(self, symbol: str) -> Optional[Dict]:
         """
-        Get options chain data
-        
-        In production: Call real options API (NSE, broker, data provider)
-        For now: Simulate
+        Get options chain data from the central DataFetcher.
         """
-        
-        # Simulated options chain
-        current_price = 2450  # RELIANCE current price
-        
-        contracts = []
-        
-        # Generate contracts for demo
-        for days in [7, 15, 30, 60]:  # Different expiries
-            expiry = (datetime.now() + timedelta(days=days)).strftime('%Y-%m-%d')
+        # In main.py orchestration, DataFetcher is passed to agents or accessible via event bus
+        # For this agent, we'll try to get it from the event bus or config if injected
+        fetcher = self.config.get('data_fetcher')
+        if not fetcher:
+            # Fallback: if not injected, we might need to create a temporary one 
+            # or log that it's missing. In AlphaZero v17, main.py should inject it.
+            logger.error("OPTIONS_FLOW: No data_fetcher found in config!")
+            return None
             
-            for strike_offset in [-200, -100, -50, 0, 50, 100, 200]:
-                strike = current_price + strike_offset
-                
-                for option_type in ['CALL', 'PUT']:
-                    # Simulate volume (with some unusual activity)
-                    base_volume = np.random.randint(50, 300)
-                    
-                    # 10% chance of unusual activity
-                    if np.random.random() < 0.1:
-                        volume = base_volume * np.random.uniform(3, 8)  # 3-8x normal!
-                        aggressive = True
-                    else:
-                        volume = base_volume
-                        aggressive = False
-                    
-                    contracts.append({
-                        'strike': strike,
-                        'expiry': expiry,
-                        'type': option_type,
-                        'volume': int(volume),
-                        'open_interest': int(volume * 2),
-                        'open_interest_change': np.random.randint(-100, 200),
-                        'premium': abs(strike - current_price) * 0.05,
-                        'implied_volatility': 0.2 + np.random.uniform(-0.05, 0.05),
-                        'moneyness': strike / current_price,
-                        'aggressive_buy': aggressive,
-                        'multi_exchange': aggressive and np.random.random() < 0.5
-                    })
-        
-        return {
-            'symbol': symbol,
-            'contracts': contracts,
-            'underlying_price': current_price
-        }
+        return fetcher.get_options_chain(symbol)
 
 
 # Example usage

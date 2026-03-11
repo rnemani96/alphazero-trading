@@ -57,13 +57,11 @@ from src.execution.paper_executor   import PaperExecutor
 from src.execution.openalgo_executor import OpenAlgoExecutor
 
 from src.data.fetch import DataFetcher
-
-from src.reporting.telegram_reporter   import TelegramReporter
-from src.reporting.email_reporter       import EmailReporter
-from src.reporting.pdf_generator        import PDFReportGenerator
-from src.reporting.agent_performance    import AgentPerformanceTracker
-from src.reporting.scheduler            import ReportScheduler
-from src.reporting.telegram_reporter   import TelegramCommandHandler
+from src.reporting.telegram_reporter import TelegramReporter, TelegramCommandHandler
+from src.reporting.email_reporter    import EmailReporter
+from src.reporting.pdf_generator     import PDFReportGenerator
+from src.reporting.agent_performance import AgentPerformanceTracker
+from src.reporting.scheduler         import ReportScheduler
 
 from src.monitoring import state as live_state
 
@@ -118,6 +116,8 @@ class AlphaZeroSystem:
         self._init_llm()             # generic LLM — must come before agents that use it
         self._init_data()
         self._init_managers()
+        self._check_broker_connectivity() # Pre-flight
+        self._sync_broker_state()         # Initial sync
         self._init_agents()
         self._init_reporting()
         self._init_subscriptions()
@@ -158,13 +158,16 @@ class AlphaZeroSystem:
 
     def _init_agents(self):
         cfg, eb = self._cfg, self.event_bus
+        # Inject data_fetcher into config so all agents can access it
+        cfg['data_fetcher'] = self.data_fetcher
+
         self.agents = {
             # ── Core portfolio agents ───────────────────────────────────────
             'CHIEF':              ChiefAgent(eb, cfg),
             'SIGMA':              SigmaAgent(eb, cfg),
-            'ATLAS':              SectorAgent(eb, cfg),          # FIX 2: was 'SECTOR'
+            'ATLAS':              SectorAgent(eb, cfg),
             # ── Market intelligence ─────────────────────────────────────────
-            'ORACLE':             OracleAgent(eb, cfg),          # FIX 3: new agent
+            'ORACLE':             OracleAgent(eb, cfg),
             'NEXUS':              IntradayRegimeAgent(eb, cfg),
             'HERMES':             NewsSentimentAgent(eb, cfg),
             # ── Strategy & execution ────────────────────────────────────────
@@ -181,9 +184,17 @@ class AlphaZeroSystem:
             'EARNINGS_ANALYZER':  EarningsCallAnalyzer(eb, cfg),
             'STRATEGY_GENERATOR': StrategyGenerator(eb, cfg),
             # ── Manager exposed as agent for dashboard health display ───────
-            'TRAILING_STOP':      self.trailing_stops,           # FIX 3: now 16 total
+            'TRAILING_STOP':      self.trailing_stops,
         }
-        logger.info(f"  {len(self.agents)} agents ready")     # → 16
+        
+        # Load NEXUS XGBoost model if exists
+        model_path = os.path.join(ROOT, 'models', 'nexus_regime.json')
+        if os.path.exists(model_path):
+            self.agents['NEXUS'].load_xgb_model(model_path)
+        else:
+            logger.info("NEXUS: No XGBoost model found at models/nexus_regime.json — using rules")
+
+        logger.info(f"  {len(self.agents)} agents ready")
 
     def _init_reporting(self):
         self.telegram         = TelegramReporter()
@@ -387,6 +398,10 @@ class AlphaZeroSystem:
         t0 = time.time()
         logger.info(f"\n{'─'*60}\nIteration {self.iteration}  |  {datetime.now().strftime('%H:%M:%S')}")
 
+        # ── v18: Periodic Broker Sync ──────────────────────────────────────────
+        if self.iteration % 10 == 0:
+            self._sync_broker_state()
+            
         market_data = self._fetch_market_data()
 
         # ── FIX 4: ORACLE runs first — gives macro context to every downstream agent ──
@@ -419,6 +434,13 @@ class AlphaZeroSystem:
             pass
 
         titan_signals = self.agents['TITAN'].generate_signals(market_data, regime)
+
+        # ── v17: LLM EARNINGS ANALYZER — check for new transcripts ────────────
+        earnings_signals = self._check_earnings_transcripts()
+        
+        # ── v17: LLM STRATEGY GENERATOR — periodic discovery ──────────────────
+        if self.iteration % 50 == 0:
+            self._run_strategy_discovery(regime)
 
         # Attach current price to every signal so MERCURY/PaperExecutor
         # fills at real market price instead of hardcoded 2450.50
@@ -963,8 +985,11 @@ class AlphaZeroSystem:
         sym = p.get('symbol', '')
         if self.telegram.is_enabled():
             self.telegram.stop_loss_hit(
-                sym, p.get('stop_price',0),
-                p.get('entry_price',0), pnl
+                symbol=sym,
+                entry=float(p.get('entry_price', 0)),
+                exit_price=float(p.get('stop_price', 0)),
+                qty=int(p.get('quantity', 0)),
+                pnl=pnl
             )
         # ── KARMA feedback: stop hit = negative outcome ──────────────────────
         self._karma_feedback(sym, pnl, 'stop_hit')
@@ -991,6 +1016,14 @@ class AlphaZeroSystem:
         logger.info(f"  [TARGET] {p}")
         pnl = float(p.get('pnl', 0) or 0)
         sym = p.get('symbol', '')
+        if self.telegram.is_enabled():
+             self.telegram.target_reached(
+                symbol=sym,
+                entry=float(p.get('entry_price', 0)),
+                exit_price=float(p.get('target_price', 0)),
+                qty=int(p.get('quantity', 0)),
+                pnl=pnl
+            )
         # ── KARMA feedback: target hit = positive outcome ─────────────────────
         self._karma_feedback(sym, pnl, 'target_reached')
         # LENS
@@ -1035,8 +1068,125 @@ class AlphaZeroSystem:
         except Exception as e:
             logger.warning(f"KARMA feedback error: {e}")
 
+    def _check_broker_connectivity(self):
+        """Verify OpenAlgo bridge is reachable before starting."""
+        if self.mode != 'LIVE':
+            return
+            
+        logger.info("  🔗 Checking OpenAlgo bridge connectivity...")
+        try:
+            # Simple P&L or orderbook fetch as health check
+            self.executor.get_orderbook()
+            logger.info("  ✅ OpenAlgo bridge online")
+        except Exception as e:
+            logger.error(f"  ❌ OpenAlgo bridge unreachable: {e}")
+            if self.mode == 'LIVE':
+                logger.critical("  CRITICAL: Live trading impossible without bridge. Shutting down.")
+                sys.exit(1)
+
+    def _sync_broker_state(self):
+        """Fetch real-time data from broker and update Guardian."""
+        if self.mode != 'LIVE' or not hasattr(self.executor, 'get_balance'):
+            return
+
+        try:
+            # 1. Sync Balance/Capital
+            balance = self.executor.get_balance()
+            if balance > 0:
+                self.agents['GUARDIAN'].update_capital(balance)
+                
+            # 2. Sync Positions
+            positions = self.executor.sync_positions()
+            self.agents['GUARDIAN'].sync_with_broker(positions)
+            
+            logger.info(f"  🔄 Sync complete: Balance=₹{balance:,.2f}, Positions={len(positions)}")
+        except Exception as e:
+            logger.error(f"  ⚠️ Broker sync failed: {e}")
+
+    def _check_earnings_transcripts(self) -> List[Dict]:
+        """
+        Check data/transcripts/ for new files. If found, analyze and return signals.
+        Format expected: SYMBOL_QUARTER.txt or SYMBOL_QUARTER.json
+        """
+        signals = []
+        transcript_dir = os.path.join(ROOT, 'data', 'transcripts')
+        if not os.path.exists(transcript_dir):
+            return []
+
+        files = [f for f in os.listdir(transcript_dir) if f.endswith(('.txt', '.json'))]
+        if not files:
+            return []
+
+        logger.info(f"  📝 Found {len(files)} new transcripts — starting LLM analysis...")
+        
+        processed_dir = os.path.join(transcript_dir, 'processed')
+        os.makedirs(processed_dir, exist_ok=True)
+
+        for filename in files:
+            try:
+                path = os.path.join(transcript_dir, filename)
+                with open(path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                # Infer symbol and quarter from filename (e.g. RELIANCE_Q4.txt)
+                parts = filename.split('.')[0].split('_')
+                symbol = parts[0]
+                quarter = parts[1] if len(parts) > 1 else "Unknown"
+
+                analysis = self.agents['EARNINGS_ANALYZER'].analyze_earnings_call(
+                    symbol=symbol,
+                    transcript=content,
+                    quarter=quarter
+                )
+
+                if 'trading_signal' in analysis:
+                    sig = analysis['trading_signal']
+                    signals.append({
+                        'symbol': symbol,
+                        'action': sig['action'],
+                        'strength': sig['strength'],
+                        'source': 'EARNINGS_ANALYZER',
+                        'reason': sig['recommendation']
+                    })
+
+                # Move to processed
+                shutil.move(path, os.path.join(processed_dir, filename))
+
+            except Exception as e:
+                logger.error(f"Error processing transcript {filename}: {e}")
+
+        return signals
+
+    def _run_strategy_discovery(self, regime: str):
+        """
+        Trigger the LLM Strategy Generator to find new alpha.
+        """
+        try:
+            logger.info("  🧠 Starting LLM Strategy Discovery...")
+            # Mock performance data for the discovery prompt
+            performance = {
+                'winning_strategies': ['EMA_Cross', 'RSI_Oversold'],
+                'losing_strategies': ['Breakout_Fail'],
+                'observations': {'regime': regime}
+            }
+            
+            # Since market_data is complex, we pass a summary
+            market_context = {
+                'regime': regime,
+                'vix': self._macro_context.get('vix', 0),
+                'symbols': settings.SYMBOLS[:5]
+            }
+
+            self.agents['STRATEGY_GENERATOR'].discover_strategy(
+                market_context=market_context,
+                recent_performance=performance,
+                regime=regime
+            )
+        except Exception as e:
+            logger.error(f"Strategy Discovery failed: {e}")
+
     def _shutdown_handler(self, sig, frame):
-        logger.info("\n⛔ Shutdown signal received")
+        logger.info("\n🛑 Shutdown signal received")
         self.running = False
         self._stop_dashboard()
         self.event_bus.stop()

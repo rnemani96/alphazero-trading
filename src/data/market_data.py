@@ -38,13 +38,8 @@ logger = logging.getLogger("MarketData")
 IST = ZoneInfo("Asia/Kolkata")
 
 # ── Optional deps ──────────────────────────────────────────────────────────────
-try:
-    # Disable nsepython for now to fix backend freeze
-    raise ImportError("Bypassing nsepython to prevent import hang")
-    from nsepython import *
-    NSE_PYTHON_AVAILABLE = True
-except ImportError:
-    NSE_PYTHON_AVAILABLE = False
+# nsepython is moved to lazy-load within methods to prevent startup hangs.
+NSE_PYTHON_AVAILABLE = False # Default to false, check only when needed
 
 try:
     import yfinance as yf
@@ -430,29 +425,35 @@ class MarketDataEngine:
     # ── Indices ───────────────────────────────────────────────────────────────
 
     def get_nifty_vix(self) -> tuple[float, float, float]:
-        """Returns (nifty50, banknifty, vix)."""
-        if NSE_PYTHON_AVAILABLE:
-            try:
-                nifty = nse_quote_ltp("NIFTY 50")
-                bnk   = nse_quote_ltp("NIFTY BANK")
-                vix   = nse_quote_ltp("INDIA VIX")
-                return round(float(nifty), 2), round(float(bnk), 2), round(float(vix), 2)
-            except Exception as e:
-                logger.error("nsepython Index/VIX error: %s", e)
-
+        """Returns (nifty50, banknifty, vix). Prioritizes yfinance for stability."""
         if YF_AVAILABLE:
             try:
+                # yfinance is more reliable for indices as it doesn't block on import
+                # We use '1m' which is the standard yfinance intraday frequency
                 raw = yf.download("^NSEI ^NSEBANK ^INDIAVIX",
-                                  period="1d", interval="1m", progress=False)
+                                  period="1d", interval="1m", progress=False, timeout=5)
                 def _last(sym):
                     try:
                         col = ("Close", sym) if isinstance(raw.columns, pd.MultiIndex) else "Close"
                         return round(float(raw[col].dropna().iloc[-1]), 2)
                     except Exception:
                         return 0.0
-                return _last("^NSEI"), _last("^NSEBANK"), _last("^INDIAVIX")
+                n, b, v = _last("^NSEI"), _last("^NSEBANK"), _last("^INDIAVIX")
+                if n > 0: return n, b, v
             except Exception as e:
-                logger.error("Index/VIX error: %s", e)
+                logger.debug("yfinance Index/VIX error: %s", e)
+
+        # Lazy-load nsepython only if yfinance fails
+        try:
+            # Re-localized to avoid top-level hang
+            from nsepython import nse_quote_ltp
+            nifty = nse_quote_ltp("NIFTY 50")
+            bnk   = nse_quote_ltp("NIFTY BANK")
+            vix   = nse_quote_ltp("INDIA VIX")
+            return round(float(nifty), 2), round(float(bnk), 2), round(float(vix), 2)
+        except Exception as e:
+            logger.debug("nsepython fallback failure: %s", e)
+            pass
 
         return 0.0, 0.0, 0.0
 

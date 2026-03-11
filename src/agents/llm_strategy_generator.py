@@ -37,10 +37,27 @@ class StrategyGenerator:
     → Auto-added to trading system! 🎉
     """
     
-    def __init__(self, api_key: str, backtester):
-        self.client = anthropic.Anthropic(api_key=api_key)
-        self.model = "claude-sonnet-4-20250514"
-        self.backtester = backtester
+    def __init__(self, event_bus, config):
+        """
+        Initialize the Strategy Generator
+        """
+        self.event_bus = event_bus
+        self.config = config
+        
+        # Get API key from config or environment
+        api_key = config.get("openrouter_api_key") or os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            # Fallback to anthropic key for backwards compatibility
+            api_key = os.getenv('ANTHROPIC_API_KEY')
+            
+        if not api_key:
+             logger.warning("StrategyGenerator: No API key found. Discovery will fail.")
+
+        self.client = anthropic.Anthropic(api_key=api_key) if api_key else None
+        self.model = config.get("llm_model", "claude-3-5-sonnet-20240620")
+        
+        # Backtester - if not provided in config, use a dummy or simulate
+        self.backtester = config.get("backtester")
         
         # Track discovered strategies
         self.discovered_strategies = []

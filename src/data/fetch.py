@@ -22,12 +22,15 @@ from typing import *
 # data
 import pandas as pd
 import numpy as np
-# nsepython for real-time NSE data
-try:
-    from nsepython import *
-    NSE_PYTHON_OK = True
-except ImportError:
-    NSE_PYTHON_OK = False
+# nsepython is lazy-loaded in methods to prevent import hangs
+NSE_PYTHON_OK = False
+def _get_nse_fn(fn_name):
+    """Lazy-load nsepython functions to prevent startup hangs."""
+    try:
+        import nsepython
+        return getattr(nsepython, fn_name)
+    except (ImportError, AttributeError):
+        return None
 
 # yfinance as fallback
 try:
@@ -281,8 +284,59 @@ class DataFetcher:
         return candles[-bars:] if len(candles) >= bars else candles
 
     def get_options_chain(self, symbol: str) -> Optional[Dict]:
-        """Fetch options chain — stub (OpenAlgo options endpoint needed for live)."""
-        return None
+        """
+        Fetch real-time options chain from NSE via nsepython.
+        """
+        try:
+            from nsepython import nse_optionchain_scrapper
+            # Map index names if needed (nsepython likes NIFTY, BANKNIFTY)
+            nse_sym = symbol
+            if symbol == "NIFTY50": nse_sym = "NIFTY"
+            if symbol == "NIFTYBANK": nse_sym = "BANKNIFTY"
+
+            # nse_optionchain_scrapper returns the raw JSON from NSE
+            payload = nse_optionchain_scrapper(nse_sym)
+            if not payload or 'filtered' not in payload:
+                return None
+
+            filtered = payload['filtered']
+            records  = payload.get('records', {})
+            
+            contracts = []
+            underlying_price = filtered.get('underlyingValue', 0)
+
+            # Flatten the NSE JSON structure into our standard format
+            for row in filtered.get('data', []):
+                strike = row.get('strikePrice')
+                expiry = row.get('expiryDate')
+                
+                for opt_key, opt_type in [('CE', 'CALL'), ('PE', 'PUT')]:
+                    if opt_key in row:
+                        opt = row[opt_key]
+                        contracts.append({
+                            'strike':               strike,
+                            'expiry':               expiry,
+                            'type':                 opt_type,
+                            'volume':               int(opt.get('totalTradedVolume', 0)),
+                            'open_interest':        int(opt.get('openInterest', 0)),
+                            'open_interest_change': int(opt.get('changeinOpenInterest', 0)),
+                            'premium':              float(opt.get('lastPrice', 0)),
+                            'implied_volatility':   float(opt.get('impliedVolatility', 0)) / 100.0,
+                            'moneyness':            strike / underlying_price if underlying_price else 1.0,
+                            'aggressive_buy':       opt.get('change', 0) > 0, # proxy for aggressiveness
+                            'multi_exchange':       False, # NSE is single exchange for us
+                        })
+
+            return {
+                'symbol':           symbol,
+                'contracts':        contracts,
+                'underlying_price': underlying_price,
+                'timestamp':        datetime.now().isoformat()
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to fetch options chain for {symbol}: {e}")
+            return None
 
     def clear_cache(self):
         self._cache.clear()
@@ -335,11 +389,15 @@ class DataFetcher:
     def _nse_batch_quotes(self, symbols: List[str]) -> Dict[str, Dict]:
         """Fetch quotes using nsepython (fast serial calls)."""
         result = {}
+        nse_quote_fn = _get_nse_fn("nse_quote")
+        if not nse_quote_fn:
+            return result
+            
         for sym in symbols:
             try:
                 # nse_quote_ltp is fast, but we might want full info for indicators
                 # For now, let's use nse_quote to get enough info to build the dict
-                quote = nse_quote(sym)
+                quote = nse_quote_fn(sym)
                 if quote:
                     entry = self._parse_nse_quote(sym, quote)
                     if entry:
@@ -454,8 +512,12 @@ class DataFetcher:
             end_date   = datetime.now().strftime("%d-%m-%Y")
             start_date = (datetime.now() - timedelta(days=60 if "min" in interval else 365)).strftime("%d-%m-%Y")
             
+            nse_get_hist_fn = _get_nse_fn("nse_get_hist")
+            if not nse_get_hist_fn:
+                return []
+                
             # nsepython nse_get_hist usually returns a pandas DF
-            df = nse_get_hist(symbol, start_date, end_date)
+            df = nse_get_hist_fn(symbol, start_date, end_date)
             
             if df is None or df.empty:
                 return []
@@ -517,23 +579,29 @@ class DataFetcher:
                 logger.warning(f"No candle data for {symbol} ({yticker})")
                 return []
 
-            # Fix for yfinance >= 0.2.x which returns MultiIndex columns like ('Close','RELIANCE.NS')
-            if hasattr(df.columns, 'get_level_values'):
+            # Fix for yfinance >= 0.2.x which returns MultiIndex columns
+            if isinstance(df.columns, pd.MultiIndex):
                 df.columns = df.columns.get_level_values(0)
+            
+            # Robustly convert all columns to lowercase strings
             df.columns = [str(c).lower() for c in df.columns]
+            
             df = df.dropna(subset=['close'])
             df = df.tail(max(bars, 200))   # keep enough for indicators
 
             candles = []
             for ts, row in df.iterrows():
-                candles.append({
-                    'timestamp': ts.isoformat() if hasattr(ts, 'isoformat') else str(ts),
-                    'open':      round(float(row['open']),   2),
-                    'high':      round(float(row['high']),   2),
-                    'low':       round(float(row['low']),    2),
-                    'close':     round(float(row['close']),  2),
-                    'volume':    int(row['volume']) if 'volume' in row else 0,
-                })
+                try:
+                    candles.append({
+                        'timestamp': ts.isoformat() if hasattr(ts, 'isoformat') else str(ts),
+                        'open':      round(float(row['open']),   2),
+                        'high':      round(float(row['high']),   2),
+                        'low':       round(float(row['low']),    2),
+                        'close':     round(float(row['close']),  2),
+                        'volume':    int(row['volume']) if 'volume' in row else 0,
+                    })
+                except Exception:
+                    continue
 
             logger.debug(f"yfinance: {symbol} — {len(candles)} candles ({yf_interval})")
             return candles

@@ -11,7 +11,7 @@ const G = {
   cyan:"#00d4ff", amber:"#ffaa00",
 };
 
-const BACKEND  = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const BACKEND  = "http://localhost:8000";
 const VERSION  = "v5.0.0";
 const AUTHOR   = "Rajesh Nemani";
 
@@ -320,7 +320,7 @@ function TopNav({regime,indices,paperPnl,time,connStatus,mode}) {
   const nChange=(indices.nifty??0)-24150,bChange=(indices.banknifty??0)-51840;
   return (
     <div style={{background:G.surface,borderBottom:`1px solid ${G.border}`,
-      padding:"0 24px",height:54,display:"flex",alignItems:"center",gap:16}}>
+      padding:"0 24px",height:54,display:"flex",alignItems:"center",gap:16,width:"100%"}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <polygon points="12,2 22,20 2,20" fill={G.green} opacity=".9"/>
@@ -375,7 +375,7 @@ function TabBar({active,setActive,counts}) {
     {id:"agents",label:"Agents"},
   ];
   return (
-    <div style={{background:G.surface,borderBottom:`1px solid ${G.border}`,padding:"0 24px",display:"flex",overflowX:"auto"}}>
+    <div style={{background:G.surface,borderBottom:`1px solid ${G.border}`,padding:"0 24px",display:"flex",overflowX:"auto",width:"100%",flexShrink:0}}>
       {tabs.map(t=>(
         <button key={t.id} onClick={()=>setActive(t.id)} style={{
           background:"none",border:"none",cursor:"pointer",
@@ -408,7 +408,7 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
   return (
     <div style={{display:"flex",flexDirection:"column",gap:24}}>
       {/* Stat cards */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12}}>
         {[
           {label:"Open Positions",val:open.length,sub:`${10-open.length} slots free`,color:G.blue},
           {label:"Gross P&L",val:`${grossPnl>=0?"+":""}₹${Math.abs(grossPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"before charges",color:grossPnl>=0?G.green:G.red},
@@ -433,7 +433,7 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
           </div>
           <span style={{color:G.textMut,fontSize:10}}>Dynamic scan · 40s refresh · {NSE_UNIVERSE.length} stocks</span>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))"}}>
           {picks.length===0
             ? Array(5).fill(null).map((_,i)=>(
                 <div key={i} style={{padding:"20px",display:"flex",alignItems:"center",justifyContent:"center",
@@ -729,7 +729,7 @@ function NewsTab({news,picks}) {
       </div>
 
       {/* Sentiment summary */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
         {[
           {label:"Bullish",count:news.filter(n=>n.sentiment==="BULLISH"||n.sentiment==="STRONGLY_BULLISH").length,color:G.green},
           {label:"Neutral",count:news.filter(n=>n.sentiment==="NEUTRAL").length,color:G.yellow},
@@ -754,13 +754,20 @@ function NewsTab({news,picks}) {
                 <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,
                   borderRadius:8,padding:"14px 18px",transition:"background .12s"}}
                   onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
-                  onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  onMouseLeave={e=>e.currentTarget.style.background=G.surface}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                     <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                      <span style={{color:srcColor,fontSize:11,fontWeight:600}}>{item.source}</span>
-                      <span style={{color:sent.color,fontSize:11,fontWeight:700}}>{sent.icon} {item.sentiment?.replace("_"," ")}</span>
+                      <span style={{background:srcColor+"1a",border:`1px solid ${srcColor}44`,
+                        color:srcColor,padding:"1px 8px",borderRadius:20,fontSize:10,fontWeight:600}}>
+                        {item.source}
+                      </span>
+                      {item.symbol&&<Tag label={item.symbol} color={G.blue}/>}
+                      {item.related?.map(r=><Tag key={r} label={r} color={G.textSec}/>)}
+                      <span style={{color:sent.color,fontSize:11,fontWeight:700}}>
+                        {sent.icon} {item.sentiment?.replace("_"," ")}
+                      </span>
                     </div>
-                    <span style={{color:G.textMut,fontSize:10,fontFamily:"monospace"}}>{item.time}</span>
+                    <span style={{color:G.textMut,fontSize:10,fontFamily:"monospace",whiteSpace:"nowrap"}}>{item.time}</span>
                   </div>
                   <div style={{color:G.text,fontSize:13,fontWeight:600,lineHeight:1.4,marginBottom:6}}>
                     {item.headline}
@@ -894,7 +901,7 @@ function PerformanceTab({evalStats,positions,agentKpi,systemState}) {
       {/* System info */}
       <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
         <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:14}}>⚙️ System Status</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:16}}>
           {[
             {k:"Mode",v:systemState?.mode??"PAPER",color:systemState?.mode==="LIVE"?G.red:G.yellow},
             {k:"Status",v:systemState?.status??"RUNNING",color:G.green},
@@ -919,11 +926,24 @@ function EvaluationTab({evalStats,evalHistory,agentScores}) {
   const wr=evalStats?.win_rate??0,total=evalStats?.total_evaluated??0;
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
-      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 20px",marginBottom:20}}>
-        <div style={{color:G.text,fontSize:14,fontWeight:700}}>Evaluation Leaderboard</div>
-        <div style={{color:G.textSec,fontSize:11,marginTop:4}}>Performance of 16 AlphaZero agents tracked against real-time NSE data.</div>
+      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 20px"}}>
+        <div style={{color:G.text,fontSize:12,fontWeight:600,marginBottom:12}}>How Paper Mode Evaluation Works</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:16}}>
+          {[
+            {icon:"📡",step:"1 — Signal",desc:"TITAN emits signal with entry, SL, target on real NSE candles (yfinance / OpenAlgo)"},
+            {icon:"⏱",step:"2 — Watch",desc:"Live prices checked every 15s. Signal stays pending until SL or target is hit, or 24h expires"},
+            {icon:"🎯",step:"3 — Score",desc:"WIN (target hit): +confidence×2 pts. LOSS (SL hit): −confidence×1 pt. Scratch: 0 pts"},
+            {icon:"🧠",step:"4 — Learn",desc:"KARMA reads evaluation report to down-weight failing strategies per regime."},
+          ].map(({icon,step,desc})=>(
+            <div key={step} style={{background:G.bg,borderRadius:6,padding:14}}>
+              <div style={{fontSize:22,marginBottom:8}}>{icon}</div>
+              <div style={{color:G.yellow,fontSize:10,fontWeight:700,marginBottom:4,fontFamily:"monospace"}}>{step}</div>
+              <div style={{color:G.textSec,fontSize:11,lineHeight:1.55}}>{desc}</div>
+            </div>
+          ))}
+        </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
         {[
           {label:"Evaluated",val:total,color:G.blue},
           {label:"Wins",val:evalStats?.wins??0,color:G.green},
@@ -967,7 +987,7 @@ function EvaluationTab({evalStats,evalHistory,agentScores}) {
                         <td style={{padding:"9px 14px",color:G.red,fontSize:11,fontFamily:"monospace"}}>{a.losses}</td>
                         <td style={{padding:"9px 14px",minWidth:100}}>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
-                            <div style={{width:50,background:G.border,borderRadius:3,height:5,overflow:"hidden"}}>
+                            <div style={{flex:1,background:G.border,borderRadius:3,height:5,overflow:"hidden"}}>
                               <div style={{width:`${wr2*100}%`,height:"100%",background:wr2>=0.55?G.green:wr2>=0.40?G.yellow:G.red,transition:"width .6s"}}/>
                             </div>
                             <span style={{color:wr2>=0.55?G.green:wr2>=0.40?G.yellow:G.red,fontSize:10,fontFamily:"monospace",minWidth:30}}>{(wr2*100).toFixed(0)}%</span>
@@ -1098,7 +1118,10 @@ function KarmaPanel({karmaStats}) {
             ? <div style={{color:G.textMut,fontSize:11,lineHeight:1.6}}>Patterns emerge after 5+ trades in the same setup. KARMA tracks: regime + strategy + outcome → learns which combinations win.</div>
             : patterns.slice(0,5).map((p,i)=>(
                 <div key={i} style={{background:G.bg,borderRadius:6,padding:"8px 12px",marginBottom:8}}>
-                  <div style={{color:G.purple,fontSize:11,fontWeight:600}}>{p.pattern}</div>
+                  <div style={{display:"flex",justifyContent:"space-between"}}>
+                    <span style={{color:G.purple,fontSize:11,fontWeight:600}}>{p.pattern}</span>
+                    <span style={{color:p.win_rate>=0.6?G.green:p.win_rate>=0.4?G.yellow:G.red,fontSize:11,fontFamily:"monospace",fontWeight:700}}>{(p.win_rate*100).toFixed(0)}% WR</span>
+                  </div>
                   <div style={{color:G.textMut,fontSize:10,marginTop:2}}>{p.description}</div>
                 </div>
               ))
@@ -1155,7 +1178,7 @@ const AGENT_LIST=[
 function AgentsTab({agentKpi,events,karmaStats}) {
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
         {AGENT_LIST.map(a=>{
           const kpi=agentKpi[a.id]??{kpi:0.72,cycles:0};
           return (
@@ -1432,7 +1455,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
         <div style={{display:"flex",borderBottom:`1px solid ${G.border}`,background:G.bg}}>
           {tabs.map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} style={{
-              background:"none",border:"none",borderBottom:tab===t.id?`2px solid ${G.blueDim}`:"2px solid transparent",
+              background:"none",border:"none",borderBottom:tab===t.id?`2px solid ${G.blue}`:"2px solid transparent",
               color:tab===t.id?G.text:G.textSec,padding:"10px 20px",fontSize:12,cursor:"pointer",
               fontWeight:tab===t.id?600:400,marginBottom:-1,transition:"color .15s"}}>
               {t.label}
@@ -1470,7 +1493,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
               {stock.sigmaFactors&&(
                 <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
                   <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:14}}>📊 SIGMA Score Breakdown</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
                     {Object.entries(stock.sigmaFactors).map(([factor,val])=>(
                       <div key={factor} style={{background:G.bg,borderRadius:6,padding:"10px 12px"}}>
                         <div style={{color:G.textMut,fontSize:9,textTransform:"capitalize",marginBottom:4}}>{factor}</div>
@@ -1514,7 +1537,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
               {ind&&i>=0&&(
                 <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
                   <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:14}}>📈 Technical Indicators</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
                     {[
                       {key:"RSI",val:ind.rsi[i].toFixed(0),
                         color:ind.rsi[i]<35?G.green:ind.rsi[i]>65?G.red:G.yellow,
@@ -1544,7 +1567,10 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
                           border:`1px solid ${expandedItem===key?color+"55":G.border}`}}
                         onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
                         onMouseLeave={e=>e.currentTarget.style.background=G.bg}>
-                        <div style={{color:G.textMut,fontSize:9,marginBottom:5}}>{key}</div>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
+                          <span style={{color:G.textSec,fontSize:10}}>{key}</span>
+                          <span style={{color:G.textMut,fontSize:8}}>click to explain</span>
+                        </div>
                         <div style={{color,fontSize:14,fontWeight:700,fontFamily:"monospace",marginBottom:4}}>{val}</div>
                         {expandedItem===key&&(
                           <div style={{color:G.textSec,fontSize:10,lineHeight:1.6,marginTop:6,
@@ -1601,7 +1627,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
                         desc:`Current volume is ${volAnalysis.volRatio}× the 20-day average. ${volAnalysis.volRatio>1.5?"Elevated volume confirms price moves — institutions participating. This is the setup TITAN's B2 Volume Breakout looks for.":volAnalysis.volRatio<0.7?"Below-average volume — move may not sustain. Wait for volume to confirm before entering.":"Normal volume. Move is organic but lacks the urgency of institutional participation."}`},
                       {key:"obv",label:"OBV Trend",val:volAnalysis.obvTrend,
                         color:volAnalysis.obvTrend==="RISING"?G.green:G.red,
-                        desc:`On-Balance Volume is ${volAnalysis.obvTrend}. OBV sums volume on up-days and subtracts on down-days. ${volAnalysis.obvTrend==="RISING"?"Rising OBV while price rises = healthy bull trend. If OBV rises but price is flat, accumulation is happening under the surface — breakout likely soon.":"Falling OBV = more volume on down-days = distribution. Institutions may be offloading positions to retail buyers. Caution on new longs."}`},
+                        desc:`On-Balance Volume is ${volAnalysis.obvTrend}. OBV sums volume on up-days and subtracts on down-days. ${volAnalysis.obvTrend==="RISING"?"Rising OBV while price rises = healthy bull trend. If OBV rises but price is flat, accumulation is happening under the surface — breakout likely soon.":"Falling OBV = more volume on down-days = distribution. Institutions may be selling into strength. Caution on new longs."}`},
                       {key:"pv",label:"Price-Volume Confirm",val:volAnalysis.pvConfirm?"CONFIRMED":"DIVERGING",
                         color:volAnalysis.pvConfirm?G.green:G.orange,
                         desc:`Price and volume are ${volAnalysis.pvConfirm?"moving together":"diverging"}. ${volAnalysis.pvConfirm?"Confirmation: price up + volume up OR price down + volume down. This is healthy — the move has conviction behind it.":"Divergence: price moving one way but volume opposing. This is a warning signal. Price up on low volume can reverse; price down on low volume may be a shakeout."}`},
@@ -1699,7 +1725,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
                     <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 16px"}}>
                       <div style={{color:G.textSec,fontSize:12,lineHeight:1.7}}>{F.description||"No company description available."}</div>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
                       {[
                         {key:"pe_ratio",label:"P/E Ratio",val:F.pe_ratio?F.pe_ratio.toFixed(1):"—",desc:"Price-to-earnings. <15 is cheap, >30 is expensive relative to growth. Click to understand."},
                         {key:"roe",label:"ROE %",val:F.roe!=null?`${F.roe.toFixed(1)}%`:"—",desc:"Return on Equity — how well the company uses shareholder money. >15% is good; >25% is excellent. Consistent ROE > 20% is a quality indicator."},
@@ -1754,8 +1780,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
                 : stockNews.map((item,i)=>{
                     const sent=SENTIMENT_LABEL[item.sentiment]??SENTIMENT_LABEL.NEUTRAL;
                     return (
-                      <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,
-                        borderRadius:8,padding:"14px 18px"}}>
+                      <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 18px"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                           <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                             <span style={{color:SOURCE_COLOR[item.source]??G.textSec,fontSize:11,fontWeight:600}}>{item.source}</span>
@@ -1763,9 +1788,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
                           </div>
                           <span style={{color:G.textMut,fontSize:10,fontFamily:"monospace"}}>{item.time}</span>
                         </div>
-                        <div style={{color:G.text,fontSize:13,fontWeight:600,lineHeight:1.4,marginBottom:6}}>
-                          {item.headline}
-                        </div>
+                        <div style={{color:G.text,fontSize:13,fontWeight:600,lineHeight:1.4,marginBottom:6}}>{item.headline}</div>
                         {item.summary&&<div style={{color:G.textSec,fontSize:11,lineHeight:1.6}}>{item.summary}</div>}
                         {item.impact&&(
                           <div style={{marginTop:8,padding:"8px 12px",background:G.bg,borderRadius:6,
@@ -1835,7 +1858,7 @@ export default function App() {
   const [evalHistory,setHistory] = useState([]);
   const [agentScores,setAgtScores]= useState([]);
   const [agentKpi,setAgentKpi]   = useState({});
-  const [karmaStats,setKarma]    = useState({});
+  const [karmaStats,setKarmaStats] = useState({});
   const [fundamentals,setFundamentals]=useState({});
   const [news,setNews]           = useState([]);
   const [events,setEvents]       = useState([]);
@@ -1876,7 +1899,7 @@ export default function App() {
           if(msg.quotes)setQuotes(msg.quotes);
           if(msg.indices)setIndices(msg.indices);
           if(msg.regime)setRegime(msg.regime);
-          if(msg.karma)setKarma(msg.karma);
+          if(msg.karma)setKarmaStats(msg.karma);
           if(msg.fundamentals)setFundamentals(prev=>({...prev,...msg.fundamentals}));
           if(msg.news)setNews(msg.news);
           if(msg.eval_stats)setEvalStats(msg.eval_stats);
@@ -1900,7 +1923,7 @@ export default function App() {
   useEffect(()=>{
     if(connStatus==="live") return;
     const r=["TRENDING","SIDEWAYS","VOLATILE","RISK_OFF"];
-    setKarma({
+    setKarmaStats({
       episodes:847,win_rate:0.61,best_strategy:"T2 Triple EMA",
       training_active:new Date().getHours()<9||new Date().getHours()>=18,
       last_training:new Date().getHours()>=18?"Today "+new Date().getHours()+":00":"Yesterday 22:30",
@@ -1978,8 +2001,8 @@ export default function App() {
       const ef=ind&&Li>=0?(ind.e20[Li]>ind.e50[Li]?.7+Math.random()*.25:.3):.5;
       const vf=.4+Math.random()*.5,nf=.35+Math.random()*.6,fii=.25+Math.random()*.7,earn=.35+Math.random()*.55;
       const score=+(mf*.20+tf*.15+rf*.15+ef*.15+earn*.15+vf*.10+nf*.10+fii*.05).toFixed(3);
-      const tt=ind&&Li>=0&&ind.adx[Li]>40?"SHORT_TERM":ind&&Li>=0&&ind.adx[Li]<18&&cr==="SIDEWAYS"?"INTRADAY":"SWING";
-      const pools={TRENDING:["T1 EMA Cross","T2 Triple EMA","T4 MACD","T5 ADX","T7 Donchian","B2 Vol Breakout"],SIDEWAYS:["M1 RSI Rev","M2 BB Bounce","M3 BB Squeeze","V1 VWAP Cross","S1 Z-Score"],VOLATILE:["M1 RSI Rev","M2 BB Bounce","V1 VWAP Cross"],RISK_OFF:[]};
+      const tt=ind&&Li>=0&&ind.adx[Li]>40?"SHORT_TERM":ind&&Li>=0&&ind.adx[Li]<18&&cr==="SIDEWAYS"?"INTRADAY":cr==="TRENDING"&&tf>.55?"LONG_TERM":"SWING";
+      const pools={TRENDING:["T1 EMA Cross","T2 Triple EMA","T4 MACD","T5 ADX","T7 Donchian","B2 Vol Breakout"],SIDEWAYS:["M1 RSI Rev","M2 BB Bounce","M3 BB Squeeze","V1 VWAP Cross","S1 Z-Score"],VOLATILE:["M1 RSI Rev","M2 BB Bounce","V1 VWAP Cross"],RISK_OFF:["M1 RSI Rev"]};
       const pool=pools[cr]??pools.TRENDING;
       const ss=pool[Math.floor(Math.random()*pool.length)];
       const [sid,...sname]=ss.split(" ");
@@ -2138,15 +2161,15 @@ export default function App() {
   const tabCounts={pos:openPositions.length,sigs:allSigs.length,news:news.length,eval:evalStats?.total_evaluated??0};
 
   return (
-    <div style={{background:G.bg,color:G.text,minHeight:"100vh",
+    <div style={{background:G.bg,color:G.text,height:"100vh",width:"100vw",
       fontFamily:"'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace",
-      fontSize:13,display:"flex",flexDirection:"column"}}>
+      fontSize:13,display:"flex",flexDirection:"column",overflow:"hidden"}}>
 
       <ConnBanner status={connStatus}/>
       <TopNav regime={regime} indices={indices} paperPnl={totalNetPnl} time={now} connStatus={connStatus} mode={systemState.mode}/>
       <TabBar active={tab} setActive={setTab} counts={tabCounts}/>
 
-      <div style={{flex:1,padding:"20px 24px",maxWidth:1400,width:"100%",margin:"0 auto"}}>
+      <div style={{flex:1,padding:"20px 24px",width:"100%",overflowY:"auto",overflowX:"hidden"}}>
         {tab==="overview"&&
           <OverviewTab picks={picks} positions={positions} allSigs={allSigs}
             evalStats={evalStats} indices={indices} candleCache={candleCache}

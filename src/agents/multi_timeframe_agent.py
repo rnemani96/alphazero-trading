@@ -176,33 +176,19 @@ class MultiTimeframeAgent(BaseAgent):
         import pandas as pd
 
         if self.data_fetcher:
-
             try:
                 candles = self.data_fetcher.get_ohlcv(
                     symbol,
                     interval=timeframe,
                     bars=periods
                 )
-
                 if candles:
                     return pd.DataFrame(candles)
-
             except Exception as e:
                 logger.debug(f"MTF fetch failed {symbol} {timeframe}: {e}")
 
-        # fallback synthetic data
-        dates = pd.date_range(end=datetime.now(), periods=periods, freq='15min')
-
-        prices = 100 + np.cumsum(np.random.randn(periods))
-
-        return pd.DataFrame({
-            "timestamp": dates,
-            "open": prices,
-            "high": prices + 1,
-            "low": prices - 1,
-            "close": prices,
-            "volume": np.random.randint(1000, 10000, periods)
-        })
+        # Final return if no data found
+        return None
 
     # ─────────────────────────────────────────────────────────────
 
