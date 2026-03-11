@@ -320,7 +320,7 @@ function TopNav({regime,indices,paperPnl,time,connStatus,mode}) {
   const nChange=(indices.nifty??0)-24150,bChange=(indices.banknifty??0)-51840;
   return (
     <div style={{background:G.surface,borderBottom:`1px solid ${G.border}`,
-      padding:"0 24px",height:54,display:"flex",alignItems:"center",gap:16}}>
+      padding:"0 24px",height:54,display:"flex",alignItems:"center",gap:16,width:"100%"}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <polygon points="12,2 22,20 2,20" fill={G.green} opacity=".9"/>
@@ -375,7 +375,7 @@ function TabBar({active,setActive,counts}) {
     {id:"agents",label:"Agents"},
   ];
   return (
-    <div style={{background:G.surface,borderBottom:`1px solid ${G.border}`,padding:"0 24px",display:"flex",overflowX:"auto"}}>
+    <div style={{background:G.surface,borderBottom:`1px solid ${G.border}`,padding:"0 24px",display:"flex",overflowX:"auto",width:"100%",flexShrink:0}}>
       {tabs.map(t=>(
         <button key={t.id} onClick={()=>setActive(t.id)} style={{
           background:"none",border:"none",cursor:"pointer",
@@ -408,7 +408,7 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
   return (
     <div style={{display:"flex",flexDirection:"column",gap:24}}>
       {/* Stat cards */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12}}>
         {[
           {label:"Open Positions",val:open.length,sub:`${10-open.length} slots free`,color:G.blue},
           {label:"Gross P&L",val:`${grossPnl>=0?"+":""}₹${Math.abs(grossPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"before charges",color:grossPnl>=0?G.green:G.red},
@@ -433,7 +433,7 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
           </div>
           <span style={{color:G.textMut,fontSize:10}}>Dynamic scan · 40s refresh · {NSE_UNIVERSE.length} stocks</span>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))"}}>
           {picks.length===0
             ? Array(5).fill(null).map((_,i)=>(
                 <div key={i} style={{padding:"20px",display:"flex",alignItems:"center",justifyContent:"center",
@@ -729,7 +729,7 @@ function NewsTab({news,picks}) {
       </div>
 
       {/* Sentiment summary */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
         {[
           {label:"Bullish",count:news.filter(n=>n.sentiment==="BULLISH"||n.sentiment==="STRONGLY_BULLISH").length,color:G.green},
           {label:"Neutral",count:news.filter(n=>n.sentiment==="NEUTRAL").length,color:G.yellow},
@@ -901,7 +901,7 @@ function PerformanceTab({evalStats,positions,agentKpi,systemState}) {
       {/* System info */}
       <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
         <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:14}}>⚙️ System Status</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:16}}>
           {[
             {k:"Mode",v:systemState?.mode??"PAPER",color:systemState?.mode==="LIVE"?G.red:G.yellow},
             {k:"Status",v:systemState?.status??"RUNNING",color:G.green},
@@ -928,7 +928,7 @@ function EvaluationTab({evalStats,evalHistory,agentScores}) {
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
       <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 20px"}}>
         <div style={{color:G.text,fontSize:12,fontWeight:600,marginBottom:12}}>How Paper Mode Evaluation Works</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:16}}>
           {[
             {icon:"📡",step:"1 — Signal",desc:"TITAN emits signal with entry, SL, target on real NSE candles (yfinance / OpenAlgo)"},
             {icon:"⏱",step:"2 — Watch",desc:"Live prices checked every 15s. Signal stays pending until SL or target is hit, or 24h expires"},
@@ -943,7 +943,7 @@ function EvaluationTab({evalStats,evalHistory,agentScores}) {
           ))}
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
         {[
           {label:"Evaluated",val:total,color:G.blue},
           {label:"Wins",val:evalStats?.wins??0,color:G.green},
@@ -1178,7 +1178,7 @@ const AGENT_LIST=[
 function AgentsTab({agentKpi,events,karmaStats}) {
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
         {AGENT_LIST.map(a=>{
           const kpi=agentKpi[a.id]??{kpi:0.72,cycles:0};
           return (
@@ -1493,7 +1493,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
               {stock.sigmaFactors&&(
                 <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
                   <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:14}}>📊 SIGMA Score Breakdown</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
                     {Object.entries(stock.sigmaFactors).map(([factor,val])=>(
                       <div key={factor} style={{background:G.bg,borderRadius:6,padding:"10px 12px"}}>
                         <div style={{color:G.textMut,fontSize:9,textTransform:"capitalize",marginBottom:4}}>{factor}</div>
@@ -1537,7 +1537,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
               {ind&&i>=0&&(
                 <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
                   <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:14}}>📈 Technical Indicators</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
                     {[
                       {key:"RSI",val:ind.rsi[i].toFixed(0),
                         color:ind.rsi[i]<35?G.green:ind.rsi[i]>65?G.red:G.yellow,
@@ -1725,7 +1725,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
                     <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 16px"}}>
                       <div style={{color:G.textSec,fontSize:12,lineHeight:1.7}}>{F.description||"No company description available."}</div>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
                       {[
                         {key:"pe_ratio",label:"P/E Ratio",val:F.pe_ratio?F.pe_ratio.toFixed(1):"—",desc:"Price-to-earnings. <15 is cheap, >30 is expensive relative to growth. Click to understand."},
                         {key:"roe",label:"ROE %",val:F.roe!=null?`${F.roe.toFixed(1)}%`:"—",desc:"Return on Equity — how well the company uses shareholder money. >15% is good; >25% is excellent. Consistent ROE > 20% is a quality indicator."},
@@ -2161,15 +2161,15 @@ export default function App() {
   const tabCounts={pos:openPositions.length,sigs:allSigs.length,news:news.length,eval:evalStats?.total_evaluated??0};
 
   return (
-    <div style={{background:G.bg,color:G.text,minHeight:"100vh",
+    <div style={{background:G.bg,color:G.text,height:"100vh",width:"100vw",
       fontFamily:"'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace",
-      fontSize:13,display:"flex",flexDirection:"column"}}>
+      fontSize:13,display:"flex",flexDirection:"column",overflow:"hidden"}}>
 
       <ConnBanner status={connStatus}/>
       <TopNav regime={regime} indices={indices} paperPnl={totalNetPnl} time={now} connStatus={connStatus} mode={systemState.mode}/>
       <TabBar active={tab} setActive={setTab} counts={tabCounts}/>
 
-      <div style={{flex:1,padding:"20px 24px",maxWidth:1400,width:"100%",margin:"0 auto"}}>
+      <div style={{flex:1,padding:"20px 24px",width:"100%",overflowY:"auto",overflowX:"hidden"}}>
         {tab==="overview"&&
           <OverviewTab picks={picks} positions={positions} allSigs={allSigs}
             evalStats={evalStats} indices={indices} candleCache={candleCache}

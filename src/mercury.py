@@ -86,6 +86,9 @@ class PaperExecutor:
 class OpenAlgoExecutor:
     """Live order execution via OpenAlgo API. Called ONLY in LIVE mode."""
 
+    MAX_RETRIES      = 3
+    RETRY_DELAY_S    = 0.5   # 500 ms between retries (MasterReference §2 critical fix)
+
     def __init__(self):
         self.host  = OPENALGO_HOST
         self.key   = OPENALGO_KEY
@@ -94,48 +97,160 @@ class OpenAlgoExecutor:
     def _headers(self):
         return {"Content-Type": "application/json", "X-API-KEY": self.key}
 
+    def _post_with_retry(self, endpoint: str, payload: dict) -> dict:
+        """POST with 3× retry + 500ms backoff. Raises on final failure."""
+        url      = f"{self.host}{endpoint}"
+        last_err = None
+        for attempt in range(1, self.MAX_RETRIES + 1):
+            try:
+                resp = requests.post(url, json=payload,
+                                     headers=self._headers(), timeout=5)
+                resp.raise_for_status()
+                return resp.json()
+            except requests.exceptions.HTTPError:
+                raise   # 4xx/5xx — don't retry broker rejections
+            except Exception as e:
+                last_err = e
+                logger.warning("[LIVE] %s attempt %d/%d failed: %s",
+                               endpoint, attempt, self.MAX_RETRIES, e)
+                if attempt < self.MAX_RETRIES:
+                    time.sleep(self.RETRY_DELAY_S)
+        raise ConnectionError(f"{endpoint} failed after {self.MAX_RETRIES} retries: {last_err}")
+
     def place_order(self, symbol: str, direction: str, qty: int,
-                    entry_price: float, order_type: str = "MARKET") -> OrderResult:
-        """Place a live order via OpenAlgo."""
+                    entry_price: float, order_type: str = "MARKET",
+                    product: str = "MIS") -> OrderResult:
+        """Place a live order via OpenAlgo with retry logic."""
         payload = {
             "symbol":    symbol,
             "exchange":  "NSE",
             "action":    direction,
             "quantity":  qty,
             "ordertype": order_type,
-            "product":   "MIS",  # intraday; use CNC for delivery
+            "product":   product,
+            "price":     str(round(entry_price, 2)) if order_type != "MARKET" else "0",
         }
         try:
-            resp = requests.post(f"{self.host}/placeorder", json=payload,
-                                 headers=self._headers(), timeout=5)
-            resp.raise_for_status()
-            data = resp.json()
-            oid  = data.get("orderid", "UNKNOWN")
-            fill = data.get("fill_price", entry_price)
-            slip = abs(fill - entry_price) / entry_price * 100
+            data = self._post_with_retry("/placeorder", payload)
+            oid        = data.get("orderid", "UNKNOWN")
+            fill       = data.get("fill_price", entry_price)
+            qty_filled = int(data.get("qty_filled") or data.get("filled_quantity") or qty)
+            slip       = abs(fill - entry_price) / entry_price * 100 if entry_price else 0
+            # Partial fill handling — broker may return qty_filled < requested qty
+            status = "FILLED" if qty_filled >= qty else ("PARTIAL" if qty_filled > 0 else "REJECTED")
+            if qty_filled < qty:
+                logger.warning("[LIVE] Partial fill: requested=%d  filled=%d  symbol=%s",
+                               qty, qty_filled, symbol)
             result = OrderResult(
-                order_id=oid, symbol=symbol, direction=direction, qty=qty,
+                order_id=oid, symbol=symbol, direction=direction, qty=qty_filled,
                 entry_price=entry_price, filled_price=fill,
-                slippage_pct=slip, status="FILLED", mode="LIVE",
-                reason=f"OpenAlgo fill @ ₹{fill:.2f}"
+                slippage_pct=slip, status=status, mode="LIVE",
+                reason=f"OpenAlgo fill @ ₹{fill:.2f} ({qty_filled}/{qty} filled)"
             )
             self.fills.append(result)
             logger.info("[LIVE] %s %s ×%d @₹%.2f", direction, symbol, qty, fill)
             return result
         except Exception as e:
-            logger.error("[LIVE] Order failed: %s", e)
+            logger.error("[LIVE] Order FAILED after retries: %s", e)
             return OrderResult(
                 order_id="FAILED", symbol=symbol, direction=direction, qty=qty,
                 entry_price=entry_price, filled_price=0, slippage_pct=0,
                 status="REJECTED", mode="LIVE", reason=str(e)
             )
 
+    def place_bracket_order(self, symbol: str, direction: str, qty: int,
+                             entry_price: float, stop_loss: float,
+                             target: float) -> OrderResult:
+        """
+        Bracket order — exchange manages SL + target automatically (MIS/BO product).
+        SL and squareoff are point distances from entry, not absolute prices.
+        """
+        sl_pts  = abs(entry_price - stop_loss)
+        tgt_pts = abs(target - entry_price)
+        payload = {
+            "symbol":      symbol,
+            "exchange":    "NSE",
+            "action":      direction,
+            "quantity":    qty,
+            "ordertype":   "MARKET",
+            "product":     "BO",
+            "price":       "0",
+            "stoploss":    str(round(sl_pts, 2)),
+            "squareoff":   str(round(tgt_pts, 2)),
+            "trailing_sl": "0",
+        }
+        try:
+            data = self._post_with_retry("/placeorder", payload)
+            oid  = data.get("orderid", "UNKNOWN")
+            fill = data.get("fill_price", entry_price)
+            result = OrderResult(
+                order_id=oid, symbol=symbol, direction=direction, qty=qty,
+                entry_price=entry_price, filled_price=fill,
+                slippage_pct=0.0, status="FILLED", mode="LIVE",
+                reason=f"Bracket order @ ₹{fill:.2f}  SL={sl_pts:.2f}pts  TGT={tgt_pts:.2f}pts"
+            )
+            self.fills.append(result)
+            logger.info("[LIVE BO] %s %s ×%d  SL=₹%.2f  TGT=₹%.2f",
+                        direction, symbol, qty, stop_loss, target)
+            return result
+        except Exception as e:
+            logger.error("[LIVE BO] Bracket order failed: %s", e)
+            return OrderResult(
+                order_id="FAILED", symbol=symbol, direction=direction, qty=qty,
+                entry_price=entry_price, filled_price=0, slippage_pct=0,
+                status="REJECTED", mode="LIVE", reason=str(e)
+            )
+
+    def modify_order(self, order_id: str, symbol: str,
+                     new_price: float = 0.0, new_trigger: float = 0.0,
+                     order_type: str = "SL") -> bool:
+        """Modify an open order — used for trailing stop-loss updates."""
+        payload = {
+            "orderid":       order_id,
+            "symbol":        symbol,
+            "exchange":      "NSE",
+            "ordertype":     order_type,
+            "price":         str(round(new_price, 2)),
+            "trigger_price": str(round(new_trigger, 2)),
+        }
+        try:
+            data = self._post_with_retry("/modifyorder", payload)
+            ok   = data.get("status", "").upper() in ("SUCCESS", "MODIFIED", "COMPLETE", "")
+            logger.info("[LIVE] ModifyOrder %s → ₹%.2f  ok=%s", order_id, new_price, ok)
+            return ok
+        except Exception as e:
+            logger.error("[LIVE] ModifyOrder failed: %s", e)
+            return False
+
+    def cancel_order(self, order_id: str, symbol: str = "") -> bool:
+        """Cancel a specific open order."""
+        payload = {"orderid": order_id, "symbol": symbol, "exchange": "NSE"}
+        try:
+            data = self._post_with_retry("/cancelorder", payload)
+            ok   = data.get("status", "").upper() in ("SUCCESS", "CANCELLED", "COMPLETE", "")
+            logger.info("[LIVE] CancelOrder %s  ok=%s", order_id, ok)
+            return ok
+        except Exception as e:
+            logger.error("[LIVE] CancelOrder failed: %s", e)
+            return False
+
     def get_positions(self) -> list:
         try:
-            resp = requests.get(f"{self.host}/positions", headers=self._headers(), timeout=5)
+            resp = requests.get(f"{self.host}/positionbook",
+                                headers=self._headers(), timeout=5)
             return resp.json().get("data", [])
         except Exception as e:
             logger.error("Positions fetch failed: %s", e)
+            return []
+
+    def get_orderbook(self) -> list:
+        """Today's full order book."""
+        try:
+            resp = requests.get(f"{self.host}/orderbook",
+                                headers=self._headers(), timeout=5)
+            return resp.json().get("data", [])
+        except Exception as e:
+            logger.error("Orderbook fetch failed: %s", e)
             return []
 
     def get_pnl(self) -> dict:
@@ -147,14 +262,24 @@ class OpenAlgoExecutor:
             return {}
 
     def mass_cancel(self) -> bool:
-        """Kill switch: cancel all open orders."""
+        """Kill switch: cancel ALL open orders immediately."""
         try:
-            resp = requests.post(f"{self.host}/cancelallorder", headers=self._headers(), timeout=10)
-            logger.critical("[LIVE] Mass cancel issued")
+            resp = requests.post(f"{self.host}/cancelallorder",
+                                 headers=self._headers(), timeout=10)
+            logger.critical("[LIVE] ⚠ MASS CANCEL issued")
             return resp.status_code == 200
         except Exception as e:
             logger.error("Mass cancel failed: %s", e)
             return False
+
+    def get_fill_stats(self) -> dict:
+        if not self.fills:
+            return {"fills": 0, "avg_slippage_bps": 0, "rejected": 0}
+        filled   = [f for f in self.fills if f.status == "FILLED"]
+        rejected = [f for f in self.fills if f.status == "REJECTED"]
+        avg_slip = sum(f.slippage_pct for f in filled) / max(len(filled), 1) * 100
+        return {"fills": len(filled), "rejected": len(rejected),
+                "avg_slippage_bps": round(avg_slip, 2)}
 
 
 class MercuryAgent:

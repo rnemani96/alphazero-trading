@@ -6,8 +6,8 @@
   <title>AlphaZero Capital v5</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{background:#0d1117;color:#e6edf3;}
-    #root{min-height:100vh;}
+    html,body{width:100%;height:100%;overflow:hidden;}
+    #root{width:100%;height:100%;}
     @keyframes spin{to{transform:rotate(360deg)}}
   </style>
 </head>
@@ -18,8 +18,6 @@
       <div style="color:#8b949e;font-family:monospace;font-size:13px;">AlphaZero Capital v5</div>
     </div>
   </div>
-
-  <!-- React 19 fully inlined — no internet needed -->
   <script>(function(w){'use strict';
 var process={env:{NODE_ENV:'production'}};
 var exports={};var module={exports:exports};
@@ -17194,21 +17192,16 @@ exports.version = "19.2.4";
 })();
 
 })(typeof window!=='undefined'?window:globalThis);</script>
-
   <script>
-    window.onerror = function(msg, src, line, col, err) {
-      document.getElementById('root').innerHTML =
-        '<div style="color:#f85149;padding:30px;font-family:monospace;font-size:12px;white-space:pre-wrap;background:#0d1117;min-height:100vh">' +
-        '<h2 style="margin-bottom:12px">\u26a0 Error</h2>' + msg +
-        '\nLine: ' + line + ', Col: ' + col +
-        (err ? '\n\n' + err.stack : '') + '</div>';
+    window.onerror = function(msg,src,line,col,err){
+      document.getElementById('root').innerHTML=
+        '<div style="color:#f85149;padding:30px;font-family:monospace;font-size:12px;white-space:pre-wrap;background:#0d1117;min-height:100vh">'+
+        '<h2 style="margin-bottom:12px">\u26a0 Error</h2>'+msg+
+        '\nLine: '+line+', Col: '+col+(err?'\n\n'+err.stack:'')+'</div>';
     };
   </script>
-
-  <!-- AlphaZero App — JSX pre-compiled, wrapped in IIFE -->
   <script>
-(function() {
-'use strict';
+(function(){'use strict';
  function _nullishCoalesce(lhs, rhsFn) { if (lhs != null) { return lhs; } else { return rhsFn(); } } function _optionalChain(ops) { let lastAccessLHS = undefined; let value = ops[0]; let i = 1; while (i < ops.length) { const op = ops[i]; const fn = ops[i + 1]; i += 2; if ((op === 'optionalAccess' || op === 'optionalCall') && value == null) { return undefined; } if (op === 'access' || op === 'optionalAccess') { lastAccessLHS = value; value = fn(value); } else if (op === 'call' || op === 'optionalCall') { value = fn((...args) => value.call(lastAccessLHS, ...args)); lastAccessLHS = undefined; } } return value; }const { useState, useEffect, useRef, useCallback } = React;
 
 // ─── Design tokens ─────────────────────────────────────────────────────────
@@ -17531,7 +17524,7 @@ function TopNav({regime,indices,paperPnl,time,connStatus,mode}) {
   const nChange=(_nullishCoalesce(indices.nifty, () => (0)))-24150,bChange=(_nullishCoalesce(indices.banknifty, () => (0)))-51840;
   return (
     React.createElement('div', { style: {background:G.surface,borderBottom:`1px solid ${G.border}`,
-      padding:"0 24px",height:54,display:"flex",alignItems:"center",gap:16},}
+      padding:"0 24px",height:54,display:"flex",alignItems:"center",gap:16,width:"100%"},}
       , React.createElement('div', { style: {display:"flex",alignItems:"center",gap:8},}
         , React.createElement('svg', { width: "20", height: "20", viewBox: "0 0 24 24"   , fill: "none",}
           , React.createElement('polygon', { points: "12,2 22,20 2,20"  , fill: G.green, opacity: ".9",})
@@ -17586,7 +17579,7 @@ function TabBar({active,setActive,counts}) {
     {id:"agents",label:"Agents"},
   ];
   return (
-    React.createElement('div', { style: {background:G.surface,borderBottom:`1px solid ${G.border}`,padding:"0 24px",display:"flex",overflowX:"auto"},}
+    React.createElement('div', { style: {background:G.surface,borderBottom:`1px solid ${G.border}`,padding:"0 24px",display:"flex",overflowX:"auto",width:"100%",flexShrink:0},}
       , tabs.map(t=>(
         React.createElement('button', { key: t.id, onClick: ()=>setActive(t.id), style: {
           background:"none",border:"none",cursor:"pointer",
@@ -17619,7 +17612,7 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
   return (
     React.createElement('div', { style: {display:"flex",flexDirection:"column",gap:24},}
       /* Stat cards */
-      , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12},}
+      , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12},}
         , [
           {label:"Open Positions",val:open.length,sub:`${10-open.length} slots free`,color:G.blue},
           {label:"Gross P&L",val:`${grossPnl>=0?"+":""}₹${Math.abs(grossPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"before charges",color:grossPnl>=0?G.green:G.red},
@@ -17644,7 +17637,7 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
           )
           , React.createElement('span', { style: {color:G.textMut,fontSize:10},}, "Dynamic scan · 40s refresh · "      , NSE_UNIVERSE.length, " stocks" )
         )
-        , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(5,1fr)"},}
+        , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))"},}
           , picks.length===0
             ? Array(5).fill(null).map((_,i)=>(
                 React.createElement('div', { key: i, style: {padding:"20px",display:"flex",alignItems:"center",justifyContent:"center",
@@ -17940,7 +17933,7 @@ function NewsTab({news,picks}) {
       )
 
       /* Sentiment summary */
-      , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12},}
+      , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12},}
         , [
           {label:"Bullish",count:news.filter(n=>n.sentiment==="BULLISH"||n.sentiment==="STRONGLY_BULLISH").length,color:G.green},
           {label:"Neutral",count:news.filter(n=>n.sentiment==="NEUTRAL").length,color:G.yellow},
@@ -18112,7 +18105,7 @@ function PerformanceTab({evalStats,positions,agentKpi,systemState}) {
       /* System info */
       , React.createElement('div', { style: {background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"},}
         , React.createElement('div', { style: {color:G.text,fontSize:13,fontWeight:600,marginBottom:14},}, "⚙️ System Status"  )
-        , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16},}
+        , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:16},}
           , [
             {k:"Mode",v:_nullishCoalesce(_optionalChain([systemState, 'optionalAccess', _28 => _28.mode]), () => ("PAPER")),color:_optionalChain([systemState, 'optionalAccess', _29 => _29.mode])==="LIVE"?G.red:G.yellow},
             {k:"Status",v:_nullishCoalesce(_optionalChain([systemState, 'optionalAccess', _30 => _30.status]), () => ("RUNNING")),color:G.green},
@@ -18139,7 +18132,7 @@ function EvaluationTab({evalStats,evalHistory,agentScores}) {
     React.createElement('div', { style: {display:"flex",flexDirection:"column",gap:20},}
       , React.createElement('div', { style: {background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 20px"},}
         , React.createElement('div', { style: {color:G.text,fontSize:12,fontWeight:600,marginBottom:12},}, "How Paper Mode Evaluation Works"    )
-        , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16},}
+        , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:16},}
           , [
             {icon:"📡",step:"1 — Signal",desc:"TITAN emits signal with entry, SL, target on real NSE candles (yfinance / OpenAlgo)"},
             {icon:"⏱",step:"2 — Watch",desc:"Live prices checked every 15s. Signal stays pending until SL or target is hit, or 24h expires"},
@@ -18154,7 +18147,7 @@ function EvaluationTab({evalStats,evalHistory,agentScores}) {
           ))
         )
       )
-      , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12},}
+      , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12},}
         , [
           {label:"Evaluated",val:total,color:G.blue},
           {label:"Wins",val:_nullishCoalesce(_optionalChain([evalStats, 'optionalAccess', _34 => _34.wins]), () => (0)),color:G.green},
@@ -18389,7 +18382,7 @@ const AGENT_LIST=[
 function AgentsTab({agentKpi,events,karmaStats}) {
   return (
     React.createElement('div', { style: {display:"flex",flexDirection:"column",gap:20},}
-      , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12},}
+      , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12},}
         , AGENT_LIST.map(a=>{
           const kpi=_nullishCoalesce(agentKpi[a.id], () => ({kpi:0.72,cycles:0}));
           return (
@@ -18704,7 +18697,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
               , stock.sigmaFactors&&(
                 React.createElement('div', { style: {background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"},}
                   , React.createElement('div', { style: {color:G.text,fontSize:13,fontWeight:600,marginBottom:14},}, "📊 SIGMA Score Breakdown"   )
-                  , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10},}
+                  , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10},}
                     , Object.entries(stock.sigmaFactors).map(([factor,val])=>(
                       React.createElement('div', { key: factor, style: {background:G.bg,borderRadius:6,padding:"10px 12px"},}
                         , React.createElement('div', { style: {color:G.textMut,fontSize:9,textTransform:"capitalize",marginBottom:4},}, factor)
@@ -18748,7 +18741,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
               , ind&&i>=0&&(
                 React.createElement('div', { style: {background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"},}
                   , React.createElement('div', { style: {color:G.text,fontSize:13,fontWeight:600,marginBottom:14},}, "📈 Technical Indicators"  )
-                  , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10},}
+                  , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10},}
                     , [
                       {key:"RSI",val:ind.rsi[i].toFixed(0),
                         color:ind.rsi[i]<35?G.green:ind.rsi[i]>65?G.red:G.yellow,
@@ -18936,7 +18929,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
                     , React.createElement('div', { style: {background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 16px"},}
                       , React.createElement('div', { style: {color:G.textSec,fontSize:12,lineHeight:1.7},}, F.description||"No company description available.")
                     )
-                    , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10},}
+                    , React.createElement('div', { style: {display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10},}
                       , [
                         {key:"pe_ratio",label:"P/E Ratio",val:F.pe_ratio?F.pe_ratio.toFixed(1):"—",desc:"Price-to-earnings. <15 is cheap, >30 is expensive relative to growth. Click to understand."},
                         {key:"roe",label:"ROE %",val:F.roe!=null?`${F.roe.toFixed(1)}%`:"—",desc:"Return on Equity — how well the company uses shareholder money. >15% is good; >25% is excellent. Consistent ROE > 20% is a quality indicator."},
@@ -19372,15 +19365,15 @@ function App() {
   const tabCounts={pos:openPositions.length,sigs:allSigs.length,news:news.length,eval:_nullishCoalesce(_optionalChain([evalStats, 'optionalAccess', _89 => _89.total_evaluated]), () => (0))};
 
   return (
-    React.createElement('div', { style: {background:G.bg,color:G.text,minHeight:"100vh",
+    React.createElement('div', { style: {background:G.bg,color:G.text,height:"100vh",width:"100vw",
       fontFamily:"'SF Mono','Fira Code','JetBrains Mono',Consolas,monospace",
-      fontSize:13,display:"flex",flexDirection:"column"},}
+      fontSize:13,display:"flex",flexDirection:"column",overflow:"hidden"},}
 
       , React.createElement(ConnBanner, { status: connStatus,})
       , React.createElement(TopNav, { regime: regime, indices: indices, paperPnl: totalNetPnl, time: now, connStatus: connStatus, mode: systemState.mode,})
       , React.createElement(TabBar, { active: tab, setActive: setTab, counts: tabCounts,})
 
-      , React.createElement('div', { style: {flex:1,padding:"20px 24px",maxWidth:1400,width:"100%",margin:"0 auto"},}
+      , React.createElement('div', { style: {flex:1,padding:"20px 24px",width:"100%",overflowY:"auto",overflowX:"hidden"},}
         , tab==="overview"&&
           React.createElement(OverviewTab, { picks: picks, positions: positions, allSigs: allSigs,
             evalStats: evalStats, indices: indices, candleCache: candleCache,
@@ -19449,7 +19442,6 @@ function App() {
   );
 }
 
-// ── Mount AlphaZero App ──────────────────────────────────────────────────
 try {
   var _root = ReactDOM.createRoot(document.getElementById('root'));
   _root.render(React.createElement(App, null));
@@ -19460,7 +19452,6 @@ try {
     '<h2 style="margin-bottom:12px">\u26a0 Render Error</h2>' +
     e.message + '\n\n' + e.stack + '</div>';
 }
-
 })();
   </script>
 </body>

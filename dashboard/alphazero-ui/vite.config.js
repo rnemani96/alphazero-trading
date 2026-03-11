@@ -7,29 +7,31 @@ export default defineConfig({
 
   server: {
     port: 3000,
-    open: true, // auto-opens browser on npm run dev
+    open: false,  // main.py opens the browser after health-check — don't double-open
 
     proxy: {
-      // WebSocket — must use ws: true
+      // ── WebSocket (live quotes, agent events) ────────────────────────────
       '/ws': {
         target: 'ws://localhost:8000',
         ws: true,
         changeOrigin: true,
       },
-      // REST endpoints — proxy to FastAPI backend
+      // ── REST API endpoints served by FastAPI backend ─────────────────────
       '/quotes':     { target: 'http://localhost:8000', changeOrigin: true },
       '/signals':    { target: 'http://localhost:8000', changeOrigin: true },
+      '/signal':     { target: 'http://localhost:8000', changeOrigin: true },
       '/indices':    { target: 'http://localhost:8000', changeOrigin: true },
-      '/portfolio':  { target: 'http://localhost:8000', changeOrigin: true },
       '/candles':    { target: 'http://localhost:8000', changeOrigin: true },
+      '/portfolio':  { target: 'http://localhost:8000', changeOrigin: true },
       '/evaluation': { target: 'http://localhost:8000', changeOrigin: true },
       '/market':     { target: 'http://localhost:8000', changeOrigin: true },
-      '/signal':     { target: 'http://localhost:8000', changeOrigin: true },
-    }
+      '/api':        { target: 'http://localhost:8000', changeOrigin: true },
+    },
   },
 
   build: {
-    outDir: '../frontend/dist', // build output goes to dashboard/frontend/dist
+    // Output directly to dashboard/frontend/dist where backend.py serves from
+    outDir: '../frontend/dist',
     emptyOutDir: true,
-  }
+  },
 })

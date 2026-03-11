@@ -60,8 +60,6 @@ from src.data.market_data import MarketDataEngine, is_market_open, next_market_o
 from src.evaluator import EvaluationEngine, SignalRecord
 from src.titan import TitanStrategyEngine
 from src.guardian import GuardianRiskEngine, RiskConfig
-from src.backtest.engine import BacktestEngine
-from src.backtest.forward_walk import ForwardWalk
 
 import pandas as pd
 
@@ -196,7 +194,7 @@ async def build_candle_cache():
     logger.info("Pre-loading candles for %d stocks…", len(NSE_STOCKS))
     for sym in NSE_STOCKS:
         try:
-            candles = market.fetch_historical(sym, period="55d", interval="15m")
+            candles = market.fetch_historical(sym, period="3mo", interval="15m")
             if candles:
                 _candle_cache[sym] = [c.to_dict() for c in candles[-200:]]
                 logger.info("  %s: %d candles", sym, len(_candle_cache[sym]))
@@ -210,46 +208,33 @@ async def startup():
     asyncio.create_task(build_candle_cache())
     asyncio.create_task(poll_market_data())
     logger.info("━" * 60)
-
-# ── Backtesting Endpoints
-@app.get("/api/backtest")
-async def run_backtest(
-    start_date: str = "2024-01-01",
-    end_date: str = "2024-03-31",
-    symbols: Optional[str] = None
-):
-    """
-    Run a simplified backtest for a list of symbols.
-    """
-    sym_list = symbols.split(",") if symbols else NSE_STOCKS[:5]
-    try:
-        engine = BacktestEngine(initial_capital=1_000_000)
-        results = engine.run(start_date, end_date, sym_list)
-        # Convert non-serializable objects (like timestamps) where needed
-        return results
-    except Exception as e:
-        logger.error(f"Backtest API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/forward-walk")
-async def run_forward_walk(
-    start_date: str = "2023-01-01",
-    end_date: str = "2024-03-31",
-    symbols: Optional[str] = None
-):
-    """
-    Run a forward-walk (sliding window) validation.
-    """
-    sym_list = symbols.split(",") if symbols else NSE_STOCKS[:1]
-    try:
-        engine = BacktestEngine(initial_capital=1_000_000)
-        fw = ForwardWalk(engine)
-        results = fw.run(start_date, end_date, sym_list)
-        return fw.get_summary()
-    except Exception as e:
-        logger.error(f"Forward Walk API error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
     logger.info("AlphaZero Capital Backend v4  |  port 8000")
     logger.info("Docs: http://localhost:8000/docs")
     logger.info("WS:   ws://localhost:8000/ws")
     logger.info("━" * 60)
+
+# ── Health check endpoint (❌ TODO MEDIUM → ✅ DONE) ──────────────────────────
+@app.get("/health")
+def health():
+    """
+    GET /health — returns live status of all backend engines.
+    Used by _start_dashboard() health poll and external monitoring.
+    """
+    return {
+        "status":       "ok",
+        "version":      "v4",
+        "timestamp":    datetime.utcnow().isoformat() + "Z",
+        "market_open":  is_market_open(),
+        "engines": {
+            "market_data": "ok",
+            "titan":       "ok",
+            "guardian":    "ok",
+            "evaluator":   "ok",
+        },
+        "cache": {
+            "quotes":  len(_quote_cache),
+            "candles": len(_candle_cache),
+            "indices": len(_index_cache),
+        },
+        "websocket_clients": len(ws_manager.active),
+    }

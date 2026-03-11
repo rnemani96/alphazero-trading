@@ -19,8 +19,11 @@ FIXES vs previous version:
 
 import sys, os, time, signal, logging, argparse, threading, subprocess
 import webbrowser, time
+import urllib.request
 from datetime import datetime
 from typing import Dict, List, Any
+from logging.handlers import TimedRotatingFileHandler
+import shutil
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
@@ -66,12 +69,22 @@ from src.monitoring import state as live_state
 
 os.makedirs(os.path.join(ROOT, 'logs'), exist_ok=True)
 os.makedirs(os.path.join(ROOT, 'logs', 'reports'), exist_ok=True)
+_log_file = os.path.join(ROOT, 'logs', 'alphazero.log')
+_file_handler = TimedRotatingFileHandler(
+    _log_file,
+    when='midnight',      # roll over at midnight IST
+    interval=1,           # every 1 day
+    backupCount=7,        # keep 7 days of logs, delete older ones
+    encoding='utf-8',
+)
+_file_handler.suffix = "%Y-%m-%d"   # alphazero.log.2026-03-11
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(name)s] %(levelname)s: %(message)s',
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler(os.path.join(ROOT, 'logs', 'alphazero.log'), encoding='utf-8'),
+        _file_handler,
     ]
 )
 logger = logging.getLogger('MAIN')
@@ -201,50 +214,158 @@ class AlphaZeroSystem:
     # ── Main loop ─────────────────────────────────────────────────────────────
 
     def _start_dashboard(self):
-        """Start the dashboard backend + React frontend (Vite dev server) automatically."""
+        """
+        Start FastAPI backend + Vite React frontend, then open browser.
 
-        # ── 1. Start FastAPI backend via uvicorn on port 8000 ──
-        backend_module = 'dashboard.backend:app'
-        try:
-            backend_proc = subprocess.Popen(
-                [sys.executable, '-m', 'uvicorn', backend_module,
-                 '--host', '0.0.0.0', '--port', '8000', '--log-level', 'warning'],
-                cwd=ROOT,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            self._dashboard_backend_proc = backend_proc
-            logger.info("✅ Dashboard backend started (FastAPI/uvicorn on :8000)")
-        except Exception as e:
-            logger.warning(f"Dashboard backend failed to start: {e}")
+        Strategy:
+          1. Start uvicorn backend on port 8000
+          2a. If Node/npm available → start Vite dev server on port 3000
+          2b. Else → open alphazero_v5.html directly (zero-dependency fallback)
+          3. Wait up to 15s for backend to become healthy
+          4. Open browser to the correct URL
+        """
+        IS_WIN = sys.platform == "win32"
+        DASH   = os.path.join(ROOT, 'dashboard')
+        PORT_BACKEND  = getattr(settings, 'DASHBOARD_PORT',  8000)
+        PORT_FRONTEND = 3000
+        HOST          = getattr(settings, 'DASHBOARD_HOST', 'localhost')
 
-        # ── 2. Start Vite React frontend (dashboard/alphazero-ui) ────
-        frontend_dir = os.path.join(ROOT, 'dashboard', 'alphazero-ui')
-        if os.path.exists(os.path.join(frontend_dir, 'package.json')):
+        # ── 1. Start FastAPI backend via uvicorn ─────────────────────────────
+        backend_py = os.path.join(DASH, 'backend.py')
+        if not os.path.exists(backend_py):
+            logger.warning("⚠  dashboard/backend.py not found — skipping auto-start")
+        else:
             try:
-                # Use 'npm' on Windows, works everywhere
-                npm_cmd = 'npm.cmd' if os.name == 'nt' else 'npm'
-                frontend_proc = subprocess.Popen(
-                    [npm_cmd, 'run', 'dev', '--', '--port', '5173'],
-                    cwd=frontend_dir,
+                env = os.environ.copy()
+                env['PYTHONPATH'] = ROOT           # so `src.*` imports resolve
+
+                backend_cmd = [
+                    sys.executable, '-m', 'uvicorn',
+                    'dashboard.backend:app',
+                    '--host', '0.0.0.0',
+                    '--port', str(PORT_BACKEND),
+                    '--log-level', 'warning',
+                ]
+                self._dashboard_backend_proc = subprocess.Popen(
+                    backend_cmd,
+                    cwd=ROOT,
+                    env=env,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1,
+                )
+
+                # Stream backend logs in background thread
+                def _stream_backend():
+                    for line in self._dashboard_backend_proc.stdout:
+                        tag = '[BACKEND]'
+                        logger.info(f"  {tag}  {line.rstrip()}")
+                threading.Thread(target=_stream_backend, daemon=True).start()
+
+                logger.info(f"✅ Backend started  →  http://{HOST}:{PORT_BACKEND}")
+            except Exception as exc:
+                logger.warning(f"⚠  Backend failed to start: {exc}")
+
+        # ── 2. Start Vite frontend (or fall back to standalone HTML) ──────────
+        ui_dir       = os.path.join(DASH, 'alphazero-ui')
+        pkg_json     = os.path.join(ui_dir, 'package.json')
+        standalone   = os.path.join(DASH, 'alphazero_v5.html')
+        npm_cmd      = 'npm.cmd' if IS_WIN else 'npm'
+        node_ok      = shutil.which('node') is not None
+        npm_ok       = shutil.which(npm_cmd) is not None
+
+        self._dashboard_frontend_proc = None
+        self._frontend_url            = f"http://{HOST}:{PORT_BACKEND}"  # default: backend serves UI
+
+        if node_ok and npm_ok and os.path.exists(pkg_json):
+            try:
+                # Auto-install node_modules if missing
+                node_modules = os.path.join(ui_dir, 'node_modules')
+                if not os.path.exists(node_modules):
+                    logger.info("📦 node_modules missing — running npm install (one time)…")
+                    subprocess.run(
+                        [npm_cmd, 'install', '--silent'],
+                        cwd=ui_dir,
+                        check=True,
+                        timeout=120,
+                    )
+                    logger.info("✅ npm install complete")
+
+                # Start Vite dev server
+                self._dashboard_frontend_proc = subprocess.Popen(
+                    [npm_cmd, 'run', 'dev'],
+                    cwd=ui_dir,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
-                self._dashboard_frontend_proc = frontend_proc
-                logger.info("✅ Dashboard frontend starting (Vite dev server on :5173)")
-            except Exception as e:
-                logger.warning(f"Dashboard frontend failed to start: {e}")
+                self._frontend_url = f"http://{HOST}:{PORT_FRONTEND}"
+                logger.info(f"✅ Vite frontend started  →  {self._frontend_url}")
+
+            except subprocess.TimeoutExpired:
+                logger.warning("⚠  npm install timed out — will open backend URL instead")
+            except Exception as exc:
+                logger.warning(f"⚠  Vite frontend failed to start: {exc}")
+
+        elif os.path.exists(standalone):
+            # No Node.js — open the standalone pre-compiled HTML directly
+            self._frontend_url = f"file:///{standalone.replace(os.sep, '/')}"
+            logger.info(f"ℹ  Node.js not found — will open standalone HTML: {standalone}")
+
         else:
-            logger.warning("dashboard/alphazero-ui/package.json not found; skipping frontend start")
+            logger.warning("⚠  No frontend available (no Node.js, no alphazero_v5.html)")
 
-        # ── 3. Open browser after short delay ───────────────
-        def _open_browser():
-            time.sleep(4)  # wait for backend + Vite to initialise
-            url = "http://localhost:8000"
-            webbrowser.open(url)
-            logger.info(f"🌐 Browser opened at {url}")
+        # ── 3. Wait for backend + open browser ───────────────────────────────
+        def _wait_and_open():
+            backend_url = f"http://{HOST}:{PORT_BACKEND}/"
+            deadline    = time.time() + 20          # wait up to 20 seconds
 
-        threading.Thread(target=_open_browser, daemon=True).start()
+            # Poll backend health
+            ready = False
+            while time.time() < deadline:
+                try:
+                    urllib.request.urlopen(backend_url, timeout=2)
+                    ready = True
+                    break
+                except Exception:
+                    time.sleep(0.8)
+
+            if ready:
+                logger.info(f"✅ Backend healthy — opening browser at {self._frontend_url}")
+            else:
+                logger.warning("⚠  Backend did not respond in 20s — opening browser anyway")
+
+            # Extra 1s for Vite to finish HMR setup
+            if self._dashboard_frontend_proc is not None:
+                time.sleep(1.5)
+
+            try:
+                webbrowser.open(self._frontend_url)
+                logger.info(f"🌐 Browser opened → {self._frontend_url}")
+            except Exception as exc:
+                logger.warning(f"⚠  Could not open browser: {exc}")
+
+        threading.Thread(target=_wait_and_open, daemon=True).start()
+
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def _stop_dashboard(self):
+        """Gracefully terminate backend and frontend processes."""
+        for attr, label in [
+            ('_dashboard_backend_proc',  'Backend'),
+            ('_dashboard_frontend_proc', 'Frontend'),
+        ]:
+            proc = getattr(self, attr, None)
+            if proc is not None:
+                try:
+                    proc.terminate()
+                    proc.wait(timeout=5)
+                    logger.info(f"  ✅ {label} process terminated")
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    logger.info(f"  ✅ {label} process killed")
+                except Exception:
+                    pass
 
     def run(self):
         self.running = True
@@ -917,6 +1038,8 @@ class AlphaZeroSystem:
     def _shutdown_handler(self, sig, frame):
         logger.info("\n⛔ Shutdown signal received")
         self.running = False
+        self._stop_dashboard()
+        self.event_bus.stop()
         if hasattr(self, '_dashboard_proc'):
             try: self._dashboard_proc.terminate()
             except: pass
