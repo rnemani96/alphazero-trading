@@ -302,3 +302,1377 @@ Traceback (most recent call last):
   File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\generic.py", line 1513, in __bool__
     raise ValueError(
 ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 39-98: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 399, in _run_iteration
+    logger.info(f"\n{'\u2500'*60}\nIteration {self.iteration}  |  {datetime.now().strftime('%H:%M:%S')}")
+Message: '\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u250
+0\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u25
+00\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2
+500\u2500\u2500\nIteration 3  |  16:54:09'
+Arguments: ()
+2026-03-11 16:54:36,661 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,661 [yfinance] ERROR: ['LT.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,667 [src.data.fetch] WARNING: No candle data for LT (LT.NS)
+2026-03-11 16:54:36,701 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,701 [yfinance] ERROR: ['MARUTI.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,707 [src.data.fetch] WARNING: No candle data for MARUTI (MARUTI.NS)
+2026-03-11 16:54:36,732 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,732 [yfinance] ERROR: ['BAJFINANCE.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,737 [src.data.fetch] WARNING: No candle data for BAJFINANCE (BAJFINANCE.NS)
+2026-03-11 16:54:36,750 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,750 [yfinance] ERROR: ['BAJAJFINSV.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,755 [src.data.fetch] WARNING: No candle data for BAJAJFINSV (BAJAJFINSV.NS)
+2026-03-11 16:54:36,767 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,767 [yfinance] ERROR: ['TATAMOTORS.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,772 [src.data.fetch] WARNING: No candle data for TATAMOTORS (TATAMOTORS.NS)
+2026-03-11 16:54:36,784 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,784 [yfinance] ERROR: ['TATASTEEL.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,788 [src.data.fetch] WARNING: No candle data for TATASTEEL (TATASTEEL.NS)
+2026-03-11 16:54:36,800 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,800 [yfinance] ERROR: ['SUNPHARMA.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,803 [src.data.fetch] WARNING: No candle data for SUNPHARMA (SUNPHARMA.NS)
+2026-03-11 16:54:36,815 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,815 [yfinance] ERROR: ['NTPC.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,817 [src.data.fetch] WARNING: No candle data for NTPC (NTPC.NS)
+2026-03-11 16:54:36,828 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,829 [yfinance] ERROR: ['POWERGRID.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,838 [src.data.fetch] WARNING: No candle data for POWERGRID (POWERGRID.NS)
+2026-03-11 16:54:36,852 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,852 [yfinance] ERROR: ['TECHM.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,862 [src.data.fetch] WARNING: No candle data for TECHM (TECHM.NS)
+2026-03-11 16:54:36,877 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,878 [yfinance] ERROR: ['ULTRACEMCO.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,887 [src.data.fetch] WARNING: No candle data for ULTRACEMCO (ULTRACEMCO.NS)
+2026-03-11 16:54:36,902 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,903 [yfinance] ERROR: ['ASIANPAINT.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,911 [src.data.fetch] WARNING: No candle data for ASIANPAINT (ASIANPAINT.NS)
+2026-03-11 16:54:36,927 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,928 [yfinance] ERROR: ['HINDALCO.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,936 [src.data.fetch] WARNING: No candle data for HINDALCO (HINDALCO.NS)
+2026-03-11 16:54:36,950 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,950 [yfinance] ERROR: ['JSWSTEEL.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,954 [src.data.fetch] WARNING: No candle data for JSWSTEEL (JSWSTEEL.NS)
+2026-03-11 16:54:36,966 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,966 [yfinance] ERROR: ['ONGC.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,970 [src.data.fetch] WARNING: No candle data for ONGC (ONGC.NS)
+2026-03-11 16:54:36,982 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,982 [yfinance] ERROR: ['COALINDIA.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:36,984 [src.data.fetch] WARNING: No candle data for COALINDIA (COALINDIA.NS)
+2026-03-11 16:54:36,998 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:36,998 [yfinance] ERROR: ['GRASIM.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,001 [src.data.fetch] WARNING: No candle data for GRASIM (GRASIM.NS)
+2026-03-11 16:54:37,012 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,012 [yfinance] ERROR: ['DRREDDY.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,014 [src.data.fetch] WARNING: No candle data for DRREDDY (DRREDDY.NS)
+2026-03-11 16:54:37,026 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,026 [yfinance] ERROR: ['CIPLA.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,028 [src.data.fetch] WARNING: No candle data for CIPLA (CIPLA.NS)
+2026-03-11 16:54:37,039 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,039 [yfinance] ERROR: ['DIVISLAB.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,041 [src.data.fetch] WARNING: No candle data for DIVISLAB (DIVISLAB.NS)
+2026-03-11 16:54:37,053 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,053 [yfinance] ERROR: ['ADANIPORTS.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,056 [src.data.fetch] WARNING: No candle data for ADANIPORTS (ADANIPORTS.NS)
+2026-03-11 16:54:37,068 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,068 [yfinance] ERROR: ['SIEMENS.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,072 [src.data.fetch] WARNING: No candle data for SIEMENS (SIEMENS.NS)
+2026-03-11 16:54:37,084 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,084 [yfinance] ERROR: ['NESTLEIND.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,088 [src.data.fetch] WARNING: No candle data for NESTLEIND (NESTLEIND.NS)
+2026-03-11 16:54:37,100 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,100 [yfinance] ERROR: ['BRITANNIA.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,104 [src.data.fetch] WARNING: No candle data for BRITANNIA (BRITANNIA.NS)
+2026-03-11 16:54:37,117 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,117 [yfinance] ERROR: ['M&M.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,121 [src.data.fetch] WARNING: No candle data for M&M (M&M.NS)
+2026-03-11 16:54:37,132 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,132 [yfinance] ERROR: ['BAJAJ-AUTO.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,135 [src.data.fetch] WARNING: No candle data for BAJAJ-AUTO (BAJAJ-AUTO.NS)
+2026-03-11 16:54:37,147 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,147 [yfinance] ERROR: ['HEROMOTOCO.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,160 [src.data.fetch] WARNING: No candle data for HEROMOTOCO (HEROMOTOCO.NS)
+2026-03-11 16:54:37,173 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,173 [yfinance] ERROR: ['BIOCON.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,175 [src.data.fetch] WARNING: No candle data for BIOCON (BIOCON.NS)
+2026-03-11 16:54:37,187 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,187 [yfinance] ERROR: ['DABUR.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,189 [src.data.fetch] WARNING: No candle data for DABUR (DABUR.NS)
+2026-03-11 16:54:37,202 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,202 [yfinance] ERROR: ['MUTHOOTFIN.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,206 [src.data.fetch] WARNING: No candle data for MUTHOOTFIN (MUTHOOTFIN.NS)
+2026-03-11 16:54:37,217 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,217 [yfinance] ERROR: ['CHOLAFIN.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,221 [src.data.fetch] WARNING: No candle data for CHOLAFIN (CHOLAFIN.NS)
+2026-03-11 16:54:37,232 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,232 [yfinance] ERROR: ['INDUSTOWER.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,235 [src.data.fetch] WARNING: No candle data for INDUSTOWER (INDUSTOWER.NS)
+2026-03-11 16:54:37,246 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,246 [yfinance] ERROR: ['LTIM.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,248 [src.data.fetch] WARNING: No candle data for LTIM (LTIM.NS)
+2026-03-11 16:54:37,260 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,260 [yfinance] ERROR: ['VEDL.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,262 [src.data.fetch] WARNING: No candle data for VEDL (VEDL.NS)
+2026-03-11 16:54:37,274 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,274 [yfinance] ERROR: ['TITAN.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,276 [src.data.fetch] WARNING: No candle data for TITAN (TITAN.NS)
+2026-03-11 16:54:37,288 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,288 [yfinance] ERROR: ['INDUSINDBK.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,290 [src.data.fetch] WARNING: No candle data for INDUSINDBK (INDUSINDBK.NS)
+2026-03-11 16:54:37,302 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,302 [yfinance] ERROR: ['APOLLOHOSP.NS']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,305 [src.data.fetch] WARNING: No candle data for APOLLOHOSP (APOLLOHOSP.NS)
+2026-03-11 16:54:37,317 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,317 [yfinance] ERROR: ['^GSPC']: TypeError("'NoneType' object is not subscriptable")
+2026-03-11 16:54:37,332 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:54:37,332 [yfinance] ERROR: ['BZ=F']: TypeError("'NoneType' object is not subscriptable")
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u25b6' in position 63: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 408, in _run_iteration
+    macro_context        = self.agents['ORACLE'].analyze(market_data)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 137, in analyze
+    self._refresh()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 173, in _refresh
+    logger.info(
+Message: 'ORACLE \u25b6 bias=%s risk=%s size_mult=%.2f'
+Arguments: ('BULLISH', 'MEDIUM', 0.9)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f52d' in position 39: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 412, in _run_iteration
+    logger.info(
+Message: '  \U0001f52d ORACLE \u2192 bias=BULLISH risk=MEDIUM size_mult=0.90 VIX=15.0'
+Arguments: ()
+2026-03-11 16:54:37,348 [src.data.fetch] ERROR: Failed to fetch options chain for RELIANCE: No module named 'nsepython'
+2026-03-11 16:54:37,348 [src.data.fetch] ERROR: Failed to fetch options chain for TCS: No module named 'nsepython'
+2026-03-11 16:54:37,349 [src.data.fetch] ERROR: Failed to fetch options chain for HDFCBANK: No module named 'nsepython'
+2026-03-11 16:54:37,349 [src.data.fetch] ERROR: Failed to fetch options chain for INFY: No module named 'nsepython'
+2026-03-11 16:54:37,350 [src.data.fetch] ERROR: Failed to fetch options chain for ICICIBANK: No module named 'nsepython'
+2026-03-11 16:54:37,351 [src.data.fetch] ERROR: Failed to fetch options chain for KOTAKBANK: No module named 'nsepython'
+2026-03-11 16:54:37,351 [src.data.fetch] ERROR: Failed to fetch options chain for HINDUNILVR: No module named 'nsepython'
+2026-03-11 16:54:37,352 [src.data.fetch] ERROR: Failed to fetch options chain for SBIN: No module named 'nsepython'
+2026-03-11 16:54:37,353 [src.data.fetch] ERROR: Failed to fetch options chain for BHARTIARTL: No module named 'nsepython'
+2026-03-11 16:54:37,353 [src.data.fetch] ERROR: Failed to fetch options chain for ITC: No module named 'nsepython'
+2026-03-11 16:54:37,354 [src.data.fetch] ERROR: Failed to fetch options chain for WIPRO: No module named 'nsepython'
+2026-03-11 16:54:37,354 [src.data.fetch] ERROR: Failed to fetch options chain for HCLTECH: No module named 'nsepython'
+2026-03-11 16:54:37,355 [src.data.fetch] ERROR: Failed to fetch options chain for AXISBANK: No module named 'nsepython'
+2026-03-11 16:54:37,355 [src.data.fetch] ERROR: Failed to fetch options chain for LT: No module named 'nsepython'
+2026-03-11 16:54:37,356 [src.data.fetch] ERROR: Failed to fetch options chain for MARUTI: No module named 'nsepython'
+2026-03-11 16:54:37,356 [src.data.fetch] ERROR: Failed to fetch options chain for BAJFINANCE: No module named 'nsepython'
+2026-03-11 16:54:37,357 [src.data.fetch] ERROR: Failed to fetch options chain for BAJAJFINSV: No module named 'nsepython'
+2026-03-11 16:54:37,358 [src.data.fetch] ERROR: Failed to fetch options chain for TATAMOTORS: No module named 'nsepython'
+2026-03-11 16:54:37,358 [src.data.fetch] ERROR: Failed to fetch options chain for TATASTEEL: No module named 'nsepython'
+2026-03-11 16:54:37,359 [src.data.fetch] ERROR: Failed to fetch options chain for SUNPHARMA: No module named 'nsepython'
+2026-03-11 16:54:37,359 [src.data.fetch] ERROR: Failed to fetch options chain for NTPC: No module named 'nsepython'
+2026-03-11 16:54:37,360 [src.data.fetch] ERROR: Failed to fetch options chain for POWERGRID: No module named 'nsepython'
+2026-03-11 16:54:37,360 [src.data.fetch] ERROR: Failed to fetch options chain for TECHM: No module named 'nsepython'
+2026-03-11 16:54:37,361 [src.data.fetch] ERROR: Failed to fetch options chain for ULTRACEMCO: No module named 'nsepython'
+2026-03-11 16:54:37,362 [src.data.fetch] ERROR: Failed to fetch options chain for ASIANPAINT: No module named 'nsepython'
+2026-03-11 16:54:37,362 [src.data.fetch] ERROR: Failed to fetch options chain for HINDALCO: No module named 'nsepython'
+2026-03-11 16:54:37,363 [src.data.fetch] ERROR: Failed to fetch options chain for JSWSTEEL: No module named 'nsepython'
+2026-03-11 16:54:37,363 [src.data.fetch] ERROR: Failed to fetch options chain for ONGC: No module named 'nsepython'
+2026-03-11 16:54:37,364 [src.data.fetch] ERROR: Failed to fetch options chain for COALINDIA: No module named 'nsepython'
+2026-03-11 16:54:37,364 [src.data.fetch] ERROR: Failed to fetch options chain for GRASIM: No module named 'nsepython'
+2026-03-11 16:54:37,365 [src.data.fetch] ERROR: Failed to fetch options chain for DRREDDY: No module named 'nsepython'
+2026-03-11 16:54:37,366 [src.data.fetch] ERROR: Failed to fetch options chain for CIPLA: No module named 'nsepython'
+2026-03-11 16:54:37,366 [src.data.fetch] ERROR: Failed to fetch options chain for DIVISLAB: No module named 'nsepython'
+2026-03-11 16:54:37,367 [src.data.fetch] ERROR: Failed to fetch options chain for ADANIPORTS: No module named 'nsepython'
+2026-03-11 16:54:37,367 [src.data.fetch] ERROR: Failed to fetch options chain for SIEMENS: No module named 'nsepython'
+2026-03-11 16:54:37,368 [src.data.fetch] ERROR: Failed to fetch options chain for NESTLEIND: No module named 'nsepython'
+2026-03-11 16:54:37,369 [src.data.fetch] ERROR: Failed to fetch options chain for BRITANNIA: No module named 'nsepython'
+2026-03-11 16:54:37,370 [src.data.fetch] ERROR: Failed to fetch options chain for M&M: No module named 'nsepython'
+2026-03-11 16:54:37,370 [src.data.fetch] ERROR: Failed to fetch options chain for BAJAJ-AUTO: No module named 'nsepython'
+2026-03-11 16:54:37,371 [src.data.fetch] ERROR: Failed to fetch options chain for HEROMOTOCO: No module named 'nsepython'
+2026-03-11 16:54:37,371 [src.data.fetch] ERROR: Failed to fetch options chain for BIOCON: No module named 'nsepython'
+2026-03-11 16:54:37,372 [src.data.fetch] ERROR: Failed to fetch options chain for DABUR: No module named 'nsepython'
+2026-03-11 16:54:37,372 [src.data.fetch] ERROR: Failed to fetch options chain for MUTHOOTFIN: No module named 'nsepython'
+2026-03-11 16:54:37,373 [src.data.fetch] ERROR: Failed to fetch options chain for CHOLAFIN: No module named 'nsepython'
+2026-03-11 16:54:37,373 [src.data.fetch] ERROR: Failed to fetch options chain for INDUSTOWER: No module named 'nsepython'
+2026-03-11 16:54:37,374 [src.data.fetch] ERROR: Failed to fetch options chain for LTIM: No module named 'nsepython'
+2026-03-11 16:54:37,375 [src.data.fetch] ERROR: Failed to fetch options chain for VEDL: No module named 'nsepython'
+2026-03-11 16:54:37,375 [src.data.fetch] ERROR: Failed to fetch options chain for TITAN: No module named 'nsepython'
+2026-03-11 16:54:37,376 [src.data.fetch] ERROR: Failed to fetch options chain for INDUSINDBK: No module named 'nsepython'
+2026-03-11 16:54:37,376 [src.data.fetch] ERROR: Failed to fetch options chain for APOLLOHOSP: No module named 'nsepython'
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u25b6' in position 44: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 422, in _run_iteration
+    nexus_regime = self.agents['NEXUS'].detect_regime(market_data)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\intraday_regime_agent.py", line 153, in 
+detect_regime
+    logger.info(f"NEXUS \u25b6 Regime change: {prev} \u2192 {regime}")
+Message: 'NEXUS \u25b6 Regime change: SIDEWAYS \u2192 TRENDING'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 46: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 425, in _run_iteration
+    sentiment        = self.agents['HERMES'].get_sentiment(settings.SYMBOLS)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\news_sentiment_agent.py", line 123, in 
+get_sentiment
+    logger.info(f"HERMES \u2192 overall={overall} (score={overall_score:+.3f}) | {len(scored)} headlines | {pos} pos / 
+{neg} neg")
+Message: 'HERMES \u2192 overall=NEUTRAL (score=+0.000) | 0 headlines | 0 pos / 0 neg'
+Arguments: ()
+2026-03-11 16:54:37,417 [src.agents.titan_agent] INFO: TITAN updated strategy weights for regime: TRENDING
+2026-03-11 16:54:37,417 [src.agents.titan_agent] INFO: TITAN generated 0 signals (Total: 0)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 65: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 463, in _run_iteration
+    sigma_scored          = self.agents['SIGMA'].score_stocks(sigma_candidates, regime)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\sigma_agent.py", line 122, in score_stocks
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 55, in 
+on_signal
+    mtf_result = self.check_timeframe_alignment(symbol)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 119, in 
+check_timeframe_alignment
+    logger.info(f"\u2705 {symbol} MTF ALIGNED: {final_signal} ({votes}/{total})")
+Message: '\u2705 INFY MTF ALIGNED: STRONG_SELL (5/5)'
+Arguments: ()
+2026-03-11 16:54:44,493 [MAIN] INFO:   [EVENT] Signal: INFY None (p=5)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 65: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 463, in _run_iteration
+    sigma_scored          = self.agents['SIGMA'].score_stocks(sigma_candidates, regime)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\sigma_agent.py", line 122, in score_stocks
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 55, in 
+on_signal
+    mtf_result = self.check_timeframe_alignment(symbol)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 119, in 
+check_timeframe_alignment
+    logger.info(f"\u2705 {symbol} MTF ALIGNED: {final_signal} ({votes}/{total})")
+Message: '\u2705 SBIN MTF ALIGNED: STRONG_SELL (4/5)'
+Arguments: ()
+2026-03-11 16:54:50,077 [MAIN] INFO:   [EVENT] Signal: SBIN None (p=5)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 65: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 463, in _run_iteration
+    sigma_scored          = self.agents['SIGMA'].score_stocks(sigma_candidates, regime)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\sigma_agent.py", line 122, in score_stocks
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 55, in 
+on_signal
+    mtf_result = self.check_timeframe_alignment(symbol)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 119, in 
+check_timeframe_alignment
+    logger.info(f"\u2705 {symbol} MTF ALIGNED: {final_signal} ({votes}/{total})")
+Message: '\u2705 HCLTECH MTF ALIGNED: STRONG_SELL (5/5)'
+Arguments: ()
+2026-03-11 16:55:08,728 [MAIN] INFO:   [EVENT] Signal: HCLTECH None (p=5)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 65: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 463, in _run_iteration
+    sigma_scored          = self.agents['SIGMA'].score_stocks(sigma_candidates, regime)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\sigma_agent.py", line 122, in score_stocks
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 55, in 
+on_signal
+    mtf_result = self.check_timeframe_alignment(symbol)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 119, in 
+check_timeframe_alignment
+    logger.info(f"\u2705 {symbol} MTF ALIGNED: {final_signal} ({votes}/{total})")
+Message: '\u2705 KOTAKBANK MTF ALIGNED: STRONG_SELL (5/5)'
+Arguments: ()
+2026-03-11 16:55:17,515 [MAIN] INFO:   [EVENT] Signal: KOTAKBANK None (p=5)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 65: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 463, in _run_iteration
+    sigma_scored          = self.agents['SIGMA'].score_stocks(sigma_candidates, regime)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\sigma_agent.py", line 122, in score_stocks
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 55, in 
+on_signal
+    mtf_result = self.check_timeframe_alignment(symbol)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 119, in 
+check_timeframe_alignment
+    logger.info(f"\u2705 {symbol} MTF ALIGNED: {final_signal} ({votes}/{total})")
+Message: '\u2705 TCS MTF ALIGNED: STRONG_SELL (5/5)'
+Arguments: ()
+2026-03-11 16:55:33,591 [MAIN] INFO:   [EVENT] Signal: TCS None (p=5)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 65: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 463, in _run_iteration
+    sigma_scored          = self.agents['SIGMA'].score_stocks(sigma_candidates, regime)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\sigma_agent.py", line 122, in score_stocks
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 55, in 
+on_signal
+    mtf_result = self.check_timeframe_alignment(symbol)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 119, in 
+check_timeframe_alignment
+    logger.info(f"\u2705 {symbol} MTF ALIGNED: {final_signal} ({votes}/{total})")
+Message: '\u2705 WIPRO MTF ALIGNED: STRONG_SELL (5/5)'
+Arguments: ()
+2026-03-11 16:55:38,975 [MAIN] INFO:   [EVENT] Signal: WIPRO None (p=5)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 65: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 463, in _run_iteration
+    sigma_scored          = self.agents['SIGMA'].score_stocks(sigma_candidates, regime)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\sigma_agent.py", line 122, in score_stocks
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 55, in 
+on_signal
+    mtf_result = self.check_timeframe_alignment(symbol)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 119, in 
+check_timeframe_alignment
+    logger.info(f"\u2705 {symbol} MTF ALIGNED: {final_signal} ({votes}/{total})")
+Message: '\u2705 AXISBANK MTF ALIGNED: STRONG_SELL (5/5)'
+Arguments: ()
+2026-03-11 16:55:54,286 [MAIN] INFO:   [EVENT] Signal: AXISBANK None (p=5)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 65: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 463, in _run_iteration
+    sigma_scored          = self.agents['SIGMA'].score_stocks(sigma_candidates, regime)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\sigma_agent.py", line 122, in score_stocks
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 55, in 
+on_signal
+    mtf_result = self.check_timeframe_alignment(symbol)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 119, in 
+check_timeframe_alignment
+    logger.info(f"\u2705 {symbol} MTF ALIGNED: {final_signal} ({votes}/{total})")
+Message: '\u2705 RELIANCE MTF ALIGNED: STRONG_SELL (5/5)'
+Arguments: ()
+2026-03-11 16:56:01,208 [MAIN] INFO:   [EVENT] Signal: RELIANCE None (p=5)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 65: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 463, in _run_iteration
+    sigma_scored          = self.agents['SIGMA'].score_stocks(sigma_candidates, regime)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\sigma_agent.py", line 122, in score_stocks
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 55, in 
+on_signal
+    mtf_result = self.check_timeframe_alignment(symbol)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 119, in 
+check_timeframe_alignment
+    logger.info(f"\u2705 {symbol} MTF ALIGNED: {final_signal} ({votes}/{total})")
+Message: '\u2705 HDFCBANK MTF ALIGNED: STRONG_SELL (4/5)'
+Arguments: ()
+2026-03-11 16:56:06,472 [MAIN] INFO:   [EVENT] Signal: HDFCBANK None (p=5)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 65: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 463, in _run_iteration
+    sigma_scored          = self.agents['SIGMA'].score_stocks(sigma_candidates, regime)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\sigma_agent.py", line 122, in score_stocks
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 55, in 
+on_signal
+    mtf_result = self.check_timeframe_alignment(symbol)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\multi_timeframe_agent.py", line 119, in 
+check_timeframe_alignment
+    logger.info(f"\u2705 {symbol} MTF ALIGNED: {final_signal} ({votes}/{total})")
+Message: '\u2705 HINDUNILVR MTF ALIGNED: STRONG_SELL (5/5)'
+Arguments: ()
+2026-03-11 16:56:28,947 [MAIN] INFO:   [EVENT] Signal: HINDUNILVR None (p=5)
+2026-03-11 16:56:28,948 [src.agents.sigma_agent] INFO: SIGMA scored 13 stocks | Top pick: INFY (0.606)
+2026-03-11 16:56:29,188 [MAIN] INFO:   [EVENT] Signal: None None (p=5)
+2026-03-11 16:56:29,218 [CHIEF] INFO: CHIEF portfolio (TRENDING): ['INFY', 'SBIN', 'HCLTECH', 'KOTAKBANK', 'RELIANCE', 'HINDUNILVR', 'BHARTIARTL', 'ITC', 'TCS', 'WIPRO'] [10/10 positions]
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u20b9' in position 108: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 466, in _run_iteration
+    self._capital_alloc = self.capital_allocator.allocate(self._selected_stocks)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\risk\capital_allocator.py", line 120, in allocate
+    logger.info(
+Message: 'CapitalAllocator: 10 positions ╖ Total deployed: \u20b9500,000 (50.0% of \u20b91,000,000)'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f3af' in position 39: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 473, in _run_iteration
+    logger.info(f"  \U0001f3af CHIEF selected: {top}")
+Message: "  \U0001f3af CHIEF selected: ['INFY', 'SBIN', 'HCLTECH', 'KOTAKBANK', 'RELIANCE', 'HINDUNILVR', 
+'BHARTIARTL', 'ITC', 'TCS', 'WIPRO']"
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 49: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 123, in update
+    evaluated = self.evaluator.evaluate_pending(self._current_prices)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\evaluator.py", line 195, in evaluate_pending
+    logger.info("LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f",
+Message: 'LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f'
+Arguments: ('TITAN', 'WIN', 'INFY', 'BUY', 0.0, 1.0)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 49: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 123, in update
+    evaluated = self.evaluator.evaluate_pending(self._current_prices)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\evaluator.py", line 195, in evaluate_pending
+    logger.info("LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f",
+Message: 'LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f'
+Arguments: ('TITAN', 'WIN', 'SBIN', 'BUY', 0.0, 1.0)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 49: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 123, in update
+    evaluated = self.evaluator.evaluate_pending(self._current_prices)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\evaluator.py", line 195, in evaluate_pending
+    logger.info("LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f",
+Message: 'LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f'
+Arguments: ('TITAN', 'WIN', 'HCLTECH', 'BUY', 0.0, 1.0)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 49: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 123, in update
+    evaluated = self.evaluator.evaluate_pending(self._current_prices)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\evaluator.py", line 195, in evaluate_pending
+    logger.info("LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f",
+Message: 'LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f'
+Arguments: ('TITAN', 'WIN', 'KOTAKBANK', 'BUY', 0.0, 1.0)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 49: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 123, in update
+    evaluated = self.evaluator.evaluate_pending(self._current_prices)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\evaluator.py", line 195, in evaluate_pending
+    logger.info("LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f",
+Message: 'LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f'
+Arguments: ('TITAN', 'WIN', 'TCS', 'BUY', 0.0, 1.0)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 49: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 123, in update
+    evaluated = self.evaluator.evaluate_pending(self._current_prices)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\evaluator.py", line 195, in evaluate_pending
+    logger.info("LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f",
+Message: 'LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f'
+Arguments: ('TITAN', 'WIN', 'WIPRO', 'BUY', 0.0, 1.0)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 49: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 123, in update
+    evaluated = self.evaluator.evaluate_pending(self._current_prices)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\evaluator.py", line 195, in evaluate_pending
+    logger.info("LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f",
+Message: 'LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f'
+Arguments: ('TITAN', 'WIN', 'AXISBANK', 'BUY', 0.0, 1.0)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 49: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 123, in update
+    evaluated = self.evaluator.evaluate_pending(self._current_prices)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\evaluator.py", line 195, in evaluate_pending
+    logger.info("LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f",
+Message: 'LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f'
+Arguments: ('TITAN', 'WIN', 'RELIANCE', 'BUY', 0.0, 1.0)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 49: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 123, in update
+    evaluated = self.evaluator.evaluate_pending(self._current_prices)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\evaluator.py", line 195, in evaluate_pending
+    logger.info("LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f",
+Message: 'LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f'
+Arguments: ('TITAN', 'WIN', 'HDFCBANK', 'BUY', 0.0, 1.0)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 49: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 123, in update
+    evaluated = self.evaluator.evaluate_pending(self._current_prices)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\evaluator.py", line 195, in evaluate_pending
+    logger.info("LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f",
+Message: 'LENS: %s \u2192 %s | %s %s | pnl=%.2f%% pts=%.2f'
+Arguments: ('TITAN', 'WIN', 'HINDUNILVR', 'BUY', 0.0, 1.0)
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f9e0' in position 55: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 146, in update
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\karma_agent.py", line 163, in 
+_on_signal_evaluated
+    logger.info(f"\U0001f9e0 KARMA reinforcement learning: {signal.get('strategy')} on {signal.get('symbol')} \u2192 
+{outcome.get('event')}")
+Message: '\U0001f9e0 KARMA reinforcement learning: TITAN on INFY \u2192 eval_win'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f9e0' in position 55: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 146, in update
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\karma_agent.py", line 163, in 
+_on_signal_evaluated
+    logger.info(f"\U0001f9e0 KARMA reinforcement learning: {signal.get('strategy')} on {signal.get('symbol')} \u2192 
+{outcome.get('event')}")
+Message: '\U0001f9e0 KARMA reinforcement learning: TITAN on SBIN \u2192 eval_win'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f9e0' in position 55: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 146, in update
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\karma_agent.py", line 163, in 
+_on_signal_evaluated
+    logger.info(f"\U0001f9e0 KARMA reinforcement learning: {signal.get('strategy')} on {signal.get('symbol')} \u2192 
+{outcome.get('event')}")
+Message: '\U0001f9e0 KARMA reinforcement learning: TITAN on HCLTECH \u2192 eval_win'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f9e0' in position 55: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 146, in update
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\karma_agent.py", line 163, in 
+_on_signal_evaluated
+    logger.info(f"\U0001f9e0 KARMA reinforcement learning: {signal.get('strategy')} on {signal.get('symbol')} \u2192 
+{outcome.get('event')}")
+Message: '\U0001f9e0 KARMA reinforcement learning: TITAN on KOTAKBANK \u2192 eval_win'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f9e0' in position 55: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 146, in update
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\karma_agent.py", line 163, in 
+_on_signal_evaluated
+    logger.info(f"\U0001f9e0 KARMA reinforcement learning: {signal.get('strategy')} on {signal.get('symbol')} \u2192 
+{outcome.get('event')}")
+Message: '\U0001f9e0 KARMA reinforcement learning: TITAN on TCS \u2192 eval_win'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f9e0' in position 55: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 146, in update
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\karma_agent.py", line 163, in 
+_on_signal_evaluated
+    logger.info(f"\U0001f9e0 KARMA reinforcement learning: {signal.get('strategy')} on {signal.get('symbol')} \u2192 
+{outcome.get('event')}")
+Message: '\U0001f9e0 KARMA reinforcement learning: TITAN on WIPRO \u2192 eval_win'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f9e0' in position 55: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 146, in update
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\karma_agent.py", line 163, in 
+_on_signal_evaluated
+    logger.info(f"\U0001f9e0 KARMA reinforcement learning: {signal.get('strategy')} on {signal.get('symbol')} \u2192 
+{outcome.get('event')}")
+Message: '\U0001f9e0 KARMA reinforcement learning: TITAN on AXISBANK \u2192 eval_win'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f9e0' in position 55: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 146, in update
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\karma_agent.py", line 163, in 
+_on_signal_evaluated
+    logger.info(f"\U0001f9e0 KARMA reinforcement learning: {signal.get('strategy')} on {signal.get('symbol')} \u2192 
+{outcome.get('event')}")
+Message: '\U0001f9e0 KARMA reinforcement learning: TITAN on RELIANCE \u2192 eval_win'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f9e0' in position 55: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 146, in update
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+2026-03-11 16:58:42,630 [MAIN] INFO:   Done in 273.3s ù 0 signals, 0 executed
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\karma_agent.py", line 163, in 
+_on_signal_evaluated
+    logger.info(f"\U0001f9e0 KARMA reinforcement learning: {signal.get('strategy')} on {signal.get('symbol')} \u2192 
+{outcome.get('event')}")
+Message: '\U0001f9e0 KARMA reinforcement learning: TITAN on HDFCBANK \u2192 eval_win'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f9e0' in position 55: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 484, in _run_iteration
+    self.agents['LENS'].update()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\lens_agent.py", line 146, in update
+    self.publish_event(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 110, in publish_event
+    self.event_bus.publish(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 170, in publish
+    self._dispatch_top()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 181, in _dispatch_top
+    self._dispatch(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\event_bus\event_bus.py", line 187, in _dispatch
+    callback(event)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\karma_agent.py", line 163, in 
+_on_signal_evaluated
+    logger.info(f"\U0001f9e0 KARMA reinforcement learning: {signal.get('strategy')} on {signal.get('symbol')} \u2192 
+{outcome.get('event')}")
+Message: '\U0001f9e0 KARMA reinforcement learning: TITAN on HINDUNILVR \u2192 eval_win'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f9e0' in position 55: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 501, in _run_iteration
+    self.agents['KARMA'].run_offline_training(
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\karma_agent.py", line 242, in 
+run_offline_training
+    logger.info(
+Message: '\U0001f9e0 KARMA offline training: 0 symbols ╫ 5 TFs in 0.0s ╖ best=trend_following'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 39-98: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 399, in _run_iteration
+    logger.info(f"\n{'\u2500'*60}\nIteration {self.iteration}  |  {datetime.now().strftime('%H:%M:%S')}")
+Message: '\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u250
+0\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u25
+00\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2
+500\u2500\u2500\nIteration 4  |  17:13:42'
+Arguments: ()
+2026-03-11 17:14:04,065 [yfinance] ERROR: $TATAMOTORS.NS: possibly delisted; no price data found  (period=60d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 17:14:04,071 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 17:14:04,071 [yfinance] ERROR: ['TATAMOTORS.NS']: possibly delisted; no price data found  (period=60d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 17:14:04,077 [src.data.fetch] WARNING: No candle data for TATAMOTORS (TATAMOTORS.NS)
+2026-03-11 17:14:43,501 [MAIN] ERROR: Iteration error: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+Traceback (most recent call last):
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 408, in _run_iteration
+    macro_context        = self.agents['ORACLE'].analyze(market_data)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 137, in analyze
+    self._refresh()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 159, in _refresh
+    macro = self._compute_macro(vix, fii, usdinr, spx, crude)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 212, in _compute_macro
+    if spx > self._cfg["ORACLE_SPX_BULL"]:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\generic.py", line 1513, in __bool__
+    raise ValueError(
+ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 39-98: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 399, in _run_iteration
+    logger.info(f"\n{'\u2500'*60}\nIteration {self.iteration}  |  {datetime.now().strftime('%H:%M:%S')}")
+Message: '\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u250
+0\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u25
+00\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2
+500\u2500\u2500\nIteration 5  |  17:29:43'
+Arguments: ()
+2026-03-11 17:30:05,872 [yfinance] ERROR: $TATAMOTORS.NS: possibly delisted; no price data found  (period=60d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 17:30:05,877 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 17:30:05,877 [yfinance] ERROR: ['TATAMOTORS.NS']: possibly delisted; no price data found  (period=60d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 17:30:05,880 [src.data.fetch] WARNING: No candle data for TATAMOTORS (TATAMOTORS.NS)
+2026-03-11 17:30:44,795 [MAIN] ERROR: Iteration error: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+Traceback (most recent call last):
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 408, in _run_iteration
+    macro_context        = self.agents['ORACLE'].analyze(market_data)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 137, in analyze
+    self._refresh()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 159, in _refresh
+    macro = self._compute_macro(vix, fii, usdinr, spx, crude)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 212, in _compute_macro
+    if spx > self._cfg["ORACLE_SPX_BULL"]:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\generic.py", line 1513, in __bool__
+    raise ValueError(
+ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\U0001f310' in position 37: character maps to <undefined>
+Call stack:
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1032, in _bootstrap
+    self._bootstrap_inner()
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1075, in _bootstrap_inner
+    self.run()
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1012, in run
+    self._target(*self._args, **self._kwargs)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 355, in _wait_and_open
+    logger.info(f"\U0001f310 Browser opened \u2192 {self._frontend_url}")
+Message: '\U0001f310 Browser opened \u2192 http://0.0.0.0:3000'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 39-98: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 399, in _run_iteration
+    logger.info(f"\n{'\u2500'*60}\nIteration {self.iteration}  |  {datetime.now().strftime('%H:%M:%S')}")
+Message: '\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u250
+0\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u25
+00\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2
+500\u2500\u2500\nIteration 6  |  17:45:44'
+Arguments: ()
+2026-03-11 17:46:06,863 [yfinance] ERROR: $TATAMOTORS.NS: possibly delisted; no price data found  (period=60d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 17:46:06,869 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 17:46:06,869 [yfinance] ERROR: ['TATAMOTORS.NS']: possibly delisted; no price data found  (period=60d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 17:46:06,871 [src.data.fetch] WARNING: No candle data for TATAMOTORS (TATAMOTORS.NS)
+2026-03-11 17:46:46,383 [MAIN] ERROR: Iteration error: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+Traceback (most recent call last):
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 408, in _run_iteration
+    macro_context        = self.agents['ORACLE'].analyze(market_data)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 137, in analyze
+    self._refresh()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 159, in _refresh
+    macro = self._compute_macro(vix, fii, usdinr, spx, crude)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 212, in _compute_macro
+    if spx > self._cfg["ORACLE_SPX_BULL"]:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\generic.py", line 1513, in __bool__
+    raise ValueError(
+ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().

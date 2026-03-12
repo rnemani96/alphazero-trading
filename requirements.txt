@@ -1,0 +1,47 @@
+# AlphaZero Capital v2 — Requirements
+# Run: pip install -r requirements.txt
+
+# Core
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+python-dotenv>=1.0.0
+
+# Data
+yfinance>=0.2.36
+pandas>=2.0.0
+numpy>=1.24.0
+requests>=2.31.0
+pyarrow>=14.0.0       # Parquet cache storage
+
+# Scraping (Screener.in fundamentals)
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Risk & Analytics
+scipy>=1.11.0
+
+# System monitoring (health endpoint)
+psutil>=5.9.0
+
+# Technical analysis (try both, use whichever is installed)
+pandas-ta>=0.3.14b   # Pure Python, no compiler needed
+# TA-Lib — install separately if needed:
+# Windows: pip install TA-Lib-prebuilt
+# Linux:   sudo apt install ta-lib && pip install TA-Lib
+
+# Machine learning (optional, for NEXUS XGBoost)
+# xgboost>=2.0.0
+
+# LLM providers (install whichever you use)
+anthropic>=0.30.0     # Claude
+# openai>=1.30.0      # GPT
+# google-generativeai>=0.5.0  # Gemini
+
+# Utilities
+colorama>=0.4.6       # Coloured terminal output (Windows)
+tabulate>=0.9.0       # Status tables
+schedule>=1.2.0       # Job scheduling
+
+# RL (optional, Phase 3 upgrade)
+# stable-baselines3>=2.0.0
+# gymnasium>=0.29.0

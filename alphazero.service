@@ -1,0 +1,25 @@
+[Unit]
+Description=AlphaZero Capital Trading System
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE
+ExecStart=C:\Users\pc\AppData\Local\Programs\Python\Python312\python.EXE main.py
+Restart=on-failure
+RestartSec=30
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+# Environment
+EnvironmentFile=D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE/.env
+StandardOutput=append:D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE/logs/systemd.log
+StandardError=append:D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE/logs/systemd_error.log
+
+# Ensure IST timezone (critical for NSE market hours)
+Environment=TZ=Asia/Kolkata
+
+[Install]
+WantedBy=multi-user.target
