@@ -1,0 +1,304 @@
+﻿python : ORACLE: nsepython not installed ù using fallback data
+At line:1 char:1
++ python main.py 2>&1 | Out-File -FilePath startup_err.log -Encoding ut ...
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ORACLE: nsepyth...g fallback data:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+2026-03-11 15:06:43,191 [MAIN] INFO: ======================================================================
+2026-03-11 15:06:43,192 [MAIN] INFO:   AlphaZero Capital v17  |  Mode: PAPER
+2026-03-11 15:06:43,193 [MAIN] INFO: ======================================================================
+2026-03-11 15:06:43,193 [src.event_bus.event_bus] INFO: EventBus initialized
+2026-03-11 15:06:43,194 [src.event_bus.event_bus] INFO: EventBus started
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 63: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1212, in <module>
+    system = AlphaZeroSystem(mode=mode)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 116, in __init__
+    self._init_llm()             # generic LLM ù must come before agents that use it
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 137, in _init_llm
+    self.llm = LLMProvider.create()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\llm_provider.py", line 182, in create
+    return LLMProvider._named(p, m, api_key)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\llm_provider.py", line 208, in _named
+    if p in ('openai','gpt'): return OpenAIProvider(k('OPENAI_API_KEY'), m or 'gpt-4o-mini')
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\llm_provider.py", line 99, in __init__
+    logger.info(f"OpenAI \u2192 {model}")
+Message: 'OpenAI \u2192 gpt-4o-mini'
+Arguments: ()
+2026-03-11 15:06:43,767 [MAIN] INFO:   LLM: OpenAIProvider(gpt-4o-mini)
+2026-03-11 15:06:43,767 [src.data.fetch] INFO: DataFetcher ready ù real NSE data via yfinance fallback (mode=PAPER)
+2026-03-11 15:06:43,767 [src.risk.trailing_stop_manager] INFO: Trailing Stop Manager initialized - Activation: 2.0%
+2026-03-11 15:06:43,767 [Agent.CHIEF] INFO: CHIEF initialized
+2026-03-11 15:06:43,768 [CHIEF] INFO: CHIEF Agent initialised ù portfolio construction ready
+2026-03-11 15:06:43,768 [Agent.SIGMA] INFO: SIGMA initialized
+2026-03-11 15:06:43,768 [src.agents.sigma_agent] INFO: SIGMA Agent initialized - will rank top 10 stocks
+2026-03-11 15:06:43,768 [Agent.ATLAS] INFO: ATLAS initialized
+2026-03-11 15:06:43,768 [src.agents.sector_agent] INFO: ATLAS Agent initialized - Sector analysis ready
+2026-03-11 15:06:43,768 [Agent.ORACLE] INFO: ORACLE initialized
+2026-03-11 15:06:43,768 [src.agents.oracle_agent] INFO: ORACLE Agent initialised ù macro intelligence active
+2026-03-11 15:06:43,768 [Agent.NEXUS] INFO: NEXUS initialized
+2026-03-11 15:06:43,768 [NEXUS] INFO: NEXUS Agent initialised ù regime detection active
+2026-03-11 15:06:43,769 [Agent.HERMES] INFO: HERMES initialized
+2026-03-11 15:06:43,769 [HERMES] INFO: HERMES Agent initialised ù Keyword scoring, yfinance
+2026-03-11 15:06:43,769 [Agent.TITAN] INFO: TITAN initialized
+2026-03-11 15:06:43,769 [src.agents.titan_agent] INFO: TITAN Agent initialized - Strategy execution ready
+2026-03-11 15:06:43,769 [Agent.GUARDIAN] INFO: GUARDIAN initialized
+2026-03-11 15:06:43,769 [src.agents.guardian_agent] INFO: GUARDIAN Agent initialized - Risk limits active
+2026-03-11 15:06:43,770 [Agent.MERCURY] INFO: MERCURY initialized
+2026-03-11 15:06:43,770 [src.agents.mercury_agent] INFO: MERCURY Agent initialized - Execution ready
+2026-03-11 15:06:43,770 [Agent.LENS] INFO: LENS initialized
+2026-03-11 15:06:43,771 [LENS] INFO: LENS: DB initialised at D:\files\ALPHAZERO_COMPLETE_FINAL\logs\evaluation.db
+2026-03-11 15:06:43,772 [LENS] INFO: LENS: 0 pending signals loaded from DB
+2026-03-11 15:06:43,772 [src.agents.lens_agent] INFO: LENS Agent initialized - Evaluation & Performance tracking ready
+2026-03-11 15:06:43,773 [Agent.KARMA] INFO: KARMA initialized
+2026-03-11 15:06:43,773 [src.agents.karma_agent] INFO: KARMA Agent initialized - Learning engine ready
+2026-03-11 15:06:43,773 [Agent.OPTIONS_FLOW] INFO: OPTIONS_FLOW initialized
+2026-03-11 15:06:43,773 [src.agents.options_flow_agent] INFO: OPTIONS_FLOW Agent initialized - Tracking institutional money flow
+2026-03-11 15:06:43,773 [Agent.MULTI_TIMEFRAME] INFO: MULTI_TIMEFRAME initialized
+2026-03-11 15:06:43,773 [src.agents.multi_timeframe_agent] INFO: MULTI_TIMEFRAME Agent initialized
+2026-03-11 15:06:44,268 [src.agents.llm_earnings_analyzer] INFO: Earnings Call Analyzer initialized with openrouter API
+2026-03-11 15:06:45,298 [src.agents.llm_strategy_generator] INFO: Strategy Generator initialized - Ready to discover new patterns!
+2026-03-11 15:06:45,298 [MAIN] INFO: NEXUS: No XGBoost model found at models/nexus_regime.json ù using rules
+2026-03-11 15:06:45,298 [MAIN] INFO:   16 agents ready
+2026-03-11 15:06:45,298 [src.reporting.telegram_reporter] WARNING: TelegramReporter: disabled (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set)
+2026-03-11 15:06:45,298 [src.reporting.email_reporter] WARNING: EmailReporter: disabled (EMAIL_SENDER / EMAIL_PASSWORD / EMAIL_RECIPIENT not set)
+2026-03-11 15:06:45,389 [src.reporting.agent_performance] INFO: AgentPerformanceTracker initialised
+2026-03-11 15:06:45,391 [src.reporting.scheduler] INFO: ReportScheduler started
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2717' in position 49: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1212, in <module>
+    system = AlphaZeroSystem(mode=mode)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 122, in __init__
+    self._init_reporting()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 214, in _init_reporting
+    logger.info(f"  Telegram: {'\u2713' if self.telegram.is_enabled() else '\u2717 (configure TELEGRAM_BOT_TOKEN)'}")
+Message: '  Telegram: \u2717 (configure TELEGRAM_BOT_TOKEN)'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2717' in position 49: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1212, in <module>
+    system = AlphaZeroSystem(mode=mode)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 122, in __init__
+    self._init_reporting()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 215, in _init_reporting
+    logger.info(f"  Email:    {'\u2713' if self.email.is_enabled()    else '\u2717 (configure EMAIL_SENDER)'}")
+Message: '  Email:    \u2717 (configure EMAIL_SENDER)'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 37: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1212, in <module>
+    system = AlphaZeroSystem(mode=mode)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 125, in __init__
+    self._start_dashboard()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 277, in _start_dashboard
+    logger.info(f"\u2705 Backend started  \u2192  http://{HOST}:{PORT_BACKEND}")
+Message: '\u2705 Backend started  \u2192  http://0.0.0.0:8501'
+Arguments: ()
+2026-03-11 15:06:47,287 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:47,287 [MarketData] MarketDataEngine init ù sources: OA=False YF=True AV=True STOOQ=yes
+2026-03-11 15:06:47,288 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:47,287 [LENS] LENS: DB initialised at D:\files\ALPHAZERO_COMPLETE_FINAL\logs\evaluation.db
+2026-03-11 15:06:47,288 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:47,288 [LENS] LENS: 0 pending signals loaded from DB
+2026-03-11 15:06:47,361 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:47,360 [Backend] \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+2026-03-11 15:06:47,361 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:47,360 [Backend] AlphaZero Capital Backend v4  |  port 8000
+2026-03-11 15:06:47,361 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:47,361 [Backend] Docs: http://localhost:8000/docs
+2026-03-11 15:06:47,361 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:47,361 [Backend] WS:   ws://localhost:8000/ws
+2026-03-11 15:06:47,361 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:47,361 [Backend] \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501
+2026-03-11 15:06:47,361 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:47,361 [Backend] Pre-loading candles for 20 stocksà
+2026-03-11 15:06:49,906 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:49,906 [yfinance] $RELIANCE.NS: possibly delisted; no price data found  (period=3mo) (Yahoo error = "15m data not available for startTime=1765186610 and endTime=1773221810. The requested range must be within the last 60 days.")
+2026-03-11 15:06:51,312 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:49,906 [Backend]   RELIANCE candle load error: 'MarketDataEngine' object has no attribute '_stooq_history'
+2026-03-11 15:06:51,312 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:50,694 [yfinance] $LTIM.NS: possibly delisted; no price data found  (period=1d)
+2026-03-11 15:06:52,799 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:52,798 [yfinance] HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: TATAMOTORS.NS"}}}
+2026-03-11 15:06:54,257 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:54,257 [yfinance] $TATAMOTORS.NS: possibly delisted; no price data found  (period=1d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 15:06:54,266 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:54,266 [yfinance]
+2026-03-11 15:06:54,266 [MAIN] INFO:   [BACKEND]  2 Failed downloads:
+2026-03-11 15:06:54,266 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:54,266 [yfinance] ['LTIM.NS']: possibly delisted; no price data found  (period=1d)
+2026-03-11 15:06:54,267 [MAIN] INFO:   [BACKEND]  2026-03-11 15:06:54,266 [yfinance] ['TATAMOTORS.NS']: possibly delisted; no price data found  (period=1d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 15:07:00,171 [MAIN] INFO:   [BACKEND]  2026-03-11 15:07:00,170 [yfinance] HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: TATAMOTORS.NS"}}}
+2026-03-11 15:07:01,854 [MAIN] INFO:   [BACKEND]  2026-03-11 15:07:01,854 [yfinance] $TATAMOTORS.NS: possibly delisted; no price data found  (period=1y) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 15:07:02,818 [MAIN] INFO:   [BACKEND]  2026-03-11 15:07:02,817 [yfinance] $TATAMOTORS.NS: possibly delisted; no price data found  (period=5d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 15:07:10,922 [MAIN] INFO:   [BACKEND]  2026-03-11 15:07:10,922 [yfinance] $LTIM.NS: possibly delisted; no price data found  (period=5d)
+2026-03-11 15:07:14,270 [MAIN] INFO:   [BACKEND]  2026-03-11 15:07:14,270 [yfinance] $TCS.NS: possibly delisted; no price data found  (period=3mo) (Yahoo error = "15m data not available for startTime=1765186634 and endTime=1773221834. The requested range must be within the last 60 days.")
+2026-03-11 15:07:14,272 [MAIN] INFO:   [BACKEND]  2026-03-11 15:07:14,271 [Backend]   TCS candle load error: 'MarketDataEngine' object has no attribute '_stooq_history'
+2026-03-11 15:07:14,273 [MAIN] INFO:   [BACKEND]  ERROR:    [Errno 10048] error while attempting to bind on address ('0.0.0.0', 8501): [winerror 10048] only one usage of each socket address (protocol/network address/port) is normally permitted
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 37: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1212, in <module>
+    system = AlphaZeroSystem(mode=mode)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 125, in __init__
+    self._start_dashboard()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 314, in _start_dashboard
+    logger.info(f"\u2705 Vite frontend started  \u2192  {self._frontend_url}")
+Message: '\u2705 Vite frontend started  \u2192  http://0.0.0.0:3000'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 37: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1212, in <module>
+    system = AlphaZeroSystem(mode=mode)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 127, in __init__
+    logger.info("\u2705 System initialised")
+Message: '\u2705 System initialised'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u25b6' in position 39: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 385, in run
+    logger.info(f"\n\u25b6  Main loop started  (interval: {settings.ITERATION_INTERVAL}s)\n")
+Message: '\n\u25b6  Main loop started  (interval: 900s)\n'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 39-98: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 399, in _run_iteration
+    logger.info(f"\n{'\u2500'*60}\nIteration {self.iteration}  |  {datetime.now().strftime('%H:%M:%S')}")
+Message: '\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u250
+0\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u25
+00\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2
+500\u2500\u2500\nIteration 1  |  16:21:54'
+Arguments: ()
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u26a0' in position 40: character maps to <undefined>
+Call stack:
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1032, in _bootstrap
+    self._bootstrap_inner()
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1075, in _bootstrap_inner
+    self.run()
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\threading.py", line 1012, in run
+    self._target(*self._args, **self._kwargs)
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 347, in _wait_and_open
+    logger.warning("\u26a0  Backend did not respond in 20s ù opening browser anyway")
+Message: '\u26a0  Backend did not respond in 20s ù opening browser anyway'
+Arguments: ()
+2026-03-11 16:22:18,496 [yfinance] ERROR: HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: TATAMOTORS.NS"}}}
+2026-03-11 16:22:21,333 [yfinance] ERROR: $TATAMOTORS.NS: possibly delisted; no price data found  (period=60d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 16:22:21,341 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:22:21,341 [yfinance] ERROR: ['TATAMOTORS.NS']: possibly delisted; no price data found  (period=60d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 16:22:21,343 [src.data.fetch] WARNING: No candle data for TATAMOTORS (TATAMOTORS.NS)
+2026-03-11 16:23:02,259 [MAIN] ERROR: Iteration error: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+Traceback (most recent call last):
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 408, in _run_iteration
+    macro_context        = self.agents['ORACLE'].analyze(market_data)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 137, in analyze
+    self._refresh()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 159, in _refresh
+    macro = self._compute_macro(vix, fii, usdinr, spx, crude)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 212, in _compute_macro
+    if spx > self._cfg["ORACLE_SPX_BULL"]:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\generic.py", line 1513, in __bool__
+    raise ValueError(
+ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+--- Logging error ---
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\logging\__init__.py", line 1163, in emit
+    stream.write(msg + self.terminator)
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 39-98: character maps to <undefined>
+Call stack:
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 1213, in <module>
+    system.run()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 399, in _run_iteration
+    logger.info(f"\n{'\u2500'*60}\nIteration {self.iteration}  |  {datetime.now().strftime('%H:%M:%S')}")
+Message: '\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u250
+0\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u25
+00\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2
+500\u2500\u2500\nIteration 2  |  16:38:02'
+Arguments: ()
+2026-03-11 16:38:24,130 [yfinance] ERROR: HTTP Error 404: {"quoteSummary":{"result":null,"error":{"code":"Not Found","description":"Quote not found for symbol: TATAMOTORS.NS"}}}
+2026-03-11 16:38:25,356 [yfinance] ERROR: $TATAMOTORS.NS: possibly delisted; no price data found  (period=60d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 16:38:25,361 [yfinance] ERROR: 
+1 Failed download:
+2026-03-11 16:38:28,541 [yfinance] ERROR: ['TATAMOTORS.NS']: possibly delisted; no price data found  (period=60d) (Yahoo error = "No data found, symbol may be delisted")
+2026-03-11 16:38:28,544 [src.data.fetch] WARNING: No candle data for TATAMOTORS (TATAMOTORS.NS)
+2026-03-11 16:39:09,323 [MAIN] ERROR: Iteration error: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+Traceback (most recent call last):
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 390, in run
+    self._run_iteration()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\main.py", line 408, in _run_iteration
+    macro_context        = self.agents['ORACLE'].analyze(market_data)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 137, in analyze
+    self._refresh()
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 159, in _refresh
+    macro = self._compute_macro(vix, fii, usdinr, spx, crude)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\files\ALPHAZERO_COMPLETE_FINAL\ALPHAZERO_COMPLETE\src\agents\oracle_agent.py", line 212, in _compute_macro
+    if spx > self._cfg["ORACLE_SPX_BULL"]:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\generic.py", line 1513, in __bool__
+    raise ValueError(
+ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
