@@ -6,7 +6,7 @@
   "capital_alloc": {},
   "portfolio": {},
   "market_data": {},
-  "running": false,
+  "running": true,
   "active_portfolio": {
     "open_positions": [],
     "total_open": 0,
