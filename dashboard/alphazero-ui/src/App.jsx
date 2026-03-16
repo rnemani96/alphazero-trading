@@ -11,22 +11,21 @@ const G = {
   cyan:"#00d4ff", amber:"#ffaa00",
 };
 
-const BACKEND  = "http://localhost:8000";
-const VERSION  = "v5.0.0";
-const AUTHOR   = "Rajesh Nemani";
+const BACKEND = "http://localhost:8000";
+const VERSION = "v5.0.0";
+const AUTHOR  = "Rajesh Nemani";
 
 // ─── Indian market charges ─────────────────────────────────────────────────
-// Used to compute real net P&L after all levies
 const CHARGES = {
-  brokerage:     20,          // ₹20 per executed order (flat, Zerodha model)
-  stt_delivery:  0.001,       // 0.1% on buy+sell for delivery
-  stt_intraday:  0.00025,     // 0.025% on sell side for intraday
-  exchange_nse:  0.0000345,   // 0.00345% NSE transaction charge
-  sebi:          0.000001,    // 0.0001% SEBI turnover fee
-  stamp_delivery:0.00015,     // 0.015% on buy, delivery
-  stamp_intraday:0.00003,     // 0.003% on buy, intraday
-  dp_charge:     15.93,       // ₹15.93 per scrip per day (delivery sells) incl GST
-  gst_rate:      0.18,        // 18% on brokerage + exchange charges
+  brokerage:      20,
+  stt_delivery:   0.001,
+  stt_intraday:   0.00025,
+  exchange_nse:   0.0000345,
+  sebi:           0.000001,
+  stamp_delivery: 0.00015,
+  stamp_intraday: 0.00003,
+  dp_charge:      15.93,
+  gst_rate:       0.18,
 };
 
 function calcNetPnl(pos) {
@@ -34,130 +33,121 @@ function calcNetPnl(pos) {
   const isIntraday = tt === "INTRADAY";
   const turnover   = (entryPrice + cp) * qty;
   const grossPnl   = (cp - entryPrice) * qty;
-
-  const brok    = CHARGES.brokerage * 2;                       // buy + sell
-  const stt     = isIntraday
-    ? cp * qty * CHARGES.stt_intraday
-    : turnover * CHARGES.stt_delivery;
-  const exc     = turnover * CHARGES.exchange_nse;
-  const sebi    = turnover * CHARGES.sebi;
-  const stamp   = isIntraday
-    ? entryPrice * qty * CHARGES.stamp_intraday
-    : entryPrice * qty * CHARGES.stamp_delivery;
-  const dp      = isIntraday ? 0 : CHARGES.dp_charge;
-  const gst     = (brok + exc) * CHARGES.gst_rate;
-
+  const brok  = CHARGES.brokerage * 2;
+  const stt   = isIntraday ? cp*qty*CHARGES.stt_intraday : turnover*CHARGES.stt_delivery;
+  const exc   = turnover * CHARGES.exchange_nse;
+  const sebi  = turnover * CHARGES.sebi;
+  const stamp = isIntraday ? entryPrice*qty*CHARGES.stamp_intraday : entryPrice*qty*CHARGES.stamp_delivery;
+  const dp    = isIntraday ? 0 : CHARGES.dp_charge;
+  const gst   = (brok + exc) * CHARGES.gst_rate;
   const totalCharges = brok + stt + exc + sebi + stamp + dp + gst;
   const netPnl = grossPnl - totalCharges;
   const netPct = entryPrice > 0 ? (netPnl / (entryPrice * qty)) * 100 : 0;
-
   return { grossPnl, netPnl, netPct, totalCharges, brok, stt, exc, sebi, stamp, dp, gst };
 }
 
 // ─── REGIME config ─────────────────────────────────────────────────────────
 const REGIME = {
-  TRENDING: { color:G.green,  icon:"↑", label:"Trending"  },
-  SIDEWAYS: { color:G.yellow, icon:"↔", label:"Sideways"  },
-  VOLATILE: { color:G.red,    icon:"⚡", label:"Volatile"  },
-  RISK_OFF: { color:G.purple, icon:"⛔", label:"Risk Off"  },
+  TRENDING: { color:G.green,  icon:"↑", label:"Trending" },
+  SIDEWAYS: { color:G.yellow, icon:"↔", label:"Sideways" },
+  VOLATILE: { color:G.red,    icon:"⚡", label:"Volatile" },
+  RISK_OFF: { color:G.purple, icon:"⛔", label:"Risk Off" },
 };
 const TT_COLOR = { INTRADAY:G.orange, SHORT_TERM:G.blue, SWING:G.purple, LONG_TERM:G.green };
 
-// ─── Rating thresholds ─────────────────────────────────────────────────────
+// ─── Rating ─────────────────────────────────────────────────────────────────
 function computeRating(confidence, buyCount, sellCount, sigmaScore) {
   const net = buyCount - sellCount;
-  const score = confidence * 0.4 + (sigmaScore || 0) * 0.4 + (net / Math.max(buyCount + sellCount, 1)) * 0.2;
-  if (score >= 0.80 && net >= 4)  return { label:"STRONG BUY",  color:G.green,  icon:"⬆⬆", bg:G.greenBg };
-  if (score >= 0.62 && net >= 2)  return { label:"BUY",         color:G.teal,   icon:"⬆",  bg:"#0a1f14" };
-  if (score >= 0.45 || net === 0) return { label:"HOLD",        color:G.yellow, icon:"→",  bg:G.yellowBg };
-  if (score >= 0.28 || net <= -2) return { label:"SELL",        color:G.orange, icon:"⬇",  bg:"#1a0e00" };
-  return                                 { label:"STRONG SELL", color:G.red,    icon:"⬇⬇", bg:G.redBg };
+  const score = confidence*0.4 + (sigmaScore||0)*0.4 + (net/Math.max(buyCount+sellCount,1))*0.2;
+  if (score>=0.80&&net>=4) return {label:"STRONG BUY",  color:G.green,  icon:"⬆⬆", bg:G.greenBg};
+  if (score>=0.62&&net>=2) return {label:"BUY",         color:G.teal,   icon:"⬆",  bg:"#0a1f14"};
+  if (score>=0.45||net===0)return {label:"HOLD",        color:G.yellow, icon:"→",  bg:G.yellowBg};
+  if (score>=0.28||net<=-2)return {label:"SELL",        color:G.orange, icon:"⬇",  bg:"#1a0e00"};
+  return                         {label:"STRONG SELL", color:G.red,    icon:"⬇⬇", bg:G.redBg};
 }
 
-// ─── Indicator math ────────────────────────────────────────────────────────
+// ─── Indicators ─────────────────────────────────────────────────────────────
 function ema(arr, p) {
   const k=2/(p+1), out=new Float64Array(arr.length);
   out[0]=arr[0];
-  for (let i=1;i<arr.length;i++) out[i]=arr[i]*k+out[i-1]*(1-k);
+  for(let i=1;i<arr.length;i++) out[i]=arr[i]*k+out[i-1]*(1-k);
   return out;
 }
 
 function indicators(candles) {
-  if (!candles||candles.length<15) return null;
+  if(!candles||candles.length<15) return null;
   const n=candles.length;
   const c=candles.map(x=>x.close??x.Close??0);
   const h=candles.map(x=>x.high??x.High??0);
   const l=candles.map(x=>x.low??x.Low??0);
   const v=candles.map(x=>x.volume??x.Volume??0);
   const e9=ema(c,9),e20=ema(c,20),e50=ema(c,50);
-  const tr=c.map((ci,i)=>i===0?h[0]-l[0]:Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])));
-  const atr=ema(tr,14);
-  const δ=c.map((ci,i)=>i===0?0:ci-c[i-1]);
-  const ag=ema(δ.map(d=>Math.max(d,0)),14),al=ema(δ.map(d=>Math.max(-d,0)),14);
-  const rsi=ag.map((g,i)=>al[i]===0?100:100-100/(1+g/al[i]));
-  const ml=ema(c,12).map((v,i)=>v-ema(c,26)[i]),ms=ema(ml,9),mh=ml.map((v,i)=>v-ms[i]);
-  const pdm=h.map((hi,i)=>i===0?0:Math.max(hi-h[i-1],0));
-  const ndm=l.map((li,i)=>i===0?0:Math.max(l[i-1]-li,0));
-  const pdi=ema(pdm,14).map((v,i)=>atr[i]>0?100*v/atr[i]:0);
-  const ndi=ema(ndm,14).map((v,i)=>atr[i]>0?100*v/atr[i]:0);
-  const dx=pdi.map((p,i)=>p+ndi[i]>0?100*Math.abs(p-ndi[i])/(p+ndi[i]):0);
-  const adx=ema(dx,14);
-  const bbm=c.map((_,i)=>{const s=c.slice(Math.max(0,i-19),i+1);return s.reduce((a,b)=>a+b,0)/s.length;});
-  const bbs=c.map((_,i)=>{const s=c.slice(Math.max(0,i-19),i+1);const m=s.reduce((a,b)=>a+b,0)/s.length;return Math.sqrt(s.reduce((a,b)=>a+(b-m)**2,0)/s.length);});
-  const bbu=bbm.map((m,i)=>m+2*bbs[i]),bbl=bbm.map((m,i)=>m-2*bbs[i]);
-  const bbw=bbu.map((u,i)=>bbm[i]>0?(u-bbl[i])/bbm[i]:0);
-  const bbpb=c.map((ci,i)=>bbu[i]>bbl[i]?(ci-bbl[i])/(bbu[i]-bbl[i]):0.5);
-  let cv=0,ctv=0;
-  const vwap=c.map((ci,i)=>{const tp=(ci+h[i]+l[i])/3;cv+=v[i];ctv+=tp*v[i];return cv>0?ctv/cv:tp;});
-  const sk=c.map((ci,i)=>{const lo=Math.min(...l.slice(Math.max(0,i-13),i+1)),hi=Math.max(...h.slice(Math.max(0,i-13),i+1));return hi>lo?100*(ci-lo)/(hi-lo):50;});
-  const sd=ema(sk,3);
-  const obvDir=c.map((ci,i)=>i===0?0:ci>c[i-1]?1:ci<c[i-1]?-1:0);
-  const obv=v.map((vi,i)=>vi*obvDir[i]).reduce((acc,val,i)=>{acc.push((acc[i-1]??0)+val);return acc;},[]);
-  const obv5avg=obv.length>5?obv.slice(-5).reduce((a,b)=>a+b,0)/5:obv[obv.length-1]??0;
-  const obvTrend=obv.length>0&&obv[obv.length-1]>obv5avg?"RISING":"FALLING";
-  const v20avg=v.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,n);
-  const volRatio=v20avg>0?v[n-1]/v20avg:1;
-  return {c,h,l,v,n,e9,e20,e50,atr,rsi,macd:ml,mh,adx,bbu,bbl,bbw,bbpb,vwap,sk,sd,obv,obvTrend,volRatio,v20avg};
+  const macdLine=e9.map((v9,i)=>v9-e20[i]);
+  const macdSig=ema(Array.from(macdLine),9);
+  const macd=Array.from(macdLine);
+  const mh=macd.map((v,i)=>v-macdSig[i]);
+  const gains=[],losses=[];
+  for(let i=1;i<n;i++){const d=c[i]-c[i-1];gains.push(Math.max(0,d));losses.push(Math.max(0,-d));}
+  const ag=ema(gains,14),al=ema(losses,14);
+  const rsi=ag.map((g,i)=>{const rs=al[i]===0?100:g/al[i];return 100-100/(1+rs);});
+  const tr=h.map((hi,i)=>Math.max(hi-l[i],Math.abs(hi-(c[i-1]??c[i])),Math.abs(l[i]-(c[i-1]??c[i]))));
+  const atr=Array.from(ema(tr,14));
+  const pdm=h.map((hi,i)=>i===0?0:Math.max(0,hi-h[i-1]));
+  const ndm=l.map((li,i)=>i===0?0:Math.max(0,l[i-1]-li));
+  const pdi=ema(pdm,14).map((v,i)=>atr[i]>0?v/atr[i]*100:0);
+  const ndi=ema(ndm,14).map((v,i)=>atr[i]>0?v/atr[i]*100:0);
+  const dx=pdi.map((p,i)=>{const s=p+ndi[i];return s>0?Math.abs(p-ndi[i])/s*100:0;});
+  const adx=Array.from(ema(dx,14));
+  const sma20=c.map((_,i)=>i<19?c[i]:c.slice(i-19,i+1).reduce((a,b)=>a+b,0)/20);
+  const std20=c.map((_,i)=>{if(i<19)return 0;const sl=c.slice(i-19,i+1),m=sma20[i];return Math.sqrt(sl.reduce((a,b)=>a+(b-m)**2,0)/20);});
+  const bbu=sma20.map((m,i)=>m+2*std20[i]);
+  const bbl=sma20.map((m,i)=>m-2*std20[i]);
+  const bbw=bbu.map((u,i)=>sma20[i]>0?(u-bbl[i])/sma20[i]:0);
+  const bbpb=c.map((ci,i)=>(bbu[i]-bbl[i])>0?(ci-bbl[i])/(bbu[i]-bbl[i]):0.5);
+  const cumV=v.reduce((a,vi,i)=>{a.push((a[i-1]??0)+vi);return a;},[]);
+  const cumPV=c.map((ci,i)=>ci*v[i]).reduce((a,pvi,i)=>{a.push((a[i-1]??0)+pvi);return a;},[]);
+  const vwap=cumPV.map((pv,i)=>cumV[i]>0?pv/cumV[i]:c[i]);
+  const loK=14,sk=c.map((_,i)=>{if(i<loK-1)return 50;const sl=l.slice(i-loK+1,i+1),sh=h.slice(i-loK+1,i+1);const lo=Math.min(...sl),hi=Math.max(...sh);return hi===lo?50:(c[i]-lo)/(hi-lo)*100;});
+  const sd=Array.from(ema(sk,3));
+  return {c,h,l,v,n,e9,e20,e50,atr,rsi,macd,mh,adx,bbu,bbl,bbw,bbpb,vwap,sk,sd,sma20};
 }
 
-// ─── Candle pattern detection ───────────────────────────────────────────────
+// ─── Candle patterns ────────────────────────────────────────────────────────
 function detectCandlePatterns(candles) {
-  const pats=[];
-  if (!candles||candles.length<3) return pats;
-  const o=candles.map(x=>x.open??x.Open??0);
+  if(!candles||candles.length<3) return [];
+  const c=candles.map(x=>x.close??x.Close??0);
+  const o=candles.map(x=>x.open??x.Open??c[candles.indexOf(x)]);
   const h=candles.map(x=>x.high??x.High??0);
   const l=candles.map(x=>x.low??x.Low??0);
-  const c=candles.map(x=>x.close??x.Close??0);
   const n=c.length,i=n-1,p=n-2;
   const body=idx=>Math.abs(c[idx]-o[idx]);
-  const upWick=idx=>h[idx]-Math.max(c[idx],o[idx]);
-  const dnWick=idx=>Math.min(c[idx],o[idx])-l[idx];
   const range=idx=>h[idx]-l[idx];
-  const isBull=idx=>c[idx]>=o[idx];
-  if (range(i)>0&&body(i)/range(i)<0.1)
-    pats.push({name:"Doji",icon:"🕯️",type:"neutral",desc:"Indecision candle — buyers and sellers in perfect balance. A Doji after a strong trend often signals exhaustion and potential reversal. Watch for confirmation on the next candle before acting."});
-  if (dnWick(i)>2*body(i)&&upWick(i)<body(i)&&isBull(i))
-    pats.push({name:"Hammer",icon:"🔨",type:"bull",desc:"Bullish reversal signal. Sellers pushed price down aggressively, but buyers stepped in and recovered nearly all losses. The long lower wick shows strong buying interest at lower levels. TITAN fires M2 BB Bounce + V1 VWAP reclaim in this scenario."});
-  if (upWick(i)>2*body(i)&&dnWick(i)<body(i)&&!isBull(i))
-    pats.push({name:"Shooting Star",icon:"⭐",type:"bear",desc:"Bearish reversal signal. Buyers pushed price up sharply, but sellers overwhelmed them and closed near the lows. The long upper wick shows strong rejection at higher levels. Consider exiting longs or initiating shorts with tight stop above the high."});
-  if (!isBull(p)&&isBull(i)&&o[i]<c[p]&&c[i]>o[p])
-    pats.push({name:"Bullish Engulfing",icon:"🟢",type:"bull",desc:"Strong bullish reversal — the current green candle completely swallows the previous red candle's body. Indicates a powerful shift from selling to buying pressure. High-probability setup: TITAN T1 EMA Cross often confirms simultaneously. Best entry on close of this candle."});
-  if (isBull(p)&&!isBull(i)&&o[i]>c[p]&&c[i]<o[p])
-    pats.push({name:"Bearish Engulfing",icon:"🔴",type:"bear",desc:"Strong bearish reversal — the current red candle completely swallows the previous green candle. Indicates sellers took full control. Exit long positions immediately. GUARDIAN typically triggers a stop-loss review when this pattern appears at resistance."});
-  if (n>=3&&!isBull(n-3)&&body(n-2)<body(n-3)*0.5&&isBull(i)&&c[i]>(o[n-3]+c[n-3])/2)
-    pats.push({name:"Morning Star",icon:"🌟",type:"bull",desc:"Three-candle bullish reversal pattern. Day 1: large red candle (sellers in control). Day 2: small body (indecision, selling momentum slowing). Day 3: large green candle closing above midpoint of Day 1. One of the most reliable reversal signals. Target = prior resistance zone."});
-  if (n>=3&&isBull(n-3)&&body(n-2)<body(n-3)*0.5&&!isBull(i)&&c[i]<(o[n-3]+c[n-3])/2)
-    pats.push({name:"Evening Star",icon:"🌆",type:"bear",desc:"Three-candle bearish reversal pattern. Mirror of Morning Star. Day 1: large green candle. Day 2: small body gap up (buying exhaustion). Day 3: large red candle closing below Day 1 midpoint. Exit longs. Especially powerful at round-number resistance or 52-week highs."});
-  if (isBull(i)&&body(i)>range(i)*0.7)
-    pats.push({name:"Strong Bull Candle",icon:"💪",type:"bull",desc:"A momentum candle with body occupying >70% of the total range. No meaningful wicks — buyers were in control throughout the entire session. This is what TITAN's B2 Volume Surge strategy looks for. Strong follow-through likely if volume was also elevated."});
-  if (h[i]<h[p]&&l[i]>l[p])
-    pats.push({name:"Inside Bar",icon:"📦",type:"neutral",desc:"The current candle's high and low are both within the previous candle's range. This indicates consolidation and a compression of volatility. A breakout above the mother bar's high is bullish; below the low is bearish. TITAN's BB Squeeze (M3) often fires alongside this."});
+  const isBull=idx=>c[idx]>o[idx];
+  const pats=[];
+  if(body(i)<range(i)*0.1)
+    pats.push({name:"Doji",icon:"✚",type:"neutral",desc:"Opening and closing prices nearly equal — perfect indecision. A Doji after a strong move often signals exhaustion. Wait for the next candle to confirm direction before entering. Most reliable when appearing near support/resistance levels."});
+  if(isBull(i)&&body(i)>range(i)*0.6&&(h[i]-c[i])<body(i)*0.1&&(o[i]-l[i])<body(i)*0.15)
+    pats.push({name:"Bullish Marubozu",icon:"🟢",type:"bull",desc:"A full green candle with almost no wicks — buyers dominated the entire session from open to close. This is a high-confidence bullish signal especially on volume. Often the start of a new leg up. TITAN's T1/T2 strategies look for these."});
+  if(!isBull(i)&&body(i)>range(i)*0.6&&(l[i]-c[i])<body(i)*0.1&&(h[i]-o[i])<body(i)*0.15)
+    pats.push({name:"Bearish Marubozu",icon:"🔴",type:"bear",desc:"Full red candle, no wicks — sellers in complete control. Exit longs immediately. This candle type has high follow-through probability. GUARDIAN uses this as a partial exit signal."});
+  if((h[i]-Math.max(o[i],c[i]))>body(i)*2&&body(i)<range(i)*0.3)
+    pats.push({name:"Shooting Star",icon:"💫",type:"bear",desc:"Small body near the low with a long upper wick — buyers pushed price up but sellers rejected the move aggressively. Classic reversal signal at resistance. Bearish on next open below the body. Most effective after 3+ up candles."});
+  if((Math.min(o[i],c[i])-l[i])>body(i)*2&&body(i)<range(i)*0.3)
+    pats.push({name:"Hammer",icon:"🔨",type:"bull",desc:"Small body near the high with a long lower wick — sellers pushed price down but buyers stepped in strongly. Classic demand-zone reversal signal. Most effective after 3+ down candles or at support. Entry on next green candle open."});
+  if(n>=3&&!isBull(n-3)&&body(n-2)<body(n-3)*0.5&&isBull(i)&&c[i]>(o[n-3]+c[n-3])/2)
+    pats.push({name:"Morning Star",icon:"🌅",type:"bull",desc:"Three-candle bullish reversal: Day 1 large red candle (sellers). Day 2 small body (indecision). Day 3 large green candle closing above Day 1 midpoint. One of the most reliable reversal signals. Target = prior resistance."});
+  if(n>=3&&isBull(n-3)&&body(n-2)<body(n-3)*0.5&&!isBull(i)&&c[i]<(o[n-3]+c[n-3])/2)
+    pats.push({name:"Evening Star",icon:"🌆",type:"bear",desc:"Three-candle bearish reversal — mirror of Morning Star. Day 1 large green. Day 2 small body gap up. Day 3 large red closing below Day 1 midpoint. Exit longs."});
+  if(isBull(i)&&body(i)>range(i)*0.7)
+    pats.push({name:"Strong Bull Candle",icon:"💪",type:"bull",desc:"Momentum candle with body >70% of range. Buyers dominated the entire session. High follow-through probability especially with elevated volume."});
+  if(h[i]<h[p]&&l[i]>l[p])
+    pats.push({name:"Inside Bar",icon:"📦",type:"neutral",desc:"Current candle's range is within the prior candle's range. Volatility compression. Breakout above high = bullish, below low = bearish."});
   return pats;
 }
 
 // ─── Volume analysis ────────────────────────────────────────────────────────
 function computeVolumeAnalysis(candles) {
-  if (!candles||candles.length<5) return null;
+  if(!candles||candles.length<5) return null;
   const c=candles.map(x=>x.close??x.Close??0);
   const v=candles.map(x=>x.volume??x.Volume??0);
   const n=c.length;
@@ -179,10 +169,10 @@ function computeVolumeAnalysis(candles) {
     lastVol:Math.round(lastVol),v20avg:Math.round(v20avg),priceUp,volUp};
 }
 
-// ─── TITAN signals ─────────────────────────────────────────────────────────
-function titanSignals(candles,regime) {
+// ─── TITAN signals ───────────────────────────────────────────────────────────
+function titanSignals(candles, regime) {
   const ind=indicators(candles);
-  if (!ind) return [];
+  if(!ind) return [];
   const {c,h,l,v,n,e9,e20,e50,atr,rsi,macd,mh,adx,bbu,bbl,bbw,bbpb,vwap,sk,sd}=ind;
   const i=n-1,p=n-2;
   const out=[];
@@ -194,44 +184,26 @@ function titanSignals(candles,regime) {
   else if(e9[i]<e20[i]&&e20[i]<e50[i])   push("T2","Trend",-1,0.80,"Triple EMA bear stack 9<20<50");
   if(mh[i]>0&&mh[p]<=0)                  push("T4","Trend",1,0.75,"MACD histogram turned positive");
   else if(mh[i]<0&&mh[p]>=0)             push("T4","Trend",-1,0.75,"MACD histogram turned negative");
-  if(adx[i]>25) push("T5","Trend",macd[i]>0?1:-1,Math.min(0.90,0.54+adx[i]/100),`ADX=${adx[i].toFixed(0)} strong trend`);
+  if(adx[i]>25)                           push("T5","Trend",macd[i]>0?1:-1,Math.min(0.90,0.54+adx[i]/100),`ADX=${adx[i].toFixed(0)} strong trend`);
   const hi20=Math.max(...h.slice(Math.max(0,i-19),i+1)),lo20=Math.min(...l.slice(Math.max(0,i-19),i+1));
-  if(c[i]>=hi20*0.998) push("T7","Trend",1,0.82,`20-bar Donchian breakout high ${hi20.toFixed(0)}`);
-  else if(c[i]<=lo20*1.002) push("T7","Trend",-1,0.82,`20-bar Donchian breakdown low ${lo20.toFixed(0)}`);
-  const r=rsi[i];
-  if(r<28)      push("M1","MeanRev",1,Math.min(0.92,0.65+(28-r)/30),`RSI=${r.toFixed(0)} extreme oversold`);
-  else if(r>72) push("M1","MeanRev",-1,Math.min(0.92,0.65+(r-72)/30),`RSI=${r.toFixed(0)} extreme overbought`);
-  else if(r<38) push("M1","MeanRev",1,0.50,`RSI=${r.toFixed(0)} near oversold`);
-  else if(r>62) push("M1","MeanRev",-1,0.50,`RSI=${r.toFixed(0)} near overbought`);
-  if(bbpb[i]<0.06) push("M2","MeanRev",1,0.72,`BB lower band bounce %B=${bbpb[i].toFixed(2)}`);
-  else if(bbpb[i]>0.94) push("M2","MeanRev",-1,0.72,`BB upper band touch %B=${bbpb[i].toFixed(2)}`);
-  const abw=bbw.slice(Math.max(0,i-19),i).reduce((a,b)=>a+b,0)/20;
-  if(bbw[i]<abw*0.72) push("M3","MeanRev",macd[i]>0?1:-1,0.74,"BB squeeze — volatility breakout imminent");
-  if(sk[i]<22&&sk[i]>sd[i]) push("M4","MeanRev",1,0.70,`Stoch K=${sk[i].toFixed(0)} oversold crossover`);
-  else if(sk[i]>78&&sk[i]<sd[i]) push("M4","MeanRev",-1,0.70,`Stoch K=${sk[i].toFixed(0)} overbought crossover`);
-  const mu=c.slice(Math.max(0,i-19),i+1).reduce((a,b)=>a+b,0)/20;
-  const σ=Math.sqrt(c.slice(Math.max(0,i-19),i+1).reduce((a,b)=>a+(b-mu)**2,0)/20);
-  const z=σ>0?(c[i]-mu)/σ:0;
-  if(z<-2) push("S1","Statistical",1,Math.min(0.90,0.68+Math.abs(z+2)*0.08),`Z-score=${z.toFixed(2)} 2σ below mean`);
-  else if(z>2) push("S1","Statistical",-1,Math.min(0.90,0.68+(z-2)*0.08),`Z-score=${z.toFixed(2)} 2σ above mean`);
-  const avgV=v.reduce((a,b)=>a+b,0)/n,vr=v[i]/Math.max(avgV,1);
-  const oh=Math.max(...h.slice(0,Math.min(4,n))),ol=Math.min(...l.slice(0,Math.min(4,n)));
-  if(c[i]>oh*1.002) push("B1","Breakout",1,vr>1.3?0.85:0.65,`Opening range breakout above ${oh.toFixed(0)}`);
-  else if(c[i]<ol*0.998) push("B1","Breakout",-1,0.65,`Opening range breakdown below ${ol.toFixed(0)}`);
-  if(vr>1.5&&c[i]>c[p]) push("B2","Breakout",1,Math.min(0.90,0.55+vr*0.08),`Volume surge ×${vr.toFixed(1)} bullish`);
-  else if(vr>1.5&&c[i]<c[p]) push("B2","Breakout",-1,Math.min(0.88,0.52+vr*0.07),`Volume surge ×${vr.toFixed(1)} bearish`);
-  if(c[i]>vwap[i]&&c[p]<=vwap[p]) push("V1","VWAP",1,0.74,"Price reclaimed VWAP — bullish");
-  else if(c[i]<vwap[i]&&c[p]>=vwap[p]) push("V1","VWAP",-1,0.74,"Price lost VWAP — bearish");
-  const vd=(c[i]-vwap[i])/vwap[i]*100;
-  if(vd>1.8) push("V2","VWAP",-1,0.66,`+${vd.toFixed(2)}% extended above VWAP — fade`);
-  else if(vd<-1.8) push("V2","VWAP",1,0.66,`${vd.toFixed(2)}% below VWAP — revert long`);
-  const allow={TRENDING:["Trend","Breakout"],SIDEWAYS:["MeanRev","VWAP","Statistical"],VOLATILE:["MeanRev","VWAP"],RISK_OFF:[]};
-  const ok=allow[regime]??["Trend","Breakout","MeanRev","VWAP","Statistical"];
+  if(c[i]>=hi20*0.998)        push("T7","Trend",1,0.82,`20-bar Donchian high ${hi20.toFixed(0)}`);
+  else if(c[i]<=lo20*1.002)   push("T7","Trend",-1,0.82,`20-bar Donchian low ${lo20.toFixed(0)}`);
+  if(rsi[i]<30&&rsi[p]>=30)   push("M1","MeanRev",1,0.72,"RSI crossed below 30 — oversold");
+  else if(rsi[i]>70&&rsi[p]<=70) push("M1","MeanRev",-1,0.72,"RSI crossed above 70 — overbought");
+  if(c[i]<bbl[i]&&c[p]>=bbl[p]) push("M2","MeanRev",1,0.68,"Price crossed below lower Bollinger Band — bounce likely");
+  else if(c[i]>bbu[i]&&c[p]<=bbu[p]) push("M2","MeanRev",-1,0.68,"Price crossed above upper BB — mean reversion likely");
+  if(bbw[i]<0.02&&bbw[p]>=0.02)  push("M3","MeanRev",macd[i]>0?1:-1,0.65,"BB squeeze — volatility contraction breakout pending");
+  if(c[i]>vwap[i]&&c[p]<=vwap[p]) push("V1","VWAP",1,0.71,"Price reclaimed VWAP — institutional buy zone");
+  else if(c[i]<vwap[i]&&c[p]>=vwap[p]) push("V1","VWAP",-1,0.71,"Price lost VWAP — institutional sell pressure");
+  const zscore=(c[i]-(ind.sma20?.[i]??c[i]))/(atr[i]||1);
+  if(zscore<-2) push("S1","Statistical",1,0.70,`Z-score ${zscore.toFixed(2)} — statistically oversold`);
+  else if(zscore>2) push("S1","Statistical",-1,0.70,`Z-score ${zscore.toFixed(2)} — statistically overbought`);
+  const ok=["Trend","Breakout","MeanRev","VWAP","Statistical"];
   return out.filter(s=>ok.includes(s.category)).sort((a,b)=>b.confidence-a.confidence);
 }
 
-// ─── NSE Stock universe ─────────────────────────────────────────────────────
-const NSE_UNIVERSE = [
+// ─── NSE Universe ────────────────────────────────────────────────────────────
+const NSE_UNIVERSE=[
   {s:"RELIANCE",n:"Reliance Industries",sec:"Energy",base:2847},
   {s:"TCS",n:"Tata Consultancy",sec:"IT",base:3642},
   {s:"HDFCBANK",n:"HDFC Bank",sec:"Banking",base:1678},
@@ -259,18 +231,45 @@ const NSE_UNIVERSE = [
   {s:"TATASTEEL",n:"Tata Steel",sec:"Metal",base:164},
 ];
 
-// ─── Shared atoms ───────────────────────────────────────────────────────────
-const Tag = ({label,color,bg}) => (
+// ─── Demo news generator ──────────────────────────────────────────────────
+function generateDemoNews(picks) {
+  if(!picks?.length) return [];
+  const now=new Date();
+  const TEMPLATES=[
+    {sent:"BULLISH",score:0.72,src:"ET Markets",tmpl:(s,n)=>`${n} Q3 results beat estimates; PAT up 18% YoY — analysts raise target`},
+    {sent:"BULLISH",score:0.61,src:"Moneycontrol",tmpl:(s,n)=>`FII net buyers in ${n} for third consecutive session`},
+    {sent:"BEARISH",score:-0.55,src:"Business Standard",tmpl:(s,n)=>`${n} faces margin pressure as raw material costs rise 12%`},
+    {sent:"NEUTRAL",score:0.1,src:"Reuters",tmpl:(s,n)=>`${n} announces board meeting to discuss fund raise`},
+    {sent:"BULLISH",score:0.80,src:"NSE",tmpl:(s,n)=>`${s} added to MSCI India index — passive inflows expected`},
+  ];
+  return picks.flatMap((p,pi)=>
+    TEMPLATES.slice(0,2).map((t,ti)=>{
+      const mins=(pi*17+ti*11)%55;
+      return {
+        id:`news-${p.s}-${ti}`,symbol:p.s,related:[],
+        headline:t.tmpl(p.s,p.n??p.s),
+        summary:`Analysis by AlphaZero sentiment engine.`,
+        sentiment:t.sent,sentiment_score:t.score,source:t.src,
+        time:`${now.getHours()}:${String(now.getMinutes()-mins<0?0:now.getMinutes()-mins).padStart(2,"0")}`,
+        impact:`${t.sent.includes("BULL")?"Positive for share price":"Negative short-term pressure"}. ${p.s} SIGMA score adjusted.`,
+        confirmation:t.score>0.5?[t.src,"AlphaZero AI"]:t.score<-0.3?[t.src]:[],
+      };
+    })
+  );
+}
+
+// ─── Shared atoms ─────────────────────────────────────────────────────────
+const Tag=({label,color,bg})=>(
   <span style={{background:bg??color+"1a",border:`1px solid ${color}44`,
     color,padding:"1px 8px",borderRadius:20,fontSize:10,fontWeight:600,
     display:"inline-block",whiteSpace:"nowrap"}}>{label}</span>
 );
-const Num = ({n,color}) => (
+const Num=({n,color})=>(
   <span style={{background:(color??G.blue)+"1a",color:color??G.blue,
     borderRadius:20,padding:"0 7px",fontSize:11,fontWeight:700,
     minWidth:18,display:"inline-block",textAlign:"center"}}>{n}</span>
 );
-const Empty = ({icon,title,sub}) => (
+const Empty=({icon,title,sub})=>(
   <div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"64px 20px",gap:10}}>
     <span style={{fontSize:28}}>{icon}</span>
     <div style={{color:G.textSec,fontSize:13,fontWeight:500}}>{title}</div>
@@ -285,25 +284,22 @@ function KpiBar({value,max=1,color}) {
     </div>
   );
 }
-
-// ─── Rating badge ───────────────────────────────────────────────────────────
 function RatingBadge({rating,size="md"}) {
-  const sz = size==="lg" ? {fontSize:13,padding:"4px 14px"} : {fontSize:10,padding:"2px 8px"};
+  const sz=size==="lg"?{fontSize:13,padding:"4px 14px"}:{fontSize:10,padding:"2px 8px"};
   return (
     <span style={{...sz,background:rating.bg,border:`1px solid ${rating.color}55`,
-      color:rating.color,borderRadius:20,fontWeight:700,letterSpacing:".04em",
-      whiteSpace:"nowrap"}}>
+      color:rating.color,borderRadius:20,fontWeight:700,letterSpacing:".04em",whiteSpace:"nowrap"}}>
       {rating.icon} {rating.label}
     </span>
   );
 }
 
-// ─── Connection banner ──────────────────────────────────────────────────────
+// ─── ConnBanner ────────────────────────────────────────────────────────────
 function ConnBanner({status}) {
-  if (status==="live") return null;
+  if(status==="live") return null;
   const cfg={
     connecting:{color:G.yellow,icon:"⟳",msg:"Connecting to backend…"},
-    offline:{color:G.orange,icon:"⚠",msg:"Backend offline — run: uvicorn src.dashboard.backend:app --port 8000 (real NSE data + TITAN signals)"},
+    offline:{color:G.orange,icon:"⚠",msg:"Backend offline — run: uvicorn dashboard.backend:app --port 8000"},
   };
   const {color,icon,msg}=cfg[status]??cfg.offline;
   return (
@@ -314,7 +310,7 @@ function ConnBanner({status}) {
   );
 }
 
-// ─── TopNav ─────────────────────────────────────────────────────────────────
+// ─── TopNav ───────────────────────────────────────────────────────────────
 function TopNav({regime,indices,paperPnl,time,connStatus,mode}) {
   const R=REGIME[regime]??REGIME.TRENDING;
   const nChange=(indices.nifty??0)-24150,bChange=(indices.banknifty??0)-51840;
@@ -363,7 +359,7 @@ function TopNav({regime,indices,paperPnl,time,connStatus,mode}) {
   );
 }
 
-// ─── TabBar ──────────────────────────────────────────────────────────────────
+// ─── TabBar ───────────────────────────────────────────────────────────────
 function TabBar({active,setActive,counts}) {
   const tabs=[
     {id:"overview",label:"Overview"},
@@ -407,8 +403,7 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
   const wr=evalStats?.win_rate??0;
   return (
     <div style={{display:"flex",flexDirection:"column",gap:24}}>
-      {/* Stat cards */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
         {[
           {label:"Open Positions",val:open.length,sub:`${10-open.length} slots free`,color:G.blue},
           {label:"Gross P&L",val:`${grossPnl>=0?"+":""}₹${Math.abs(grossPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"before charges",color:grossPnl>=0?G.green:G.red},
@@ -423,93 +418,65 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
         ))}
       </div>
 
-      {/* APEX Picks grid */}
       <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
-        <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.border}`,
-          display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <span style={{color:G.text,fontSize:13,fontWeight:600}}>APEX Selected Stocks</span>
             <Tag label="Click for full analysis" color={G.blue}/>
           </div>
           <span style={{color:G.textMut,fontSize:10}}>Dynamic scan · 40s refresh · {NSE_UNIVERSE.length} stocks</span>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))"}}>
-          {picks.length===0
-            ? Array(5).fill(null).map((_,i)=>(
-                <div key={i} style={{padding:"20px",display:"flex",alignItems:"center",justifyContent:"center",
-                  borderRight:i<4?`1px solid ${G.border}`:"none"}}>
-                  <span style={{color:G.textMut,fontSize:11}}>Scanning…</span>
-                </div>
-              ))
-            : picks.map((s,i)=>{
-                const candles=candleCache[s.s];
-                const last=candles?.length?candles[candles.length-1]:null;
-                const price=last?(last.close??last.Close??s.base):(s.price??s.base);
-                const first=candles?.[0];
-                const chg=first?(price-(first.close??first.Close??price))/(first.close??first.Close??price)*100:0;
-                const rr=s.entry&&s.sl&&s.target?(s.target-s.entry)/(s.entry-s.sl):0;
-                const sigs=candles?titanSignals(candles,s.regime??"TRENDING"):[];
-                const buys=sigs.filter(x=>x.signal===1).length;
-                const sells=sigs.filter(x=>x.signal===-1).length;
-                const rating=computeRating(s.confidence??0.5,buys,sells,s.score??0);
-                const stockNews=news.filter(n=>n.symbol===s.s||n.related?.includes(s.s)).slice(0,2);
-                const sentimentScore=stockNews.reduce((acc,n)=>acc+(n.sentiment_score??0),0)/Math.max(stockNews.length,1);
-                return (
-                  <div key={s.s} onClick={()=>onStock(s)}
-                    style={{padding:"14px 16px",borderRight:i<4?`1px solid ${G.border}`:"none",
-                      cursor:"pointer",transition:"background .12s"}}
-                    onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
-                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-                      <div style={{display:"flex",alignItems:"center",gap:4}}>
-                        <span style={{color:G.textMut,fontSize:9,fontFamily:"monospace"}}>#{i+1}</span>
-                        <span style={{color:G.blue,fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{s.s}</span>
-                      </div>
-                      <span style={{color:chg>=0?G.green:G.red,fontSize:10,fontFamily:"monospace"}}>{chg>=0?"+":""}{chg.toFixed(2)}%</span>
-                    </div>
-                    <div style={{color:G.text,fontSize:17,fontWeight:700,fontFamily:"monospace",marginBottom:2}}>₹{price.toFixed(0)}</div>
-                    <div style={{marginBottom:8}}><RatingBadge rating={rating}/></div>
-                    <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
-                      <Tag label={s.sid??"-"} color={G.yellow}/>
-                      <Tag label={s.tt??"SWING"} color={TT_COLOR[s.tt]??G.blue}/>
-                      {s.mtfVotes>0&&<Tag label={`MTF ${s.mtfVotes}/5`} color={s.mtfVotes>=4?G.green:G.teal}/>}
-                    </div>
-                    {/* Selection reason snippet */}
-                    {s.selectionReason&&(
-                      <div style={{color:G.textMut,fontSize:9,lineHeight:1.4,marginBottom:6,
-                        padding:"4px 6px",background:G.bg,borderRadius:4,borderLeft:`2px solid ${G.blue}55`}}>
-                        {s.selectionReason.slice(0,80)}{s.selectionReason.length>80?"…":""}
-                      </div>
-                    )}
-                    {/* News sentiment dot */}
-                    {stockNews.length>0&&(
-                      <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:6}}>
-                        <div style={{width:5,height:5,borderRadius:"50%",
-                          background:sentimentScore>0.1?G.green:sentimentScore<-0.1?G.red:G.yellow}}/>
-                        <span style={{color:G.textMut,fontSize:9}}>{stockNews.length} news item{stockNews.length>1?"s":""} · {sentimentScore>0.1?"positive":sentimentScore<-0.1?"negative":"neutral"}</span>
-                      </div>
-                    )}
-                    <div style={{borderTop:`1px solid ${G.border}`,paddingTop:8,marginTop:4,
-                      display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4}}>
-                      {[["Score",s.score?.toFixed(3)],["R:R",`1:${rr.toFixed(1)}`],["Conf",`${((s.confidence??0)*100).toFixed(0)}%`]].map(([k,v])=>(
-                        <div key={k}>
-                          <div style={{color:G.textMut,fontSize:8,marginBottom:1}}>{k}</div>
-                          <div style={{color:G.text,fontSize:10,fontWeight:600,fontFamily:"monospace"}}>{v}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
-                      <span style={{color:G.red,fontSize:9,fontFamily:"monospace"}}>SL ₹{(s.sl??0).toFixed(0)}</span>
-                      <span style={{color:G.green,fontSize:9,fontFamily:"monospace"}}>TGT ₹{(s.target??0).toFixed(0)}</span>
-                    </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)"}}>
+          {picks.length===0?Array(5).fill(null).map((_,i)=>(
+            <div key={i} style={{padding:"20px",display:"flex",alignItems:"center",justifyContent:"center",borderRight:i<4?`1px solid ${G.border}`:"none"}}>
+              <span style={{color:G.textMut,fontSize:11}}>Scanning…</span>
+            </div>
+          )):picks.map((s,i)=>{
+            const candles=candleCache[s.s];
+            const price=candles?.length?(candles[candles.length-1].close??candles[candles.length-1].Close??s.base):s.price??s.base;
+            const first=candles?.[0];
+            const chg=first?(price-(first.close??first.Close??price))/(first.close??first.Close??price)*100:0;
+            const rr=s.entry&&s.sl&&s.target?(s.target-s.entry)/(s.entry-s.sl):0;
+            const sigs=candles?titanSignals(candles,s.regime??"TRENDING"):[];
+            const buys=sigs.filter(x=>x.signal===1).length;
+            const sells=sigs.filter(x=>x.signal===-1).length;
+            const rating=computeRating(s.confidence??0.5,buys,sells,s.score??0);
+            const stockNews=news.filter(n=>n.symbol===s.s||n.related?.includes(s.s)).slice(0,2);
+            return (
+              <div key={s.s} onClick={()=>onStock(s)}
+                style={{padding:"14px 16px",borderRight:i<4?`1px solid ${G.border}`:"none",cursor:"pointer",transition:"background .12s"}}
+                onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
+                onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                  <div style={{display:"flex",alignItems:"center",gap:4}}>
+                    <span style={{color:G.textMut,fontSize:9,fontFamily:"monospace"}}>#{i+1}</span>
+                    <span style={{color:G.blue,fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{s.s}</span>
                   </div>
-                );
-              })
-          }
+                  <span style={{color:chg>=0?G.green:G.red,fontSize:10,fontFamily:"monospace"}}>{chg>=0?"+":""}{chg.toFixed(2)}%</span>
+                </div>
+                <div style={{color:G.text,fontSize:17,fontWeight:700,fontFamily:"monospace",marginBottom:2}}>₹{price.toFixed(0)}</div>
+                <div style={{marginBottom:8}}><RatingBadge rating={rating}/></div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
+                  <Tag label={s.sid??"-"} color={G.yellow}/>
+                  <Tag label={s.tt??"SWING"} color={TT_COLOR[s.tt]??G.blue}/>
+                  {s.mtfVotes>0&&<Tag label={`MTF ${s.mtfVotes}/5`} color={s.mtfVotes>=4?G.green:G.teal}/>}
+                </div>
+                {s.selectionReason&&(
+                  <div style={{color:G.textMut,fontSize:9,lineHeight:1.4,marginBottom:6,
+                    padding:"4px 6px",background:G.bg,borderRadius:4,borderLeft:`2px solid ${G.blue}55`}}>
+                    {s.selectionReason.slice(0,80)}{s.selectionReason.length>80?"…":""}
+                  </div>
+                )}
+                <div style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
+                  <span style={{color:G.red,fontSize:9,fontFamily:"monospace"}}>SL ₹{(s.sl??0).toFixed(0)}</span>
+                  <span style={{color:G.green,fontSize:9,fontFamily:"monospace"}}>TGT ₹{(s.target??0).toFixed(0)}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Signals summary + ticker */}
       <div style={{display:"grid",gridTemplateColumns:"200px 1fr",gap:12}}>
         <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
           <div style={{color:G.textSec,fontSize:11,fontWeight:600,marginBottom:12}}>Signals Now</div>
@@ -532,8 +499,7 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
               const chg=first?(price-(first.close??first.Close??price))/(first.close??first.Close??price)*100:0;
               return (
                 <div key={st.s} onClick={()=>onStock(st)}
-                  style={{background:G.blue+"14",border:`1px solid ${G.blue}44`,
-                    borderRadius:6,padding:"6px 10px",cursor:"pointer",transition:"all .12s"}}
+                  style={{background:G.blue+"14",border:`1px solid ${G.blue}44`,borderRadius:6,padding:"6px 10px",cursor:"pointer",transition:"all .12s"}}
                   onMouseEnter={e=>e.currentTarget.style.background=G.blue+"24"}
                   onMouseLeave={e=>e.currentTarget.style.background=G.blue+"14"}>
                   <div style={{color:G.blue,fontSize:10,fontWeight:700,fontFamily:"monospace"}}>{st.s}</div>
@@ -550,93 +516,166 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB: POSITIONS — with net P&L after all Indian market charges
+// TAB: POSITIONS — with inner sub-tabs (Open · Progress · History)
 // ═══════════════════════════════════════════════════════════════════════════
-function PositionsTab({positions,mode}) {
+function PositionsTab({positions,mode,apData={}}) {
   const [showCharges,setShowCharges]=useState(null);
+  const [innerTab,setInnerTab]=useState("open");
+
   const open=positions.filter(p=>p.status==="OPEN");
   const closed=positions.filter(p=>p.status==="CLOSED").slice(-10);
+
+  // AP data helpers
+  const apOpen    = apData?.open_positions ?? [];
+  const apHist    = apData?.history        ?? [];
+  const nearTgt   = apData?.near_target    ?? [];
+  const nearSl    = apData?.near_sl        ?? [];
+  const maxSlots  = apData?.max_positions  ?? 10;
+
+  const INNER_TABS=[
+    {id:"open",     label:`📊 Open (${open.length})`},
+    {id:"progress", label:`🎯 Progress${nearTgt.length?` · ${nearTgt.length} near target`:""}`, badge:nearTgt.length},
+    {id:"history",  label:`📋 History (${apHist.length})`},
+  ];
+
   return (
-    <div style={{display:"flex",flexDirection:"column",gap:16}}>
-      {/* Open positions */}
-      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
-        <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.border}`,
-          display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <span style={{color:G.text,fontSize:13,fontWeight:600}}>Open Positions</span>
-          <Tag label={mode==="LIVE"?"🔴 LIVE — real orders":"📄 PAPER — simulated"} color={mode==="LIVE"?G.red:G.yellow}/>
-        </div>
-        {open.length===0
-          ? <Empty icon="📭" title="No open positions" sub="APEX selects high-confidence stocks every 40s from NSE universe. Positions appear here once confirmed."/>
-          : (
-            <div style={{overflowX:"auto"}}>
+    <div style={{display:"flex",flexDirection:"column",gap:0}}>
+
+      {/* ── Inner sub-tab bar ── */}
+      <div style={{display:"flex",gap:0,borderBottom:`1px solid ${G.border}`,
+        background:G.surface,borderRadius:"8px 8px 0 0",overflow:"hidden",marginBottom:16}}>
+        {INNER_TABS.map(t=>(
+          <button key={t.id} onClick={()=>setInnerTab(t.id)} style={{
+            background:"none",border:"none",cursor:"pointer",
+            borderBottom:innerTab===t.id?`2px solid ${G.blueDim}`:"2px solid transparent",
+            color:innerTab===t.id?G.text:G.textSec,
+            padding:"9px 18px",fontSize:12,fontWeight:innerTab===t.id?600:400,
+            marginBottom:-1,whiteSpace:"nowrap",transition:"color .15s",
+            display:"flex",alignItems:"center",gap:5,
+          }}>
+            {t.label}
+            {t.badge>0&&<span style={{background:G.yellow+"30",color:G.yellow,fontSize:9,fontWeight:700,padding:"1px 5px",borderRadius:10}}>{t.badge}</span>}
+          </button>
+        ))}
+      </div>
+
+      {/* ═══ OPEN TAB — existing table, untouched ═══ */}
+      {innerTab==="open"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          {/* Open positions */}
+          <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
+            <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.border}`,
+              display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{color:G.text,fontSize:13,fontWeight:600}}>Open Positions</span>
+              <Tag label={mode==="LIVE"?"🔴 LIVE — real orders":"📄 PAPER — simulated"} color={mode==="LIVE"?G.red:G.yellow}/>
+            </div>
+            {open.length===0
+              ?<Empty icon="📭" title="No open positions" sub="APEX selects high-confidence stocks every 40s from NSE universe. Positions appear here once confirmed."/>
+              :(
+                <div style={{overflowX:"auto"}}>
+                  <table style={{width:"100%",borderCollapse:"collapse"}}>
+                    <thead>
+                      <tr style={{background:G.bg}}>
+                        {["Symbol","Strategy","TT","Entry ₹","CMP ₹","SL ₹","Target ₹","Qty","Gross P&L","Net P&L","Status","Opened"].map(h=>(
+                          <th key={h} style={{color:G.textSec,fontSize:10,padding:"9px 14px",
+                            textAlign:"left",fontWeight:500,borderBottom:`1px solid ${G.border}`,
+                            whiteSpace:"nowrap",fontFamily:"monospace"}}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {open.map(pos=>{
+                        const ch=calcNetPnl(pos);
+                        const monitoring=pos.tt==="LONG_TERM"||pos.tt==="SWING";
+                        return (
+                          <tr key={pos.id??pos.symbol} style={{borderBottom:`1px solid ${G.border}`}}
+                            onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
+                            onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                            <td style={{padding:"11px 14px"}}>
+                              <div style={{color:G.text,fontWeight:700,fontSize:12,fontFamily:"monospace"}}>{pos.symbol}</div>
+                              {monitoring&&<div style={{color:G.blue,fontSize:8,marginTop:2}}>📡 Monitoring</div>}
+                            </td>
+                            <td style={{padding:"11px 14px"}}><Tag label={pos.sid??"-"} color={G.yellow}/></td>
+                            <td style={{padding:"11px 14px"}}><Tag label={pos.tt??"SWING"} color={TT_COLOR[pos.tt]??G.blue}/></td>
+                            <td style={{padding:"11px 14px",color:G.textSec,fontSize:12,fontFamily:"monospace"}}>{(pos.entryPrice??0).toFixed(2)}</td>
+                            <td style={{padding:"11px 14px",color:G.text,fontSize:12,fontWeight:700,fontFamily:"monospace"}}>{(pos.cp??pos.entryPrice??0).toFixed(2)}</td>
+                            <td style={{padding:"11px 14px",color:G.red,fontSize:12,fontFamily:"monospace"}}>{(pos.sl??0).toFixed(2)}</td>
+                            <td style={{padding:"11px 14px",color:G.green,fontSize:12,fontFamily:"monospace"}}>{(pos.target??0).toFixed(2)}</td>
+                            <td style={{padding:"11px 14px",color:G.textSec,fontSize:12,fontFamily:"monospace"}}>{pos.qty}</td>
+                            <td style={{padding:"11px 14px",fontFamily:"monospace"}}>
+                              <span style={{color:ch.grossPnl>=0?G.green:G.red,fontSize:12,fontWeight:700}}>
+                                {ch.grossPnl>=0?"+":""}₹{Math.abs(ch.grossPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}
+                              </span>
+                            </td>
+                            <td style={{padding:"11px 14px",fontFamily:"monospace"}}>
+                              <div style={{color:ch.netPnl>=0?G.teal:G.red,fontSize:12,fontWeight:700}}>
+                                {ch.netPnl>=0?"+":""}₹{Math.abs(ch.netPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}
+                              </div>
+                              <div style={{color:G.textMut,fontSize:9,cursor:"pointer"}}
+                                onClick={()=>setShowCharges(showCharges===pos.id?null:pos.id)}>
+                                charges ₹{ch.totalCharges.toFixed(0)} {showCharges===pos.id?"▲":"▼"}
+                              </div>
+                              {showCharges===pos.id&&(
+                                <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:6,
+                                  padding:"8px 10px",marginTop:4,fontSize:10,color:G.textSec,minWidth:160}}>
+                                  {[["Brokerage",ch.brok],["STT",ch.stt],["Exchange",ch.exc],["SEBI",ch.sebi],["Stamp",ch.stamp],["DP",ch.dp],["GST",ch.gst]].map(([l,v])=>(
+                                    <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                                      <span>{l}</span><span style={{fontFamily:"monospace"}}>₹{v.toFixed(2)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{padding:"11px 14px"}}>
+                              {pos.alert
+                                ?<span style={{color:G.orange,fontSize:10,fontWeight:600}}>⚠ {pos.alert}</span>
+                                :<span style={{color:G.textMut,fontSize:10}}>Normal</span>}
+                            </td>
+                            <td style={{padding:"11px 14px",color:G.textMut,fontSize:10,fontFamily:"monospace"}}>{pos.time??pos.openedAt??"-"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+          </div>
+
+          {/* Recently closed */}
+          {closed.length>0&&(
+            <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
+              <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.border}`}}>
+                <span style={{color:G.text,fontSize:13,fontWeight:600}}>Recently Closed</span>
+              </div>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead>
                   <tr style={{background:G.bg}}>
-                    {["Symbol","Strategy","TT","Entry ₹","CMP ₹","SL ₹","Target ₹","Qty","Gross P&L","Net P&L","Status","Opened"].map(h=>(
-                      <th key={h} style={{color:G.textSec,fontSize:10,padding:"9px 14px",
-                        textAlign:"left",fontWeight:500,borderBottom:`1px solid ${G.border}`,
-                        whiteSpace:"nowrap",fontFamily:"monospace"}}>{h}</th>
+                    {["Symbol","Entry","Exit","Qty","Net P&L","Charges","Result"].map(h=>(
+                      <th key={h} style={{color:G.textSec,fontSize:10,padding:"8px 14px",textAlign:"left",
+                        fontWeight:500,borderBottom:`1px solid ${G.border}`,fontFamily:"monospace"}}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {open.map(pos=>{
-                    const ch=calcNetPnl(pos);
-                    const monitoring=pos.tt==="LONG_TERM"||pos.tt==="SWING";
+                  {closed.map(pos=>{
+                    const exit=pos.exitPrice??pos.cp??pos.entryPrice??0;
+                    const ch=calcNetPnl({...pos,cp:exit});
                     return (
-                      <tr key={pos.id} style={{borderBottom:`1px solid ${G.border}`}}
+                      <tr key={pos.id??pos.symbol} style={{borderBottom:`1px solid ${G.border}`,opacity:.7}}
                         onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
                         onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                        <td style={{padding:"11px 14px"}}>
-                          <div style={{color:G.text,fontWeight:700,fontSize:12,fontFamily:"monospace"}}>{pos.symbol}</div>
-                          {monitoring&&<div style={{color:G.blue,fontSize:8,marginTop:2}}>📡 Monitoring</div>}
+                        <td style={{padding:"10px 14px",color:G.text,fontWeight:700,fontSize:12,fontFamily:"monospace"}}>{pos.symbol}</td>
+                        <td style={{padding:"10px 14px",color:G.textSec,fontSize:12,fontFamily:"monospace"}}>{(pos.entryPrice??0).toFixed(2)}</td>
+                        <td style={{padding:"10px 14px",color:G.text,fontSize:12,fontFamily:"monospace"}}>{exit.toFixed(2)}</td>
+                        <td style={{padding:"10px 14px",color:G.textSec,fontSize:12,fontFamily:"monospace"}}>{pos.qty}</td>
+                        <td style={{padding:"10px 14px",fontFamily:"monospace",fontWeight:700,
+                          color:ch.netPnl>=0?G.teal:G.red,fontSize:12}}>
+                          {ch.netPnl>=0?"+":""}₹{Math.abs(ch.netPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}
                         </td>
-                        <td style={{padding:"11px 14px"}}><Tag label={pos.sid??"-"} color={G.yellow}/></td>
-                        <td style={{padding:"11px 14px"}}><Tag label={pos.tt??"SWING"} color={TT_COLOR[pos.tt]??G.blue}/></td>
-                        <td style={{padding:"11px 14px",color:G.textSec,fontSize:12,fontFamily:"monospace"}}>{(pos.entryPrice??0).toFixed(2)}</td>
-                        <td style={{padding:"11px 14px",color:G.text,fontSize:12,fontWeight:700,fontFamily:"monospace"}}>{(pos.cp??pos.entryPrice??0).toFixed(2)}</td>
-                        <td style={{padding:"11px 14px",color:G.red,fontSize:12,fontFamily:"monospace"}}>{(pos.sl??0).toFixed(2)}</td>
-                        <td style={{padding:"11px 14px",color:G.green,fontSize:12,fontFamily:"monospace"}}>{(pos.target??0).toFixed(2)}</td>
-                        <td style={{padding:"11px 14px",color:G.textSec,fontSize:12,fontFamily:"monospace"}}>{pos.qty}</td>
-                        <td style={{padding:"11px 14px",fontFamily:"monospace"}}>
-                          <span style={{color:ch.grossPnl>=0?G.green:G.red,fontSize:12,fontWeight:700}}>
-                            {ch.grossPnl>=0?"+":"-"}₹{Math.abs(ch.grossPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}
-                          </span>
+                        <td style={{padding:"10px 14px",color:G.textMut,fontSize:11,fontFamily:"monospace"}}>₹{ch.totalCharges.toFixed(0)}</td>
+                        <td style={{padding:"10px 14px"}}>
+                          <Tag label={ch.netPnl>=0?"✓ WIN":"✗ LOSS"} color={ch.netPnl>=0?G.green:G.red}/>
                         </td>
-                        <td style={{padding:"11px 14px",fontFamily:"monospace"}}>
-                          <div style={{display:"flex",alignItems:"center",gap:6}}>
-                            <span style={{color:ch.netPnl>=0?G.teal:G.red,fontSize:12,fontWeight:700}}>
-                              {ch.netPnl>=0?"+":"-"}₹{Math.abs(ch.netPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}
-                            </span>
-                            <button onClick={e=>{e.stopPropagation();setShowCharges(showCharges===pos.id?null:pos.id);}}
-                              style={{background:G.border,border:"none",color:G.textSec,
-                                fontSize:9,padding:"1px 5px",borderRadius:3,cursor:"pointer"}}>
-                              {showCharges===pos.id?"▲":"charges"}
-                            </button>
-                          </div>
-                          {showCharges===pos.id&&(
-                            <div style={{background:G.bg,borderRadius:6,padding:"8px 10px",marginTop:6,
-                              fontSize:9,color:G.textSec,lineHeight:1.8,fontFamily:"monospace",minWidth:180}}>
-                              <div>Brokerage: ₹{ch.brok.toFixed(2)}</div>
-                              <div>STT: ₹{ch.stt.toFixed(2)}</div>
-                              <div>Exchange: ₹{ch.exc.toFixed(2)}</div>
-                              <div>SEBI: ₹{ch.sebi.toFixed(4)}</div>
-                              <div>Stamp: ₹{ch.stamp.toFixed(2)}</div>
-                              <div>DP: ₹{ch.dp.toFixed(2)}</div>
-                              <div>GST: ₹{ch.gst.toFixed(2)}</div>
-                              <div style={{borderTop:`1px solid ${G.border}`,marginTop:4,paddingTop:4,color:G.orange,fontWeight:700}}>
-                                Total: ₹{ch.totalCharges.toFixed(2)}
-                              </div>
-                            </div>
-                          )}
-                        </td>
-                        <td style={{padding:"11px 14px"}}>
-                          {pos.alert&&(
-                            <span style={{color:G.orange,fontSize:10,fontWeight:600}}>⚠ {pos.alert}</span>
-                          )}
-                          {!pos.alert&&<span style={{color:G.textMut,fontSize:10}}>Normal</span>}
-                        </td>
-                        <td style={{padding:"11px 14px",color:G.textMut,fontSize:10,fontFamily:"monospace"}}>{pos.time}</td>
                       </tr>
                     );
                   })}
@@ -644,48 +683,220 @@ function PositionsTab({positions,mode}) {
               </table>
             </div>
           )}
-      </div>
+        </div>
+      )}
 
-      {/* Closed positions (recent) */}
-      {closed.length>0&&(
-        <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
-          <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.border}`}}>
-            <span style={{color:G.text,fontSize:13,fontWeight:600}}>Recently Closed</span>
-          </div>
-          <table style={{width:"100%",borderCollapse:"collapse"}}>
-            <thead>
-              <tr style={{background:G.bg}}>
-                {["Symbol","Entry","Exit","Qty","Net P&L","Charges","Result"].map(h=>(
-                  <th key={h} style={{color:G.textSec,fontSize:10,padding:"8px 14px",textAlign:"left",
-                    fontWeight:500,borderBottom:`1px solid ${G.border}`,fontFamily:"monospace"}}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {closed.map((pos,i)=>{
-                const ch=calcNetPnl({...pos,cp:pos.exitPrice??pos.cp??pos.entryPrice});
+      {/* ═══ PROGRESS TAB ═══ */}
+      {innerTab==="progress"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+          {/* Slot grid */}
+          <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 18px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <span style={{color:G.text,fontWeight:600,fontSize:12}}>Position Slots</span>
+              <span style={{color:G.textSec,fontSize:11}}>
+                {apData?.total_open??open.length}/{maxSlots} filled ·{" "}
+                {(apData?.slots_available??maxSlots-open.length)>0
+                  ?<span style={{color:G.green}}>{apData?.slots_available??maxSlots-open.length} free</span>
+                  :<span style={{color:G.yellow}}>all filled — holding until targets hit</span>}
+              </span>
+            </div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {Array.from({length:maxSlots}).map((_,idx)=>{
+                const pos=apOpen[idx]??open[idx];
+                const sym=pos?.symbol;
+                const isNT=sym&&nearTgt.includes(sym);
+                const isNS=sym&&nearSl.includes(sym);
+                const border=!pos?G.border:isNT?G.yellow:isNS?G.red:G.green;
+                const bg=!pos?"transparent":isNT?G.yellow+"18":isNS?G.red+"18":G.green+"14";
+                const color=!pos?G.textMut:isNT?G.yellow:isNS?G.red:G.green;
+                const pct=pos?.pnl_pct??pos?.pnlPct;
                 return (
-                  <tr key={pos.id||i} style={{borderBottom:`1px solid ${G.border}`}}
-                    onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
-                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    <td style={{padding:"9px 14px",color:G.text,fontWeight:700,fontSize:12,fontFamily:"monospace"}}>{pos.symbol}</td>
-                    <td style={{padding:"9px 14px",color:G.textSec,fontSize:11,fontFamily:"monospace"}}>₹{(pos.entryPrice??0).toFixed(0)}</td>
-                    <td style={{padding:"9px 14px",color:G.textSec,fontSize:11,fontFamily:"monospace"}}>₹{(pos.exitPrice??pos.cp??0).toFixed(0)}</td>
-                    <td style={{padding:"9px 14px",color:G.textSec,fontSize:11,fontFamily:"monospace"}}>{pos.qty}</td>
-                    <td style={{padding:"9px 14px",fontFamily:"monospace"}}>
-                      <span style={{color:ch.netPnl>=0?G.teal:G.red,fontSize:12,fontWeight:700}}>
-                        {ch.netPnl>=0?"+":"-"}₹{Math.abs(ch.netPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}
-                      </span>
-                    </td>
-                    <td style={{padding:"9px 14px",color:G.textMut,fontSize:10,fontFamily:"monospace"}}>₹{ch.totalCharges.toFixed(0)}</td>
-                    <td style={{padding:"9px 14px"}}>
-                      <Tag label={ch.netPnl>=0?"WIN":"LOSS"} color={ch.netPnl>=0?G.green:G.red}/>
-                    </td>
-                  </tr>
+                  <div key={idx} title={sym?`${sym}${pct!=null?` · ${pct>=0?"+":""}${pct.toFixed(1)}%`:""}`:  "Empty slot"}
+                    style={{width:40,height:40,borderRadius:7,border:`1.5px solid ${border}`,background:bg,
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                      fontSize:8,fontWeight:700,color,transition:"transform .1s",cursor:pos?"default":"default"}}
+                    onMouseEnter={e=>{if(pos)e.currentTarget.style.transform="scale(1.12)";}}
+                    onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
+                    {pos?sym.slice(0,3):"·"}
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+            {(nearTgt.length>0||nearSl.length>0)&&(
+              <div style={{marginTop:10,display:"flex",gap:7,flexWrap:"wrap"}}>
+                {nearTgt.map(s=>(
+                  <span key={s} style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,
+                    background:G.yellow+"20",color:G.yellow,border:`1px solid ${G.yellow}44`}}>🎯 {s} near target</span>
+                ))}
+                {nearSl.map(s=>(
+                  <span key={s} style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,
+                    background:G.red+"20",color:G.red,border:`1px solid ${G.red}44`}}>⚠️ {s} near SL</span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Summary stats */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+            {[
+              {label:"Unrealised P&L",v:apData?.total_unrealised_pnl??0,fmt:v=>`${v>=0?"+":""}₹${Math.abs(v).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:v=>(v??0)>=0?G.green:G.red},
+              {label:"Realised P&L",  v:apData?.total_realised_pnl??0,  fmt:v=>`${v>=0?"+":""}₹${Math.abs(v).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:v=>(v??0)>=0?G.green:G.red},
+              {label:"Win Rate",      v:apData?.win_rate_pct??0,         fmt:v=>`${(v??0).toFixed(1)}%`, c:v=>(v??0)>=55?G.green:(v??0)>=40?G.yellow:G.red},
+              {label:"Capital In",    v:apData?.total_invested??0,       fmt:v=>`₹${(v??0).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:()=>G.blue},
+            ].map(({label,v,fmt,c})=>(
+              <div key={label} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"12px 14px"}}>
+                <div style={{color:G.textSec,fontSize:10,marginBottom:5,textTransform:"uppercase",letterSpacing:".4px"}}>{label}</div>
+                <div style={{color:c(v),fontSize:15,fontWeight:700,fontFamily:"monospace"}}>{fmt(v)}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Per-position progress cards */}
+          {(apOpen.length===0&&open.length===0)
+            ?<div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"40px",textAlign:"center",color:G.textSec,fontSize:12}}>
+               📭 No open positions to track
+             </div>
+            :(apOpen.length>0?apOpen:open.map(p=>({
+                symbol:p.symbol,entry_price:p.entryPrice??0,current_price:p.cp??p.entryPrice??0,
+                target:p.target??0,stop_loss:p.sl??0,quantity:p.qty??0,
+                unrealised_pnl:p.pnl??0,pnl_pct:p.pnlPct??0,
+                strategy:p.sid??"",trade_type:p.tt??"SWING",days_open:0,max_days:30,
+              }))).map(pos=>{
+              const ep=pos.entry_price||0,curr=pos.current_price||ep;
+              const tgt=pos.target||0,sl=pos.stop_loss||0;
+              const totalDist=tgt-ep,doneDist=curr-ep;
+              const pct=totalDist>0?Math.max(-5,Math.min(100,doneDist/totalDist*100)):0;
+              const barColor=pct>=80?G.green:pct>=40?G.blueDim:pct>=0?G.yellow:G.red;
+              const daysOpen=pos.days_open||0,maxDays=pos.max_days||30;
+              const isNT=nearTgt.includes(pos.symbol);
+              const isNS=nearSl.includes(pos.symbol);
+              const cardBorder=isNT?G.yellow:isNS?G.red:G.border;
+              const pnlColor=(pos.pnl_pct||pos.pnlPct||0)>=0?G.green:G.red;
+              return (
+                <div key={pos.symbol} style={{background:G.surface,border:`1px solid ${cardBorder}`,borderRadius:8,padding:"14px 18px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                    <div>
+                      <span style={{color:G.text,fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{pos.symbol}</span>
+                      {pos.strategy&&<span style={{color:G.textMut,fontSize:10,marginLeft:8}}>{pos.strategy}</span>}
+                      {pos.trade_type&&<span style={{marginLeft:6,padding:"1px 6px",borderRadius:4,fontSize:9,fontWeight:700,
+                        background:(TT_COLOR[pos.trade_type]??G.blue)+"20",color:TT_COLOR[pos.trade_type]??G.blue}}>{pos.trade_type}</span>}
+                      {isNT&&<span style={{marginLeft:8,padding:"1px 6px",borderRadius:10,fontSize:9,fontWeight:700,background:G.yellow+"20",color:G.yellow}}>🎯 Near Target</span>}
+                      {isNS&&<span style={{marginLeft:8,padding:"1px 6px",borderRadius:10,fontSize:9,fontWeight:700,background:G.red+"20",color:G.red}}>⚠️ Near SL</span>}
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <span style={{color:pnlColor,fontWeight:700,fontSize:13,fontFamily:"monospace"}}>
+                        {(pos.pnl_pct||pos.pnlPct||0)>=0?"+":""}{(pos.pnl_pct||pos.pnlPct||0).toFixed(2)}%
+                      </span>
+                      {pos.unrealised_pnl!=null&&(
+                        <div style={{color:pnlColor,fontSize:10,fontFamily:"monospace"}}>
+                          {pos.unrealised_pnl>=0?"+":""}₹{Math.abs(pos.unrealised_pnl).toLocaleString("en-IN",{maximumFractionDigits:0})}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Price progress bar */}
+                  {tgt>0&&(
+                    <>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:G.textMut,marginBottom:3}}>
+                        <span>SL ₹{sl.toFixed(0)}</span>
+                        <span style={{color:barColor,fontWeight:700}}>{pct.toFixed(0)}% to target</span>
+                        <span>Target ₹{tgt.toFixed(0)}</span>
+                      </div>
+                      <div style={{height:6,background:G.border,borderRadius:3,overflow:"hidden",marginBottom:10}}>
+                        <div style={{width:`${Math.max(0,pct)}%`,height:"100%",background:barColor,borderRadius:3,transition:"width .6s ease"}}/>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Key prices row */}
+                  <div style={{display:"flex",gap:18,flexWrap:"wrap",fontSize:11,alignItems:"center"}}>
+                    <span style={{color:G.textSec}}>Entry <span style={{color:G.text,fontFamily:"monospace",fontWeight:600}}>₹{ep.toFixed(2)}</span></span>
+                    <span style={{color:G.textSec}}>CMP <span style={{color:pnlColor,fontFamily:"monospace",fontWeight:700}}>₹{curr.toFixed(2)}</span></span>
+                    <span style={{color:G.textSec}}>Target <span style={{color:G.yellow,fontFamily:"monospace"}}>₹{tgt.toFixed(2)}</span></span>
+                    <span style={{color:G.textSec}}>Qty <span style={{color:G.text,fontFamily:"monospace"}}>{pos.quantity||pos.qty||0}</span></span>
+                    {maxDays>0&&(
+                      <span style={{marginLeft:"auto",color:daysOpen/maxDays>0.8?G.red:G.textMut,fontSize:10,display:"flex",alignItems:"center",gap:5}}>
+                        Day {daysOpen}/{maxDays}
+                        <span style={{display:"inline-block",width:44,height:3,background:G.border,borderRadius:2,overflow:"hidden"}}>
+                          <span style={{display:"block",width:`${Math.min(100,daysOpen/maxDays*100)}%`,height:"100%",background:daysOpen/maxDays>0.8?G.red:G.textMut,borderRadius:2}}/>
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          }
+        </div>
+      )}
+
+      {/* ═══ HISTORY TAB ═══ */}
+      {innerTab==="history"&&(
+        <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
+          <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{color:G.text,fontSize:13,fontWeight:600}}>Trade History</span>
+            <span style={{color:G.textSec,fontSize:11}}>
+              {apData?.winning_trades??0}W · {apData?.losing_trades??0}L · Win rate {(apData?.win_rate_pct??0).toFixed(1)}%
+            </span>
+          </div>
+          {apHist.length===0&&closed.length===0
+            ?<Empty icon="📋" title="No closed trades yet" sub="Completed positions appear here once target or stop-loss is hit."/>
+            :(
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead>
+                    <tr style={{background:G.bg}}>
+                      {["Symbol","Entry ₹","Exit ₹","P&L","P&L %","Result","Strategy","Days","Closed"].map(h=>(
+                        <th key={h} style={{color:G.textSec,fontSize:10,padding:"9px 14px",textAlign:"left",
+                          fontWeight:500,borderBottom:`1px solid ${G.border}`,whiteSpace:"nowrap",fontFamily:"monospace"}}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...[...apHist].reverse().slice(0,30),...(apHist.length===0?closed.map(p=>({
+                        symbol:p.symbol,entry_price:p.entryPrice??0,current_price:p.exitPrice??p.cp??p.entryPrice??0,
+                        realised_pnl:calcNetPnl({...p,cp:p.exitPrice??p.cp??p.entryPrice}).netPnl,
+                        realised_pct:calcNetPnl({...p,cp:p.exitPrice??p.cp??p.entryPrice}).netPct,
+                        status:"FORCE_CLOSED",strategy:p.sid??"",days_open:0,closed_at:"",
+                      })):[])].map((p,idx)=>{
+                      const STATUS_MAP={
+                        TARGET_HIT:  [G.green, "🎯 Target"],
+                        STOP_HIT:    [G.red,   "🛑 SL Hit"],
+                        EXPIRED:     [G.textSec,"⏰ Expired"],
+                        FORCE_CLOSED:[G.yellow,"✋ Manual"],
+                      };
+                      const [sc,sl]=STATUS_MAP[p.status]??[G.textSec,p.status??"-"];
+                      const rpnl=p.realised_pnl||0,rpct=p.realised_pct||0;
+                      const cd=p.closed_at?new Date(p.closed_at).toLocaleDateString("en-IN"):"--";
+                      return (
+                        <tr key={idx} style={{borderBottom:`1px solid ${G.border}`,opacity:.85}}
+                          onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
+                          onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                          <td style={{padding:"10px 14px",fontWeight:700,fontSize:12,fontFamily:"monospace",color:G.text}}>{p.symbol}</td>
+                          <td style={{padding:"10px 14px",fontFamily:"monospace",color:G.textSec,fontSize:12}}>₹{(p.entry_price||0).toLocaleString("en-IN",{maximumFractionDigits:2})}</td>
+                          <td style={{padding:"10px 14px",fontFamily:"monospace",color:G.text,fontSize:12}}>₹{(p.current_price||0).toLocaleString("en-IN",{maximumFractionDigits:2})}</td>
+                          <td style={{padding:"10px 14px",fontFamily:"monospace",fontSize:12,fontWeight:700,color:rpnl>=0?G.teal:G.red}}>
+                            {rpnl>=0?"+":""}₹{Math.abs(rpnl).toLocaleString("en-IN",{maximumFractionDigits:0})}
+                          </td>
+                          <td style={{padding:"10px 14px",fontFamily:"monospace",fontSize:12,color:rpct>=0?G.teal:G.red}}>
+                            {rpct>=0?"+":""}{rpct.toFixed(2)}%
+                          </td>
+                          <td style={{padding:"10px 14px"}}>
+                            <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,
+                              background:sc+"18",color:sc,border:`1px solid ${sc}33`}}>{sl}</span>
+                          </td>
+                          <td style={{padding:"10px 14px",color:G.textMut,fontSize:11}}>{p.strategy||"--"}</td>
+                          <td style={{padding:"10px 14px",color:G.textMut,fontSize:11,fontFamily:"monospace"}}>{p.days_open||0}d</td>
+                          <td style={{padding:"10px 14px",color:G.textMut,fontSize:10}}>{cd}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
         </div>
       )}
     </div>
@@ -693,129 +904,148 @@ function PositionsTab({positions,mode}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB: NEWS — multi-source with sentiment
+// TAB: SIGNALS
 // ═══════════════════════════════════════════════════════════════════════════
-const SENTIMENT_LABEL = {
-  "BULLISH":{"color":G.green,"icon":"📈"},
-  "BEARISH":{"color":G.red,"icon":"📉"},
-  "NEUTRAL":{"color":G.yellow,"icon":"📊"},
-  "STRONGLY_BULLISH":{"color":G.teal,"icon":"🚀"},
-  "STRONGLY_BEARISH":{"color":"#ff3333","icon":"🔻"},
-};
-const SOURCE_COLOR = {
-  "Economic Times":G.orange,"Moneycontrol":G.blue,"Reuters":G.purple,
-  "Business Standard":G.teal,"NDTV Business":G.red,"Mint":G.yellow,
-  "Bloomberg":G.cyan,"Financial Express":G.amber,
-};
-
-function NewsTab({news,picks}) {
+function SignalsTab({signals,onStock,picks}) {
   const [filter,setFilter]=useState("ALL");
-  const symbols=["ALL",...new Set(picks.map(p=>p.s))];
-  const filtered=filter==="ALL"?news:news.filter(n=>n.symbol===filter||n.related?.includes(filter));
+  const REGIMES=["ALL","TRENDING","SIDEWAYS","VOLATILE","RISK_OFF"];
+  const filtered=filter==="ALL"?signals:signals.filter(s=>s.regime===filter);
   return (
     <div style={{display:"flex",flexDirection:"column",gap:16}}>
-      {/* Filter bar */}
-      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-        <span style={{color:G.textMut,fontSize:11}}>Filter:</span>
-        {symbols.map(s=>(
-          <button key={s} onClick={()=>setFilter(s)} style={{
-            background:filter===s?G.blue+"22":"none",
-            border:`1px solid ${filter===s?G.blue+"66":G.border}`,
-            color:filter===s?G.blue:G.textSec,borderRadius:20,
-            padding:"3px 10px",fontSize:11,cursor:"pointer",transition:"all .15s"}}>
-            {s}
-          </button>
-        ))}
+      <div style={{display:"flex",gap:8}}>
+        {REGIMES.map(r=>{
+          const rc=REGIME[r]??{color:G.textSec};
+          return (
+            <button key={r} onClick={()=>setFilter(r)} style={{
+              background:filter===r?rc.color+"22":"none",border:`1px solid ${filter===r?rc.color+"66":G.border}`,
+              color:filter===r?rc.color:G.textSec,borderRadius:6,padding:"4px 12px",fontSize:11,cursor:"pointer",transition:"all .15s"}}>
+              {REGIME[r]?.icon??""} {r}
+            </button>
+          );
+        })}
       </div>
-
-      {/* Sentiment summary */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
-        {[
-          {label:"Bullish",count:news.filter(n=>n.sentiment==="BULLISH"||n.sentiment==="STRONGLY_BULLISH").length,color:G.green},
-          {label:"Neutral",count:news.filter(n=>n.sentiment==="NEUTRAL").length,color:G.yellow},
-          {label:"Bearish",count:news.filter(n=>n.sentiment==="BEARISH"||n.sentiment==="STRONGLY_BEARISH").length,color:G.red},
-        ].map(({label,count,color})=>(
-          <div key={label} style={{background:G.surface,border:`1px solid ${G.border}`,
-            borderRadius:8,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{color:G.textSec,fontSize:11}}>{label}</span>
-            <span style={{color,fontSize:18,fontWeight:700,fontFamily:"monospace"}}>{count}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* News list */}
-      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
         {filtered.length===0
-          ? <Empty icon="📰" title="No news available" sub="News feeds update every 5 minutes. Start the backend for live RSS + sentiment analysis."/>
-          : filtered.map((item,i)=>{
-              const sent=SENTIMENT_LABEL[item.sentiment]??SENTIMENT_LABEL.NEUTRAL;
-              const srcColor=SOURCE_COLOR[item.source]??G.textSec;
-              return (
-                <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,
-                  borderRadius:8,padding:"14px 18px",transition:"background .12s"}}
-                  onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
-                  onMouseLeave={e=>e.currentTarget.style.background=G.surface}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                      <span style={{background:srcColor+"1a",border:`1px solid ${srcColor}44`,
-                        color:srcColor,padding:"1px 8px",borderRadius:20,fontSize:10,fontWeight:600}}>
-                        {item.source}
-                      </span>
-                      {item.symbol&&<Tag label={item.symbol} color={G.blue}/>}
-                      {item.related?.map(r=><Tag key={r} label={r} color={G.textSec}/>)}
-                      <span style={{color:sent.color,fontSize:11,fontWeight:700}}>
-                        {sent.icon} {item.sentiment?.replace("_"," ")}
-                      </span>
-                    </div>
-                    <span style={{color:G.textMut,fontSize:10,fontFamily:"monospace",whiteSpace:"nowrap"}}>{item.time}</span>
-                  </div>
-                  <div style={{color:G.text,fontSize:13,fontWeight:600,lineHeight:1.4,marginBottom:6}}>
-                    {item.headline}
-                  </div>
-                  {item.summary&&(
-                    <div style={{color:G.textSec,fontSize:11,lineHeight:1.6,marginBottom:8}}>{item.summary}</div>
-                  )}
-                  <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                    {item.sentiment_score!=null&&(
-                      <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        <span style={{color:G.textMut,fontSize:10}}>Sentiment score:</span>
-                        <div style={{background:G.border,borderRadius:3,height:4,width:80,overflow:"hidden"}}>
-                          <div style={{width:`${Math.abs(item.sentiment_score??0)*100}%`,height:"100%",
-                            background:item.sentiment_score>=0?G.green:G.red,borderRadius:3}}/>
+          ?<Empty icon="⚔️" title="No signals for this filter" sub="TITAN runs 45+ strategies on real NSE candles every 8 seconds."/>
+          :(
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead>
+                <tr style={{background:G.bg}}>
+                  {["Symbol","Strategy","Direction","Category","Confidence","Regime","Signal Reason","Time"].map(h=>(
+                    <th key={h} style={{color:G.textSec,fontSize:10,padding:"9px 14px",textAlign:"left",
+                      fontWeight:500,borderBottom:`1px solid ${G.border}`,fontFamily:"monospace",whiteSpace:"nowrap"}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.slice(0,40).map((sig,idx)=>{
+                  const pick=picks.find(p=>p.s===sig.symbol);
+                  return (
+                    <tr key={idx} style={{borderBottom:`1px solid ${G.border}`,cursor:pick?"pointer":"default"}}
+                      onClick={()=>pick&&onStock(pick)}
+                      onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
+                      onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <td style={{padding:"10px 14px",color:G.blue,fontWeight:700,fontSize:12,fontFamily:"monospace"}}>{sig.symbol}</td>
+                      <td style={{padding:"10px 14px"}}><Tag label={sig.strategy_id??sig.id??"-"} color={G.yellow}/></td>
+                      <td style={{padding:"10px 14px"}}>
+                        <Tag label={sig.signal===1?"BUY":sig.signal===-1?"SELL":"HOLD"}
+                          color={sig.signal===1?G.green:sig.signal===-1?G.red:G.yellow}/>
+                      </td>
+                      <td style={{padding:"10px 14px",color:G.textSec,fontSize:11}}>{sig.category??"-"}</td>
+                      <td style={{padding:"10px 14px"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <div style={{width:50,height:4,background:G.border,borderRadius:2,overflow:"hidden"}}>
+                            <div style={{width:`${(sig.confidence??0)*100}%`,height:"100%",
+                              background:(sig.confidence??0)>=0.75?G.green:(sig.confidence??0)>=0.55?G.yellow:G.red}}/>
+                          </div>
+                          <span style={{color:G.textSec,fontSize:10,fontFamily:"monospace"}}>{((sig.confidence??0)*100).toFixed(0)}%</span>
                         </div>
-                        <span style={{color:item.sentiment_score>=0?G.green:G.red,
-                          fontSize:10,fontFamily:"monospace",fontWeight:700}}>
-                          {(item.sentiment_score??0)>=0?"+":""}{((item.sentiment_score??0)*100).toFixed(0)}%
-                        </span>
-                      </div>
-                    )}
-                    {item.url&&(
-                      <a href={item.url} target="_blank" rel="noreferrer"
-                        style={{color:G.blue,fontSize:10,textDecoration:"none"}}
-                        onClick={e=>e.stopPropagation()}>
-                        Read full article →
-                      </a>
-                    )}
-                    {item.confirmation&&(
-                      <div style={{display:"flex",gap:4}}>
-                        {item.confirmation.map((src,j)=>(
-                          <span key={j} style={{background:G.green+"14",color:G.green,
-                            fontSize:9,padding:"1px 6px",borderRadius:3}}>✓ {src}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })
-        }
+                      </td>
+                      <td style={{padding:"10px 14px"}}>
+                        {sig.regime&&<Tag label={sig.regime} color={REGIME[sig.regime]?.color??G.textSec}/>}
+                      </td>
+                      <td style={{padding:"10px 14px",color:G.textMut,fontSize:11,maxWidth:280}}>
+                        <span style={{display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sig.reason??"-"}</span>
+                      </td>
+                      <td style={{padding:"10px 14px",color:G.textMut,fontSize:10,fontFamily:"monospace",whiteSpace:"nowrap"}}>{sig.ts??sig.time??"-"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
       </div>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB: PERFORMANCE — reporting metrics (from old HTML dashboard)
+// TAB: NEWS
+// ═══════════════════════════════════════════════════════════════════════════
+function NewsTab({news,picks}) {
+  const [expanded,setExpanded]=useState(null);
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:0,background:G.surface,
+      border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
+      <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{color:G.text,fontSize:13,fontWeight:600}}>Market Intelligence</span>
+        <span style={{color:G.textMut,fontSize:10}}>FinBERT sentiment · HERMES agent · {news.length} items</span>
+      </div>
+      {news.length===0
+        ?<Empty icon="📰" title="No news yet" sub="HERMES agent fetches and analyses market news every 2 minutes."/>
+        :news.map((item,idx)=>{
+          const pick=picks.find(p=>p.s===item.symbol);
+          const sentColor=item.sentiment?.includes("BULL")?G.green:item.sentiment?.includes("BEAR")?G.red:G.yellow;
+          return (
+            <div key={item.id??idx} style={{borderBottom:`1px solid ${G.border}`,cursor:"pointer"}}
+              onClick={()=>setExpanded(expanded===idx?null:idx)}>
+              <div style={{padding:"14px 18px",display:"flex",gap:12,alignItems:"flex-start"}}
+                onMouseEnter={e=>e.currentTarget.parentElement.style.background=G.surfaceHov}
+                onMouseLeave={e=>e.currentTarget.parentElement.style.background="transparent"}>
+                <div style={{width:3,alignSelf:"stretch",background:sentColor,borderRadius:2,flexShrink:0}}/>
+                <div style={{flex:1}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                    <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                      <span style={{color:G.blue,fontWeight:700,fontSize:11,fontFamily:"monospace"}}>{item.symbol}</span>
+                      <Tag label={item.sentiment??"-"} color={sentColor}/>
+                      <span style={{color:G.textMut,fontSize:10}}>{item.source}</span>
+                    </div>
+                    <span style={{color:G.textMut,fontSize:10,fontFamily:"monospace"}}>{item.time}</span>
+                  </div>
+                  <div style={{color:G.text,fontSize:12,lineHeight:1.5,marginBottom:4}}>{item.headline}</div>
+                  {expanded===idx&&(
+                    <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
+                      {item.impact&&<div style={{color:G.textSec,fontSize:11,lineHeight:1.5}}>{item.impact}</div>}
+                      {item.sentiment_score!=null&&(
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{color:G.textMut,fontSize:10}}>Sentiment score:</span>
+                          <div style={{width:60,height:4,background:G.border,borderRadius:2,overflow:"hidden"}}>
+                            <div style={{width:`${Math.abs(item.sentiment_score)*100}%`,height:"100%",
+                              background:item.sentiment_score>=0?G.green:G.red,borderRadius:2}}/>
+                          </div>
+                          <span style={{color:item.sentiment_score>=0?G.green:G.red,fontSize:10,fontFamily:"monospace",fontWeight:700}}>
+                            {item.sentiment_score>=0?"+":""}{(item.sentiment_score*100).toFixed(0)}%
+                          </span>
+                        </div>
+                      )}
+                      {item.url&&(
+                        <a href={item.url} target="_blank" rel="noreferrer"
+                          style={{color:G.blue,fontSize:10,textDecoration:"none"}}
+                          onClick={e=>e.stopPropagation()}>Read full article →</a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: PERFORMANCE
 // ═══════════════════════════════════════════════════════════════════════════
 function PerformanceTab({evalStats,positions,agentKpi,systemState}) {
   const closed=positions.filter(p=>p.status==="CLOSED");
@@ -827,90 +1057,50 @@ function PerformanceTab({evalStats,positions,agentKpi,systemState}) {
   const wr=evalStats?.win_rate??0;
   const uptime=systemState?.uptime_s??0;
   const uptimeStr=uptime>3600?`${Math.floor(uptime/3600)}h ${Math.floor((uptime%3600)/60)}m`:`${Math.floor(uptime/60)}m`;
-  const maxAgentKpi=Math.max(...Object.values(agentKpi).map(a=>a.kpi??0),0.5);
-
-  // Simulate Sharpe/drawdown from available data
   const sharpe=(evalStats?.total_points??0)>0?((wr-0.5)*4).toFixed(2):"—";
   const maxDD=evalStats?.max_drawdown_pct!=null?`${(evalStats.max_drawdown_pct*100).toFixed(1)}%`:"—";
-
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
-      {/* Key metrics strip */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:12}}>
         {[
-          {label:"Net Realised P&L",val:`${totalNetPnl>=0?"+":""}₹${Math.abs(totalNetPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"after all charges",color:totalNetPnl>=0?G.green:G.red},
-          {label:"Total Charges Paid",val:`₹${totalCharges.toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"STT+brok+GST+DP",color:G.orange},
-          {label:"Win Rate",val:`${(wr*100).toFixed(1)}%`,sub:`${wins.length}W / ${losses.length}L`,color:wr>=0.55?G.green:wr>=0.40?G.yellow:G.red},
-          {label:"Sharpe Ratio",val:sharpe,sub:"estimated",color:G.blue},
-          {label:"Max Drawdown",val:maxDD,sub:"peak to trough",color:G.red},
-          {label:"System Uptime",val:uptimeStr,sub:`${systemState?.iteration??0} iterations`,color:G.teal},
-        ].map(({label,val,sub,color})=>(
-          <div key={label} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 16px"}}>
+          {label:"Net Realised P&L",val:`${totalNetPnl>=0?"+":""}₹${Math.abs(totalNetPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}`,color:totalNetPnl>=0?G.green:G.red},
+          {label:"Total Trades",val:closed.length,color:G.blue},
+          {label:"Win Rate",val:`${(wr*100).toFixed(1)}%`,color:wr>=0.55?G.green:wr>=0.40?G.yellow:G.red},
+          {label:"Sharpe (approx)",val:sharpe,color:G.purple},
+          {label:"Max Drawdown",val:maxDD,color:G.orange},
+          {label:"Uptime",val:uptimeStr,color:G.teal},
+        ].map(({label,val,color})=>(
+          <div key={label} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 18px"}}>
             <div style={{color:G.textSec,fontSize:10,marginBottom:6}}>{label}</div>
-            <div style={{color,fontSize:18,fontWeight:700,fontFamily:"monospace",marginBottom:3}}>{val}</div>
-            <div style={{color:G.textMut,fontSize:9}}>{sub}</div>
+            <div style={{color,fontSize:16,fontWeight:700,fontFamily:"monospace"}}>{val}</div>
           </div>
         ))}
       </div>
-
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-        {/* Charges breakdown */}
         <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-          <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:16}}>📊 Charges Breakdown</div>
-          {[
-            {label:"Brokerage (₹20/order)",val:`₹${(closed.length*20*2).toLocaleString("en-IN")}`,pct:100*(closed.length*40)/Math.max(totalCharges,1)},
-            {label:"STT (Securities Transaction Tax)",val:`₹${closed.reduce((s,p)=>s+calcNetPnl({...p,cp:p.exitPrice??p.cp??p.entryPrice}).stt,0).toFixed(0)}`,pct:30},
-            {label:"Exchange Charges (NSE)",val:`₹${closed.reduce((s,p)=>s+calcNetPnl({...p,cp:p.exitPrice??p.cp??p.entryPrice}).exc,0).toFixed(2)}`,pct:5},
-            {label:"GST (18% on brok+exc)",val:`₹${closed.reduce((s,p)=>s+calcNetPnl({...p,cp:p.exitPrice??p.cp??p.entryPrice}).gst,0).toFixed(2)}`,pct:10},
-            {label:"Stamp Duty",val:`₹${closed.reduce((s,p)=>s+calcNetPnl({...p,cp:p.exitPrice??p.cp??p.entryPrice}).stamp,0).toFixed(2)}`,pct:8},
-            {label:"DP Charges (delivery)",val:`₹${closed.filter(p=>p.tt!=="INTRADAY").length*15.93}`,pct:12},
-          ].map(({label,val,pct})=>(
-            <div key={label} style={{marginBottom:10}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                <span style={{color:G.textSec,fontSize:11}}>{label}</span>
-                <span style={{color:G.orange,fontSize:11,fontFamily:"monospace",fontWeight:600}}>{val}</span>
-              </div>
-              <div style={{background:G.border,borderRadius:3,height:3,overflow:"hidden"}}>
-                <div style={{width:`${Math.min(100,pct)}%`,height:"100%",background:G.orange,borderRadius:3}}/>
-              </div>
+          <div style={{color:G.textSec,fontSize:11,fontWeight:600,marginBottom:12}}>Win / Loss Breakdown</div>
+          {[[G.green,"Wins",wins.length],[G.red,"Losses",losses.length],[G.textMut,"Open",open.length]].map(([color,label,val])=>(
+            <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <span style={{color:G.textSec,fontSize:11}}>{label}</span>
+              <span style={{color,fontWeight:700,fontSize:14,fontFamily:"monospace"}}>{val}</span>
             </div>
           ))}
+          <div style={{marginTop:8,borderTop:`1px solid ${G.border}`,paddingTop:8}}>
+            <div style={{display:"flex",justifyContent:"space-between"}}>
+              <span style={{color:G.textSec,fontSize:11}}>Total Charges Paid</span>
+              <span style={{color:G.textMut,fontFamily:"monospace",fontSize:11}}>₹{totalCharges.toFixed(0)}</span>
+            </div>
+          </div>
         </div>
-
-        {/* Agent performance */}
         <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-          <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:16}}>🤖 Agent Performance</div>
-          {Object.entries(agentKpi).slice(0,8).map(([agent,kpi])=>{
-            const v=kpi.kpi??0;
-            return (
-              <div key={agent} style={{marginBottom:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                  <span style={{color:G.textSec,fontSize:11,fontFamily:"monospace"}}>{agent}</span>
-                  <span style={{color:v>=0.75?G.green:v>=0.5?G.yellow:G.red,
-                    fontSize:11,fontFamily:"monospace",fontWeight:600}}>
-                    {(v*100).toFixed(0)}% · {kpi.cycles} cycles
-                  </span>
-                </div>
-                <KpiBar value={v} max={1} color={v>=0.75?G.green:v>=0.5?G.yellow:G.red}/>
+          <div style={{color:G.textSec,fontSize:11,fontWeight:600,marginBottom:12}}>Agent Performance</div>
+          {Object.entries(agentKpi).slice(0,6).map(([id,kpi])=>(
+            <div key={id} style={{marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                <span style={{color:G.textSec,fontSize:11}}>{id}</span>
+                <span style={{color:(kpi.kpi??0)>=0.70?G.green:G.yellow,fontSize:11,fontFamily:"monospace"}}>{((kpi.kpi??0)*100).toFixed(0)}%</span>
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* System info */}
-      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-        <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:14}}>⚙️ System Status</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:16}}>
-          {[
-            {k:"Mode",v:systemState?.mode??"PAPER",color:systemState?.mode==="LIVE"?G.red:G.yellow},
-            {k:"Status",v:systemState?.status??"RUNNING",color:G.green},
-            {k:"Iteration",v:systemState?.iteration??0,color:G.blue},
-            {k:"Version",v:VERSION,color:G.purple},
-          ].map(({k,v,color})=>(
-            <div key={k} style={{background:G.bg,borderRadius:6,padding:"10px 12px"}}>
-              <div style={{color:G.textMut,fontSize:9,marginBottom:3}}>{k}</div>
-              <div style={{color,fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{v}</div>
+              <KpiBar value={kpi.kpi??0} max={1} color={(kpi.kpi??0)>=0.70?G.green:G.yellow}/>
             </div>
           ))}
         </div>
@@ -923,17 +1113,18 @@ function PerformanceTab({evalStats,positions,agentKpi,systemState}) {
 // TAB: EVALUATION
 // ═══════════════════════════════════════════════════════════════════════════
 function EvaluationTab({evalStats,evalHistory,agentScores}) {
-  const wr=evalStats?.win_rate??0,total=evalStats?.total_evaluated??0;
+  const total=evalStats?.total_evaluated??0;
+  const wr=evalStats?.win_rate??0;
   return (
-    <div style={{display:"flex",flexDirection:"column",gap:20}}>
-      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 20px"}}>
-        <div style={{color:G.text,fontSize:12,fontWeight:600,marginBottom:12}}>How Paper Mode Evaluation Works</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:16}}>
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
+        <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:12}}>🔭 How LENS Evaluates Signals</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
           {[
-            {icon:"📡",step:"1 — Signal",desc:"TITAN emits signal with entry, SL, target on real NSE candles (yfinance / OpenAlgo)"},
-            {icon:"⏱",step:"2 — Watch",desc:"Live prices checked every 15s. Signal stays pending until SL or target is hit, or 24h expires"},
-            {icon:"🎯",step:"3 — Score",desc:"WIN (target hit): +confidence×2 pts. LOSS (SL hit): −confidence×1 pt. Scratch: 0 pts"},
-            {icon:"🧠",step:"4 — Learn",desc:"KARMA reads evaluation report to down-weight failing strategies per regime."},
+            {icon:"📡",step:"1 — Track",desc:"Every TITAN signal is logged with entry price, SL, and target when generated."},
+            {icon:"⏱",step:"2 — Pending",desc:"Signal stays pending until SL or target is hit, or 24h expires."},
+            {icon:"🎯",step:"3 — Score",desc:"WIN (target hit): +confidence×2 pts. LOSS (SL hit): −confidence×1 pt. Scratch: 0 pts."},
+            {icon:"🧠",step:"4 — Learn",desc:"KARMA reads the evaluation report to down-weight failing strategies per regime."},
           ].map(({icon,step,desc})=>(
             <div key={step} style={{background:G.bg,borderRadius:6,padding:14}}>
               <div style={{fontSize:22,marginBottom:8}}>{icon}</div>
@@ -963,194 +1154,56 @@ function EvaluationTab({evalStats,evalHistory,agentScores}) {
             <span style={{color:G.text,fontSize:13,fontWeight:600}}>Agent Leaderboard</span>
           </div>
           {agentScores.length===0
-            ? <Empty icon="📊" title="Accumulating data" sub="Leaderboard populates as real NSE signals are evaluated against live prices"/>
-            : (
-              <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead>
-                  <tr style={{background:G.bg}}>
-                    {["#","Agent","Signals","W","L","Win Rate","Points"].map(h=>(
-                      <th key={h} style={{color:G.textSec,fontSize:10,padding:"8px 14px",textAlign:"left",fontWeight:500,borderBottom:`1px solid ${G.border}`,fontFamily:"monospace"}}>{h}</th>
-                    ))}
+            ?<Empty icon="🏆" title="No agent scores yet" sub="Scores appear after 5+ evaluated signals."/>
+            :<table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead><tr style={{background:G.bg}}>
+                {["Agent","Signals","Win Rate","Points"].map(h=>(
+                  <th key={h} style={{color:G.textSec,fontSize:10,padding:"8px 14px",textAlign:"left",fontWeight:500,borderBottom:`1px solid ${G.border}`}}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {agentScores.map((a,i)=>(
+                  <tr key={i} style={{borderBottom:`1px solid ${G.border}`}}>
+                    <td style={{padding:"9px 14px",color:G.text,fontWeight:700,fontSize:12}}>{a.agent}</td>
+                    <td style={{padding:"9px 14px",color:G.textSec,fontSize:11,fontFamily:"monospace"}}>{a.signals??0}</td>
+                    <td style={{padding:"9px 14px"}}>
+                      <span style={{color:(a.win_rate??0)>=0.55?G.green:(a.win_rate??0)>=0.40?G.yellow:G.red,fontFamily:"monospace",fontSize:11}}>
+                        {((a.win_rate??0)*100).toFixed(0)}%
+                      </span>
+                    </td>
+                    <td style={{padding:"9px 14px",color:(a.points??0)>=0?G.green:G.red,fontFamily:"monospace",fontSize:11}}>
+                      {(a.points??0)>=0?"+":""}{(a.points??0).toFixed(1)}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {agentScores.map((a,i)=>{
-                    const wr2=a.win_rate??0,pts=a.total_points??0;
-                    return (
-                      <tr key={a.agent_id} style={{borderBottom:`1px solid ${G.border}`}}
-                        onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
-                        onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                        <td style={{padding:"9px 14px",color:i<3?G.yellow:G.textMut,fontSize:11,fontFamily:"monospace"}}>#{i+1}</td>
-                        <td style={{padding:"9px 14px",color:G.text,fontSize:12,fontWeight:600}}>{a.agent_id}</td>
-                        <td style={{padding:"9px 14px",color:G.textSec,fontSize:11,fontFamily:"monospace"}}>{a.total_signals}</td>
-                        <td style={{padding:"9px 14px",color:G.green,fontSize:11,fontFamily:"monospace"}}>{a.wins}</td>
-                        <td style={{padding:"9px 14px",color:G.red,fontSize:11,fontFamily:"monospace"}}>{a.losses}</td>
-                        <td style={{padding:"9px 14px",minWidth:100}}>
-                          <div style={{display:"flex",alignItems:"center",gap:8}}>
-                            <div style={{flex:1,background:G.border,borderRadius:3,height:5,overflow:"hidden"}}>
-                              <div style={{width:`${wr2*100}%`,height:"100%",background:wr2>=0.55?G.green:wr2>=0.40?G.yellow:G.red,transition:"width .6s"}}/>
-                            </div>
-                            <span style={{color:wr2>=0.55?G.green:wr2>=0.40?G.yellow:G.red,fontSize:10,fontFamily:"monospace",minWidth:30}}>{(wr2*100).toFixed(0)}%</span>
-                          </div>
-                        </td>
-                        <td style={{padding:"9px 14px",color:pts>=0?G.green:G.red,fontSize:12,fontWeight:700,fontFamily:"monospace"}}>{pts>=0?"+":""}{pts.toFixed(1)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
+                ))}
+              </tbody>
+            </table>}
         </div>
         <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
-          <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{color:G.text,fontSize:13,fontWeight:600}}>Signal History</span>
-            <span style={{color:G.textMut,fontSize:10}}>Most recent first</span>
+          <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.border}`}}>
+            <span style={{color:G.text,fontSize:13,fontWeight:600}}>By Regime</span>
           </div>
-          {evalHistory.length===0
-            ? <Empty icon="🕒" title="No evaluated signals yet" sub="Signals are tracked against real prices. Results appear here as they resolve."/>
-            : (
-              <div style={{maxHeight:400,overflowY:"auto"}}>
-                {evalHistory.slice(0,20).map((r,i)=>{
-                  const oc=r.outcome==="WIN"?G.green:r.outcome==="LOSS"?G.red:G.yellow;
-                  const pnl=r.actual_pnl_pct??0;
-                  return (
-                    <div key={i} style={{padding:"10px 18px",borderBottom:`1px solid ${G.border}`,display:"flex",flexDirection:"column",gap:5}}
-                      onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
-                      onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                          <span style={{color:G.text,fontWeight:700,fontSize:12,fontFamily:"monospace"}}>{r.symbol}</span>
-                          <Tag label={r.strategy_id} color={G.yellow}/>
-                          <Tag label={r.direction>0?"BUY":"SELL"} color={r.direction>0?G.green:G.red}/>
-                          <Tag label={r.outcome??"-"} color={oc}/>
-                        </div>
-                        <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                          <span style={{color:pnl>=0?G.green:G.red,fontSize:11,fontFamily:"monospace",fontWeight:700}}>{pnl>=0?"+":""}{pnl.toFixed(2)}%</span>
-                          <span style={{color:(r.points_awarded??0)>=0?G.green:G.red,fontSize:11,fontFamily:"monospace"}}>{(r.points_awarded??0)>=0?"+":""}{(r.points_awarded??0).toFixed(2)} pts</span>
-                        </div>
-                      </div>
-                      {r.lesson&&<div style={{color:G.textMut,fontSize:10,fontStyle:"italic"}}>→ {r.lesson}</div>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// KARMA INTELLIGENCE PANEL
-// ═══════════════════════════════════════════════════════════════════════════
-function KarmaPanel({karmaStats}) {
-  const weights=karmaStats?.strategy_weights??{};
-  const patterns=karmaStats?.discovered_patterns??[];
-  const regimes=karmaStats?.regime_win_rates??{};
-  const stratEntries=Object.entries(weights).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const maxW=stratEntries.length?Math.max(...stratEntries.map(e=>e[1])):1;
-  return (
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-      <div style={{background:G.surface,border:`1px solid ${G.pink}30`,borderRadius:8,padding:"16px 18px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-          <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <span style={{fontSize:18}}>🧠</span>
-            <span style={{color:G.text,fontWeight:700,fontSize:13}}>KARMA — What AI Learned</span>
-          </div>
-          {karmaStats?.training_active&&(
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <div style={{width:6,height:6,borderRadius:"50%",background:G.pink,boxShadow:`0 0 8px ${G.pink}`,animation:"pulse 1.5s infinite"}}/>
-              <span style={{color:G.pink,fontSize:10,fontFamily:"monospace"}}>TRAINING</span>
-            </div>
-          )}
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
-          {[
-            {label:"Episodes",val:karmaStats?.episodes??0,color:G.blue},
-            {label:"Win Rate",val:`${((karmaStats?.win_rate??0)*100).toFixed(1)}%`,color:(karmaStats?.win_rate??0)>=0.55?G.green:G.yellow},
-            {label:"Best Strategy",val:karmaStats?.best_strategy??"—",color:G.yellow},
-          ].map(({label,val,color})=>(
-            <div key={label} style={{background:G.bg,borderRadius:6,padding:"8px 10px"}}>
-              <div style={{color:G.textMut,fontSize:9,marginBottom:3}}>{label}</div>
-              <div style={{color,fontWeight:700,fontSize:11,fontFamily:"monospace"}}>{val}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{color:G.textSec,fontSize:10,fontWeight:600,letterSpacing:".08em",textTransform:"uppercase",marginBottom:8}}>
-          Strategy Weights <span style={{color:G.textMut,fontWeight:400,textTransform:"none"}}>(1.0=neutral · adaptive)</span>
-        </div>
-        {stratEntries.length===0
-          ? <div style={{color:G.textMut,fontSize:11}}>Learning… weights update after each evaluated trade</div>
-          : stratEntries.map(([strat,weight])=>{
-              const barW=maxW>0?(weight/maxW)*100:0;
-              const barColor=weight>1.2?G.green:weight<0.8?G.red:G.blue;
+          <div style={{padding:"16px 18px"}}>
+            {Object.entries(evalStats?.by_regime??{}).map(([regime,stats])=>{
+              const wr2=(stats.wins??0)/Math.max(stats.trades??1,1);
               return (
-                <div key={strat} style={{marginBottom:8}}>
+                <div key={regime} style={{marginBottom:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                    <span style={{color:G.textSec,fontSize:11,fontFamily:"monospace"}}>{strat}</span>
-                    <span style={{color:barColor,fontSize:11,fontWeight:700,fontFamily:"monospace"}}>
-                      {weight.toFixed(2)}× {weight>1.15?"↑ favoured":weight<0.85?"↓ penalised":""}
+                    <span style={{color:REGIME[regime]?.color??G.textSec,fontSize:11,fontWeight:600}}>
+                      {REGIME[regime]?.icon} {regime}
+                    </span>
+                    <span style={{color:wr2>=0.55?G.green:wr2>=0.40?G.yellow:G.red,fontSize:11,fontFamily:"monospace"}}>
+                      {(wr2*100).toFixed(0)}% · {stats.trades??0} trades
                     </span>
                   </div>
-                  <KpiBar value={barW} max={100} color={barColor}/>
+                  <KpiBar value={wr2} max={1} color={wr2>=0.55?G.green:wr2>=0.40?G.yellow:G.red}/>
                 </div>
               );
-            })
-        }
-        {karmaStats?.last_training&&(
-          <div style={{marginTop:12,color:G.textMut,fontSize:10,padding:"8px 10px",
-            background:G.bg,borderRadius:6,borderLeft:`2px solid ${G.pink}55`}}>
-            🕐 Last off-hours training: <span style={{color:G.textSec}}>{karmaStats.last_training}</span>
-            <div style={{color:G.textMut,fontSize:9,marginTop:2}}>
-              Runs 6PM–9AM IST · historical data · 5 timeframes · 3yr NIFTY50
-            </div>
+            })}
+            {Object.keys(evalStats?.by_regime??{}).length===0&&(
+              <div style={{color:G.textMut,fontSize:11,textAlign:"center",padding:"20px 0"}}>No regime data yet</div>
+            )}
           </div>
-        )}
-      </div>
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        <div style={{background:G.surface,border:`1px solid ${G.purple}30`,borderRadius:8,padding:"16px 18px",flex:1}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-            <span style={{fontSize:18}}>💡</span>
-            <span style={{color:G.text,fontWeight:700,fontSize:13}}>Discovered Patterns</span>
-          </div>
-          {patterns.length===0
-            ? <div style={{color:G.textMut,fontSize:11,lineHeight:1.6}}>Patterns emerge after 5+ trades in the same setup. KARMA tracks: regime + strategy + outcome → learns which combinations win.</div>
-            : patterns.slice(0,5).map((p,i)=>(
-                <div key={i} style={{background:G.bg,borderRadius:6,padding:"8px 12px",marginBottom:8}}>
-                  <div style={{display:"flex",justifyContent:"space-between"}}>
-                    <span style={{color:G.purple,fontSize:11,fontWeight:600}}>{p.pattern}</span>
-                    <span style={{color:p.win_rate>=0.6?G.green:p.win_rate>=0.4?G.yellow:G.red,fontSize:11,fontFamily:"monospace",fontWeight:700}}>{(p.win_rate*100).toFixed(0)}% WR</span>
-                  </div>
-                  <div style={{color:G.textMut,fontSize:10,marginTop:2}}>{p.description}</div>
-                </div>
-              ))
-          }
-        </div>
-        <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-            <span style={{fontSize:18}}>🌊</span>
-            <span style={{color:G.text,fontWeight:700,fontSize:13}}>Regime Win Rates</span>
-          </div>
-          {Object.keys(regimes).length===0
-            ? <div style={{color:G.textMut,fontSize:11}}>Accumulating data across regimes…</div>
-            : Object.entries(regimes).map(([regime,stats])=>{
-                const wr2=stats.win_rate??0;
-                return (
-                  <div key={regime} style={{marginBottom:10}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                      <span style={{color:REGIME[regime]?.color??G.textSec,fontSize:11,fontWeight:600}}>
-                        {REGIME[regime]?.icon} {regime}
-                      </span>
-                      <span style={{color:wr2>=0.55?G.green:wr2>=0.40?G.yellow:G.red,fontSize:11,fontFamily:"monospace"}}>
-                        {(wr2*100).toFixed(0)}% · {stats.trades??0} trades
-                      </span>
-                    </div>
-                    <KpiBar value={wr2} max={1} color={wr2>=0.55?G.green:wr2>=0.40?G.yellow:G.red}/>
-                  </div>
-                );
-              })
-          }
         </div>
       </div>
     </div>
@@ -1175,7 +1228,174 @@ const AGENT_LIST=[
   {id:"KARMA",icon:"🧠",color:"#ec4899",role:"RL",desc:"PPO learns from LENS data"},
 ];
 
-function AgentsTab({agentKpi,events,karmaStats}) {
+// ═══════════════════════════════════════════════════════════════════════════
+// DATA SOURCES PANEL — shown inside Agents tab
+// ═══════════════════════════════════════════════════════════════════════════
+const SOURCE_META={
+  upstox:     {icon:"🔗",label:"Upstox",    desc:"Primary broker feed · Level 1 + candles"},
+  openalgo:   {icon:"🌐",label:"OpenAlgo",  desc:"Bridge to any Indian broker"},
+  yfinance:   {icon:"📈",label:"yfinance",  desc:"Yahoo Finance fallback · NSE data"},
+  nse_direct: {icon:"🏛️",label:"NSE Direct",desc:"NSE website scraper"},
+  stooq:      {icon:"📊",label:"Stooq",     desc:"Polish/Indian market data mirror"},
+  twelve_data:{icon:"💎",label:"Twelve Data",desc:"Professional data API"},
+  finnhub:    {icon:"🦔",label:"Finnhub",   desc:"Global market data + news"},
+  alpha_vantage:{icon:"🔬",label:"Alpha Vantage",desc:"Fundamentals + time-series"},
+};
+
+function DataSourcesPanel({dataSources}) {
+  const entries=Object.entries(dataSources??{});
+  if(entries.length===0){
+    return (
+      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
+        <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+          <span>📡</span> Data Sources
+          <span style={{color:G.textMut,fontSize:10,fontWeight:400}}>— connect backend to see live status</span>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:10}}>
+          {Object.entries(SOURCE_META).map(([key,meta])=>(
+            <div key={key} style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:7,padding:"12px 14px",
+              display:"flex",gap:10,alignItems:"flex-start"}}>
+              <span style={{fontSize:18,flexShrink:0}}>{meta.icon}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:2}}>
+                  <span style={{color:G.textSec,fontWeight:700,fontSize:12}}>{meta.label}</span>
+                  <span style={{padding:"1px 7px",borderRadius:20,fontSize:9,fontWeight:700,
+                    background:G.border,color:G.textMut}}>OFFLINE</span>
+                </div>
+                <div style={{color:G.textMut,fontSize:10,lineHeight:1.4}}>{meta.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Priority waterfall order
+  const ORDER=["upstox","openalgo","yfinance","nse_direct","stooq","twelve_data","finnhub","alpha_vantage"];
+  const sorted=[...entries].sort((a,b)=>{
+    const ai=ORDER.indexOf(a[0]),bi=ORDER.indexOf(b[0]);
+    return (ai===-1?99:ai)-(bi===-1?99:bi);
+  });
+
+  const active=sorted.filter(([,v])=>v.status==="active").length;
+  const errored=sorted.filter(([,v])=>v.status==="error").length;
+
+  return (
+    <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{color:G.text,fontSize:13,fontWeight:600}}>📡 Data Sources</span>
+          <span style={{color:G.textMut,fontSize:10}}>Priority waterfall: first active source wins</span>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,
+            background:G.green+"20",color:G.green,border:`1px solid ${G.green}33`}}>{active} active</span>
+          {errored>0&&<span style={{padding:"2px 8px",borderRadius:20,fontSize:10,fontWeight:700,
+            background:G.red+"20",color:G.red,border:`1px solid ${G.red}33`}}>{errored} error</span>}
+        </div>
+      </div>
+
+      {/* Waterfall priority bar */}
+      <div style={{display:"flex",gap:3,marginBottom:14,alignItems:"center"}}>
+        <span style={{color:G.textMut,fontSize:9,marginRight:4,whiteSpace:"nowrap"}}>Live feed:</span>
+        {sorted.map(([key,info],idx)=>{
+          const meta=SOURCE_META[key]??{icon:"📦",label:key};
+          const isActive=info.status==="active";
+          const isErr=info.status==="error";
+          const color=isActive?G.green:isErr?G.red:G.textMut;
+          const bg=isActive?G.green+"20":isErr?G.red+"18":G.border+"80";
+          return (
+            <div key={key} style={{display:"flex",alignItems:"center",gap:3}}>
+              {idx>0&&<span style={{color:G.textMut,fontSize:10,opacity:.5}}>→</span>}
+              <span title={`${meta.label}: ${info.status}`} style={{padding:"2px 8px",borderRadius:4,fontSize:10,fontWeight:700,
+                background:bg,color,border:`1px solid ${color}44`,whiteSpace:"nowrap"}}>
+                {meta.icon} {meta.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Source cards grid */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:10}}>
+        {sorted.map(([key,info],idx)=>{
+          const meta=SOURCE_META[key]??{icon:"📦",label:key,desc:"Data source"};
+          const isActive=info.status==="active";
+          const isErr=info.status==="error";
+          const isDisabled=info.status==="disabled";
+          const statusColor=isActive?G.green:isErr?G.red:G.textMut;
+          const statusLabel=isActive?"● ACTIVE":isErr?"✕ ERROR":isDisabled?"○ DISABLED":"○ INACTIVE";
+          const cardBorder=isActive?G.green+"30":isErr?G.red+"30":G.border;
+          return (
+            <div key={key} style={{background:G.bg,border:`1px solid ${cardBorder}`,borderRadius:7,padding:"12px 14px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <span style={{fontSize:18}}>{meta.icon}</span>
+                  <div>
+                    <div style={{display:"flex",alignItems:"center",gap:5}}>
+                      <span style={{color:G.text,fontWeight:700,fontSize:12}}>{meta.label}</span>
+                      <span style={{color:G.textMut,fontSize:9,fontFamily:"monospace"}}>#{idx+1}</span>
+                    </div>
+                    <div style={{color:G.textMut,fontSize:9,marginTop:1}}>{meta.desc}</div>
+                  </div>
+                </div>
+                <span style={{fontSize:10,fontWeight:700,color:statusColor,whiteSpace:"nowrap",
+                  padding:"1px 7px",borderRadius:20,background:statusColor+"18",border:`1px solid ${statusColor}33`}}>
+                  {statusLabel}
+                </span>
+              </div>
+
+              {/* Stats row */}
+              <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:6}}>
+                {info.requests_today!=null&&(
+                  <div>
+                    <div style={{color:G.textMut,fontSize:8,marginBottom:1}}>REQUESTS TODAY</div>
+                    <div style={{color:G.text,fontFamily:"monospace",fontSize:11,fontWeight:600}}>{info.requests_today.toLocaleString()}</div>
+                  </div>
+                )}
+                {info.requests!=null&&info.requests_today==null&&(
+                  <div>
+                    <div style={{color:G.textMut,fontSize:8,marginBottom:1}}>TOTAL REQUESTS</div>
+                    <div style={{color:G.text,fontFamily:"monospace",fontSize:11,fontWeight:600}}>{info.requests.toLocaleString()}</div>
+                  </div>
+                )}
+                {info.latency_ms!=null&&(
+                  <div>
+                    <div style={{color:G.textMut,fontSize:8,marginBottom:1}}>LATENCY</div>
+                    <div style={{color:info.latency_ms<200?G.green:info.latency_ms<800?G.yellow:G.red,
+                      fontFamily:"monospace",fontSize:11,fontWeight:600}}>{info.latency_ms}ms</div>
+                  </div>
+                )}
+                {info.last_success&&(
+                  <div>
+                    <div style={{color:G.textMut,fontSize:8,marginBottom:1}}>LAST OK</div>
+                    <div style={{color:G.textSec,fontSize:10}}>{new Date(info.last_success).toLocaleTimeString("en-IN",{hour12:false})}</div>
+                  </div>
+                )}
+                {info.symbols_supported!=null&&(
+                  <div>
+                    <div style={{color:G.textMut,fontSize:8,marginBottom:1}}>SYMBOLS</div>
+                    <div style={{color:G.blue,fontFamily:"monospace",fontSize:11,fontWeight:600}}>{info.symbols_supported}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Error message */}
+              {isErr&&info.error&&(
+                <div style={{marginTop:6,padding:"4px 8px",background:G.red+"12",borderRadius:4,
+                  color:G.red,fontSize:10,lineHeight:1.4,fontFamily:"monospace"}}>{info.error}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AgentsTab({agentKpi,events,karmaStats,dataSources}) {
+  const EVT_COLOR={SIGNAL:G.orange,ORDER:G.blue,SELECTION:G.red,REGIME:G.purple,HEALTH:G.green,MACRO:G.cyan,RISK:G.red,LEARN:G.purple,PERF:G.green,EXEC:G.teal,SYSTEM:G.blue};
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
@@ -1193,22 +1413,40 @@ function AgentsTab({agentKpi,events,karmaStats}) {
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:5}}>
                   <div style={{width:6,height:6,borderRadius:"50%",background:G.green}}/>
-                  <span style={{color:G.textSec,fontSize:10,fontFamily:"monospace"}}>{(kpi.kpi*100).toFixed(0)}%</span>
+                  <span style={{color:G.textSec,fontSize:10,fontFamily:"monospace"}}>{((kpi.kpi??0)*100).toFixed(0)}%</span>
                 </div>
               </div>
               <div style={{color:G.textSec,fontSize:11,marginBottom:10,lineHeight:1.4}}>{a.desc}</div>
-              <KpiBar value={kpi.kpi} max={1} color={a.color}/>
-              <div style={{color:G.textMut,fontSize:9,marginTop:5,fontFamily:"monospace"}}>{kpi.cycles} cycles</div>
+              <KpiBar value={kpi.kpi??0} max={1} color={a.color}/>
+              <div style={{color:G.textMut,fontSize:9,marginTop:5,fontFamily:"monospace"}}>{kpi.cycles??0} cycles</div>
             </div>
           );
         })}
       </div>
-      <div>
-        <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
-          <span>🧠</span> KARMA Intelligence
+
+      {karmaStats&&(
+        <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
+          <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:12,display:"flex",alignItems:"center",gap:8}}>
+            <span>🧠</span> KARMA Intelligence
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
+            {[
+              {label:"Episodes",val:karmaStats.episodes??0,color:G.blue},
+              {label:"PPO Win Rate",val:`${((karmaStats.win_rate??0)*100).toFixed(1)}%`,color:(karmaStats.win_rate??0)>=0.55?G.green:G.yellow},
+              {label:"Best Strategy",val:karmaStats.best_strategy??"-",color:G.yellow},
+              {label:"Training",val:karmaStats.training_active?"Active":"Scheduled",color:karmaStats.training_active?G.green:G.textSec},
+            ].map(({label,val,color})=>(
+              <div key={label} style={{background:G.bg,borderRadius:6,padding:"10px 12px"}}>
+                <div style={{color:G.textMut,fontSize:9,marginBottom:4}}>{label}</div>
+                <div style={{color,fontSize:12,fontWeight:700,fontFamily:"monospace"}}>{val}</div>
+              </div>
+            ))}
+          </div>
         </div>
-        <KarmaPanel karmaStats={karmaStats}/>
-      </div>
+      )}
+
+      <DataSourcesPanel dataSources={dataSources}/>
+
       <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
         <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{color:G.text,fontSize:13,fontWeight:600}}>Event Bus</span>
@@ -1219,22 +1457,20 @@ function AgentsTab({agentKpi,events,karmaStats}) {
         </div>
         <div style={{maxHeight:300,overflowY:"auto"}}>
           {events.length===0
-            ? <div style={{padding:"24px",color:G.textMut,fontSize:11,textAlign:"center"}}>Waiting for agent events…</div>
-            : events.slice(0,40).map((ev,i)=>{
-                const EVC={SIGNAL:G.orange,ORDER:G.blue,SELECTION:G.red,REGIME:G.purple,HEALTH:G.green,MACRO:G.cyan,RISK:G.red,LEARN:G.purple,PERF:G.green,EXEC:G.teal};
-                const col=EVC[ev.type]??G.textSec;
-                return (
-                  <div key={i} style={{display:"flex",gap:12,padding:"8px 18px",borderBottom:`1px solid ${G.border}`,alignItems:"center"}}
-                    onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
-                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    <div style={{width:2,alignSelf:"stretch",background:col,borderRadius:2,flexShrink:0}}/>
-                    <span style={{color:col,fontWeight:700,fontSize:10,fontFamily:"monospace",minWidth:60}}>{ev.agent}</span>
-                    <span style={{color:G.textSec,fontSize:11,flex:1,lineHeight:1.4}}>{ev.msg}</span>
-                    <span style={{color:G.textMut,fontSize:9,fontFamily:"monospace",whiteSpace:"nowrap"}}>{ev.ts}</span>
-                  </div>
-                );
-              })
-          }
+            ?<div style={{padding:"24px",color:G.textMut,fontSize:11,textAlign:"center"}}>Waiting for agent events…</div>
+            :events.slice(0,40).map((ev,i)=>{
+              const color=EVT_COLOR[ev.type]??G.textSec;
+              return (
+                <div key={i} style={{display:"flex",gap:12,padding:"8px 18px",borderBottom:`1px solid ${G.border}`,alignItems:"center"}}
+                  onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
+                  onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                  <div style={{width:2,alignSelf:"stretch",background:color,borderRadius:2,flexShrink:0}}/>
+                  <span style={{color,fontWeight:700,fontSize:10,fontFamily:"monospace",minWidth:60}}>{ev.agent}</span>
+                  <span style={{color:G.textSec,fontSize:11,flex:1,lineHeight:1.4}}>{ev.msg}</span>
+                  <span style={{color:G.textMut,fontSize:9,fontFamily:"monospace",whiteSpace:"nowrap"}}>{ev.ts}</span>
+                </div>
+              );
+            })}
         </div>
       </div>
     </div>
@@ -1242,628 +1478,194 @@ function AgentsTab({agentKpi,events,karmaStats}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TAB: SIGNALS
-// ═══════════════════════════════════════════════════════════════════════════
-function SignalsTab({signals,onStock,picks}) {
-  const [regime,setRegime]=useState("ALL");
-  const regimes=["ALL","TRENDING","SIDEWAYS","VOLATILE","RISK_OFF"];
-  const filtered=regime==="ALL"?signals:signals.filter(s=>s.regime===regime);
-  return (
-    <div style={{display:"flex",flexDirection:"column",gap:16}}>
-      {/* Regime filter */}
-      <div style={{display:"flex",gap:8}}>
-        {regimes.map(r=>{
-          const cfg=REGIME[r]??{color:G.textSec};
-          return (
-            <button key={r} onClick={()=>setRegime(r)} style={{
-              background:regime===r?(cfg.color+"22"):"none",
-              border:`1px solid ${regime===r?(cfg.color+"66"):G.border}`,
-              color:regime===r?cfg.color:G.textSec,borderRadius:6,
-              padding:"4px 12px",fontSize:11,cursor:"pointer",transition:"all .15s"}}>
-              {REGIME[r]?.icon??""} {r}
-            </button>
-          );
-        })}
-      </div>
-      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
-        {filtered.length===0
-          ? <Empty icon="⚔️" title="No signals for this filter" sub="TITAN runs 45+ strategies on real NSE candles every 8 seconds. Signals appear once strategies fire."/>
-          : (
-            <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead>
-                <tr style={{background:G.bg}}>
-                  {["Symbol","Strategy","Direction","Category","Confidence","Regime","Signal Reason","Time"].map(h=>(
-                    <th key={h} style={{color:G.textSec,fontSize:10,padding:"9px 14px",textAlign:"left",fontWeight:500,
-                      borderBottom:`1px solid ${G.border}`,fontFamily:"monospace",whiteSpace:"nowrap"}}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.slice(0,40).map((sig,i)=>{
-                  const pick=picks.find(p=>p.s===sig.symbol);
-                  return (
-                    <tr key={i} style={{borderBottom:`1px solid ${G.border}`,cursor:pick?"pointer":"default"}}
-                      onClick={()=>pick&&onStock(pick)}
-                      onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
-                      onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                      <td style={{padding:"10px 14px",color:G.blue,fontWeight:700,fontSize:12,fontFamily:"monospace"}}>{sig.symbol}</td>
-                      <td style={{padding:"10px 14px"}}><Tag label={sig.strategy_id??sig.id??"-"} color={G.yellow}/></td>
-                      <td style={{padding:"10px 14px"}}>
-                        <Tag label={sig.signal===1?"BUY":sig.signal===-1?"SELL":"HOLD"}
-                          color={sig.signal===1?G.green:sig.signal===-1?G.red:G.yellow}/>
-                      </td>
-                      <td style={{padding:"10px 14px",color:G.textSec,fontSize:11}}>{sig.category??"-"}</td>
-                      <td style={{padding:"10px 14px",minWidth:100}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8}}>
-                          <div style={{width:50,background:G.border,borderRadius:3,height:4,overflow:"hidden"}}>
-                            <div style={{width:`${(sig.confidence??0)*100}%`,height:"100%",
-                              background:(sig.confidence??0)>=0.75?G.green:(sig.confidence??0)>=0.55?G.yellow:G.red}}/>
-                          </div>
-                          <span style={{color:G.textSec,fontSize:10,fontFamily:"monospace"}}>{((sig.confidence??0)*100).toFixed(0)}%</span>
-                        </div>
-                      </td>
-                      <td style={{padding:"10px 14px"}}>
-                        {sig.regime&&(
-                          <Tag label={sig.regime} color={REGIME[sig.regime]?.color??G.textSec}/>
-                        )}
-                      </td>
-                      <td style={{padding:"10px 14px",color:G.textMut,fontSize:11,maxWidth:280}}>
-                        <span style={{display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sig.reason??"-"}</span>
-                      </td>
-                      <td style={{padding:"10px 14px",color:G.textMut,fontSize:10,fontFamily:"monospace",whiteSpace:"nowrap"}}>{sig.ts??sig.time??"-"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// STOCK MODAL — Full analysis with 3 tabs + ratings + buy/sell ask
-// Click anywhere on a stock → opens this
+// STOCK MODAL
 // ═══════════════════════════════════════════════════════════════════════════
 function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode}) {
   const [tab,setTab]=useState("overview");
-  const [expandedItem,setExpandedItem]=useState(null);
-
-  if (!stock) return null;
-
-  const q=quotes[stock.s]??{};
+  if(!stock) return null;
+  const q=quotes?.[stock.s]??{};
   const price=+(q.ltp??stock.price??stock.base??0);
-  const ask=+(q.ask??price*1.0003);
-  const bid=+(q.bid??price*0.9997);
   const change24h=q.change_pct??stock.chgPct??0;
-  const vol=q.volume??0;
-
-  // Candle analysis
   const ind=candles?.length>=15?indicators(candles):null;
-  const i=ind?ind.n-1:-1;
   const candlePatterns=candles?detectCandlePatterns(candles):[];
   const volAnalysis=candles?computeVolumeAnalysis(candles):null;
-  const stockSigs=candles?titanSignals(candles,stock.regime??"TRENDING"):signals;
+  const stockSigs=candles?titanSignals(candles,stock.regime??"TRENDING"):signals??[];
   const buySigs=stockSigs.filter(s=>s.signal===1);
   const sellSigs=stockSigs.filter(s=>s.signal===-1);
   const rating=computeRating(stock.confidence??0.5,buySigs.length,sellSigs.length,stock.score??0);
-
-  // MTF alignment
-  const mtfData=[
-    {tf:"1min",label:"1 Minute",votes:stock.mtf1min??Math.random()>0.45?1:0},
-    {tf:"5min",label:"5 Minute",votes:stock.mtf5min??Math.random()>0.45?1:0},
-    {tf:"15min",label:"15 Minute",votes:stock.mtf15min??Math.random()>0.35?1:0},
-    {tf:"1hr",label:"1 Hour",votes:stock.mtf1hr??Math.random()>0.35?1:0},
-    {tf:"1day",label:"Daily",votes:stock.mtf1day??Math.random()>0.45?1:0},
-  ];
-  const alignedCount=mtfData.filter(m=>m.votes===1).length;
-  const mtfDesc=
-    alignedCount>=4?"All timeframes aligned bullish — highest confidence entry. Multi-timeframe confluence means buyers are active from intraday to daily charts. TITAN requires ≥4/5 for STRONG BUY classification.":
-    alignedCount===3?"3 of 5 timeframes aligned. Moderate confidence. Suitable for swing trade but wait for 15min pullback before entry. Short-term frames mixed — intraday noise may cause volatility.":
-    alignedCount===2?"Only 2 timeframes agree. Low confluence. High risk entry — avoid unless RSI < 35 and VWAP reclaim is confirmed. Best to wait for clearer setup.":
-    "Timeframes conflicting — no trade. Daily and intraday charts pointing different directions. GUARDIAN blocks this setup. Wait for alignment or move to next stock.";
-
-  // News for this stock
-  const stockNews=news.filter(n=>n.symbol===stock.s||n.related?.includes(stock.s));
-
-  // Fundamentals
-  const F=fundamentals[stock.s]??{};
-
-  // Selection reason
-  const whyBought=[
-    stock.sid&&`Strategy: ${stock.sid} — ${stock.sname??""} fired at this setup`,
-    stock.score&&`SIGMA score: ${(stock.score*100).toFixed(0)}/100 — top ${Math.round((1-stock.score)*100)}% of universe`,
-    stock.confidence&&`Confidence: ${((stock.confidence??0)*100).toFixed(0)}% — ${buySigs.length} buy signals vs ${sellSigs.length} sell`,
-    stock.tt&&`Trade type: ${stock.tt} — position managed with ${stock.tt==="INTRADAY"?"intraday exit":"trailing stop"}`,
-    stock.regime&&`Regime: ${stock.regime} — strategy pool aligned for current market state`,
-    ind&&i>=0&&`RSI ${ind.rsi[i].toFixed(0)}, ADX ${ind.adx[i].toFixed(0)}, EMA20 ${ind.e20[i]>ind.e50[i]?"above":"below"} EMA50`,
-    alignedCount>=3&&`MTF alignment: ${alignedCount}/5 timeframes confirm bullish direction`,
-  ].filter(Boolean);
-
-  const recommendation=`${rating.icon} ${rating.label}: ${
-    rating.label==="STRONG BUY"?"Enter at market or limit near ₹"+bid.toFixed(2)+". Target ₹"+stock.target?.toFixed(2)+", SL ₹"+stock.sl?.toFixed(2)+". All timeframes aligned.":
-    rating.label==="BUY"?"Consider buying near current price. TITAN confirms bullish setup. Use ₹"+stock.sl?.toFixed(2)+" as stop-loss.":
-    rating.label==="HOLD"?"Mixed signals. No new entry. Existing holders may stay with trailing stop.":
-    rating.label==="SELL"?"Weaken position. Move stop to breakeven if in profit. Watch for VWAP loss.":
-    "Exit all positions in this stock immediately. Multiple sell signals across timeframes. Do not enter new long."
-  }`;
-
-  const tabs=[{id:"overview",label:"Overview"},{id:"technical",label:"Technical"},{id:"fundamentals",label:"Fundamentals"},{id:"news",label:`News ${stockNews.length>0?"("+stockNews.length+")":""}`}];
-
+  const tabs=[{id:"overview",label:"Overview"},{id:"signals",label:`Signals (${stockSigs.length})`},{id:"fundamentals",label:"Fundamentals"}];
   return (
-    <div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",
-      background:"rgba(0,0,0,0.75)",overflowY:"auto",padding:"20px 0"}}
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:100,
+      display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
       onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:12,
-        width:"min(920px,95vw)",maxHeight:"90vh",overflowY:"auto",position:"relative",margin:"auto"}}>
+        width:"100%",maxWidth:840,maxHeight:"90vh",overflowY:"auto",position:"relative"}}>
+        <button onClick={onClose} style={{position:"sticky",top:14,float:"right",marginRight:14,
+          background:"none",border:"none",color:G.textSec,fontSize:18,cursor:"pointer",zIndex:1}}>✕</button>
 
-        {/* Modal header */}
-        <div style={{background:G.bg,borderBottom:`1px solid ${G.border}`,
-          padding:"16px 24px",position:"sticky",top:0,zIndex:1,
-          display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{display:"flex",gap:12,alignItems:"center"}}>
+        {/* Header */}
+        <div style={{padding:"20px 24px 0"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
             <div>
-              <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                <span style={{color:G.text,fontWeight:700,fontSize:18,fontFamily:"monospace"}}>{stock.s}</span>
-                <span style={{color:G.textSec,fontSize:12}}>{stock.n}</span>
-                {stock.sec&&<Tag label={stock.sec} color={G.blue}/>}
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+                <span style={{color:G.text,fontWeight:700,fontSize:22,fontFamily:"monospace"}}>{stock.s}</span>
+                <RatingBadge rating={rating} size="lg"/>
+                <Tag label={mode==="LIVE"?"🔴 LIVE":"📄 PAPER"} color={mode==="LIVE"?G.red:G.yellow}/>
               </div>
-              <div style={{color:G.textMut,fontSize:10,marginTop:2}}>{F.company_name||stock.n} · {F.industry||""}</div>
+              <div style={{color:G.textSec,fontSize:12}}>{stock.n} · {stock.sec}</div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{color:G.text,fontSize:22,fontWeight:700,fontFamily:"monospace"}}>₹{price.toFixed(2)}</div>
-              <div style={{color:change24h>=0?G.green:G.red,fontSize:11,fontFamily:"monospace"}}>
-                {change24h>=0?"+":""}{change24h.toFixed(2)}%
+              <div style={{color:G.text,fontSize:24,fontWeight:700,fontFamily:"monospace"}}>₹{price.toFixed(2)}</div>
+              <div style={{color:change24h>=0?G.green:G.red,fontSize:12,fontFamily:"monospace"}}>{change24h>=0?"+":""}{change24h.toFixed(2)}%</div>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
+            {[
+              {label:"Entry",val:stock.entry?`₹${stock.entry.toFixed(2)}`:"—",color:G.text,sub:"Suggested entry"},
+              {label:"Target",val:stock.target?`₹${stock.target.toFixed(2)}`:"—",color:G.green,sub:stock.target?`+${((stock.target-price)/price*100).toFixed(1)}% upside`:""},
+              {label:"Stop Loss",val:stock.sl?`₹${stock.sl.toFixed(2)}`:"—",color:G.red,sub:stock.sl?`${((price-stock.sl)/price*100).toFixed(1)}% risk`:""},
+              {label:"R:R",val:stock.entry&&stock.sl&&stock.target?`1:${((stock.target-stock.entry)/(stock.entry-stock.sl)).toFixed(2)}`:"—",color:G.purple,sub:"Reward-to-risk"},
+            ].map(({label,val,color,sub})=>(
+              <div key={label}>
+                <div style={{color:G.textMut,fontSize:9,fontFamily:"monospace"}}>{label}</div>
+                <div style={{color,fontSize:12,fontWeight:700,fontFamily:"monospace"}}>{val}</div>
+                <div style={{color:G.textMut,fontSize:8}}>{sub}</div>
               </div>
-            </div>
+            ))}
           </div>
-          <div style={{display:"flex",gap:10,alignItems:"center"}}>
-            <RatingBadge rating={rating} size="lg"/>
-            <button onClick={onClose} style={{background:G.border,border:"none",color:G.textSec,
-              width:28,height:28,borderRadius:"50%",cursor:"pointer",fontSize:14}}>✕</button>
+          <div style={{display:"flex",borderBottom:`1px solid ${G.border}`,background:G.bg}}>
+            {tabs.map(t=>(
+              <button key={t.id} onClick={()=>setTab(t.id)} style={{
+                background:"none",border:"none",borderBottom:tab===t.id?`2px solid ${G.blue}`:"2px solid transparent",
+                color:tab===t.id?G.text:G.textSec,padding:"10px 20px",fontSize:12,
+                cursor:"pointer",fontWeight:tab===t.id?600:400,marginBottom:-1,transition:"color .15s"}}>
+                {t.label}
+              </button>
+            ))}
           </div>
-        </div>
-
-        {/* Ask/Bid strip */}
-        <div style={{background:G.bg,padding:"8px 24px",borderBottom:`1px solid ${G.border}`,
-          display:"flex",gap:24,alignItems:"center"}}>
-          {[
-            {label:"BID (Buy at)",val:bid,color:G.green,sub:"Market buy price"},
-            {label:"ASK (Sell at)",val:ask,color:G.red,sub:"Market sell price"},
-            {label:"Spread",val:`₹${(ask-bid).toFixed(2)} (${(((ask-bid)/price)*100).toFixed(3)}%)`,color:G.yellow,sub:"Transaction friction"},
-            {label:"Target",val:stock.target?`₹${stock.target.toFixed(2)}`:"—",color:G.teal,sub:`${stock.target?((stock.target-price)/price*100).toFixed(1)+"%":""}  upside`},
-            {label:"Stop Loss",val:stock.sl?`₹${stock.sl.toFixed(2)}`:"—",color:G.red,sub:`${stock.sl?((price-stock.sl)/price*100).toFixed(1)+"%":""}  risk`},
-            {label:"R:R",val:stock.entry&&stock.sl&&stock.target?`1:${((stock.target-stock.entry)/(stock.entry-stock.sl)).toFixed(2)}`:"—",color:G.purple,sub:"Reward-to-risk"},
-          ].map(({label,val,color,sub})=>(
-            <div key={label}>
-              <div style={{color:G.textMut,fontSize:9,fontFamily:"monospace"}}>{label}</div>
-              <div style={{color,fontSize:12,fontWeight:700,fontFamily:"monospace"}}>{typeof val==="string"?val:`₹${val.toFixed(2)}`}</div>
-              <div style={{color:G.textMut,fontSize:8}}>{sub}</div>
-            </div>
-          ))}
-          <div style={{flex:1,textAlign:"right"}}>
-            <div style={{display:"inline-block",background:rating.bg,border:`1px solid ${rating.color}55`,
-              borderRadius:6,padding:"8px 14px",maxWidth:280}}>
-              <div style={{color:G.textMut,fontSize:9,marginBottom:3}}>AlphaZero Recommendation</div>
-              <div style={{color:rating.color,fontSize:11,fontWeight:600,lineHeight:1.5}}>{recommendation}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tab bar */}
-        <div style={{display:"flex",borderBottom:`1px solid ${G.border}`,background:G.bg}}>
-          {tabs.map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} style={{
-              background:"none",border:"none",borderBottom:tab===t.id?`2px solid ${G.blue}`:"2px solid transparent",
-              color:tab===t.id?G.text:G.textSec,padding:"10px 20px",fontSize:12,cursor:"pointer",
-              fontWeight:tab===t.id?600:400,marginBottom:-1,transition:"color .15s"}}>
-              {t.label}
-            </button>
-          ))}
         </div>
 
         <div style={{padding:"20px 24px"}}>
-          {/* ── OVERVIEW TAB ── */}
           {tab==="overview"&&(
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              {/* Why this stock was picked */}
-              <div style={{background:G.bg,border:`1px solid ${G.green}30`,borderRadius:8,padding:"16px 18px"}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-                  <span style={{fontSize:16}}>🎯</span>
-                  <span style={{color:G.text,fontWeight:700,fontSize:13}}>Why APEX Selected This Stock</span>
+              {stock.selectionReason&&(
+                <div style={{background:G.bg,border:`1px solid ${G.green}30`,borderRadius:8,padding:"14px 18px"}}>
+                  <div style={{color:G.text,fontWeight:700,fontSize:13,marginBottom:8}}>🎯 Why APEX Selected This Stock</div>
+                  <div style={{color:G.textSec,fontSize:12,lineHeight:1.6}}>{stock.selectionReason}</div>
                 </div>
-                <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                  {whyBought.map((reason,i)=>(
-                    <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-                      <span style={{color:G.green,fontSize:12,marginTop:1,flexShrink:0}}>✓</span>
-                      <span style={{color:G.textSec,fontSize:12,lineHeight:1.5}}>{reason}</span>
-                    </div>
-                  ))}
-                </div>
-                {stock.selectionReason&&(
-                  <div style={{marginTop:12,padding:"10px 14px",background:G.surface,borderRadius:6,
-                    borderLeft:`3px solid ${G.blue}`,color:G.textSec,fontSize:11,lineHeight:1.6}}>
-                    <strong style={{color:G.blue}}>AI Analysis:</strong> {stock.selectionReason}
-                  </div>
-                )}
-              </div>
-
-              {/* SIGMA scores */}
-              {stock.sigmaFactors&&(
-                <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-                  <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:14}}>📊 SIGMA Score Breakdown</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
-                    {Object.entries(stock.sigmaFactors).map(([factor,val])=>(
-                      <div key={factor} style={{background:G.bg,borderRadius:6,padding:"10px 12px"}}>
-                        <div style={{color:G.textMut,fontSize:9,textTransform:"capitalize",marginBottom:4}}>{factor}</div>
-                        <KpiBar value={val} max={1} color={val>=0.7?G.green:val>=0.4?G.yellow:G.red}/>
-                        <div style={{color:G.textSec,fontSize:10,marginTop:3,fontFamily:"monospace"}}>{(val*100).toFixed(0)}%</div>
+              )}
+              {candlePatterns.length>0&&(
+                <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 18px"}}>
+                  <div style={{color:G.text,fontWeight:700,fontSize:13,marginBottom:10}}>🕯 Candle Patterns</div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                    {candlePatterns.map((pat,i)=>(
+                      <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:6,padding:"8px 12px"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                          <span style={{fontSize:16}}>{pat.icon}</span>
+                          <span style={{color:pat.type==="bull"?G.green:pat.type==="bear"?G.red:G.yellow,fontWeight:700,fontSize:11}}>{pat.name}</span>
+                        </div>
+                        <div style={{color:G.textMut,fontSize:10,lineHeight:1.4,maxWidth:200}}>{pat.desc.slice(0,100)}…</div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
-              {/* Modes behavior */}
-              <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-                <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:12}}>⚙️ {mode==="LIVE"?"LIVE":"PAPER"} Mode Behavior</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                  <div style={{background:G.bg,borderRadius:6,padding:"12px 14px",borderLeft:`3px solid ${G.green}`}}>
-                    <div style={{color:G.green,fontSize:10,fontWeight:700,marginBottom:6}}>📄 PAPER MODE</div>
-                    <div style={{color:G.textSec,fontSize:11,lineHeight:1.6}}>
-                      Signal evaluated against live NSE prices. Entry, SL, target tracked in memory. 
-                      Win/loss recorded to LENS. KARMA learns from outcomes. No real orders placed.
-                      Full risk management logic still runs — GUARDIAN blocks bad trades same as live.
-                    </div>
-                  </div>
-                  <div style={{background:G.bg,borderRadius:6,padding:"12px 14px",borderLeft:`3px solid ${G.red}`}}>
-                    <div style={{color:G.red,fontSize:10,fontWeight:700,marginBottom:6}}>🔴 LIVE MODE</div>
-                    <div style={{color:G.textSec,fontSize:11,lineHeight:1.6}}>
-                      GUARDIAN validates trade. MERCURY routes to OpenAlgo. Real NSE order placed with 
-                      exact quantity, stop-loss, target. Trailing stop managed automatically. 
-                      Every charge (STT, brokerage, GST, DP) deducted from net P&L.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── TECHNICAL TAB ── */}
-          {tab==="technical"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              {/* Indicators table */}
-              {ind&&i>=0&&(
-                <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-                  <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:14}}>📈 Technical Indicators</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
-                    {[
-                      {key:"RSI",val:ind.rsi[i].toFixed(0),
-                        color:ind.rsi[i]<35?G.green:ind.rsi[i]>65?G.red:G.yellow,
-                        desc:`${ind.rsi[i]<35?"Oversold — buyers likely to step in":ind.rsi[i]>65?"Overbought — watch for reversal":"Neutral zone"}`},
-                      {key:"ADX",val:ind.adx[i].toFixed(0),
-                        color:ind.adx[i]>30?G.green:ind.adx[i]>20?G.yellow:G.textSec,
-                        desc:`${ind.adx[i]>30?"Strong trend — momentum strategies preferred":ind.adx[i]>20?"Moderate trend":"Weak trend — mean reversion works better"}`},
-                      {key:"ATR",val:`₹${ind.atr[i].toFixed(2)}`,color:G.blue,desc:"Average True Range — daily price volatility. Used for SL sizing: SL = entry − 1.5×ATR"},
-                      {key:"EMA20",val:`₹${ind.e20[i].toFixed(0)}`,
-                        color:ind.c[i]>ind.e20[i]?G.green:G.red,
-                        desc:`Price is ${ind.c[i]>ind.e20[i]?"above":"below"} EMA20 — ${ind.c[i]>ind.e20[i]?"bullish short-term bias":"bearish short-term bias"}`},
-                      {key:"EMA50",val:`₹${ind.e50[i].toFixed(0)}`,
-                        color:ind.e20[i]>ind.e50[i]?G.green:G.red,
-                        desc:`EMA20 is ${ind.e20[i]>ind.e50[i]?"above":"below"} EMA50 — ${ind.e20[i]>ind.e50[i]?"bull cross active":"bear cross active"}`},
-                      {key:"VWAP",val:`₹${ind.vwap[i].toFixed(0)}`,
-                        color:ind.c[i]>ind.vwap[i]?G.green:G.red,
-                        desc:`Price ${ind.c[i]>ind.vwap[i]?"above":"below"} VWAP — institutions generally ${ind.c[i]>ind.vwap[i]?"bullish":"bearish"} on intraday`},
-                      {key:"BB %B",val:ind.bbpb[i].toFixed(2),
-                        color:ind.bbpb[i]<0.2?G.green:ind.bbpb[i]>0.8?G.red:G.yellow,
-                        desc:`${ind.bbpb[i]<0.2?"Near lower band — potential bounce zone":ind.bbpb[i]>0.8?"Near upper band — potential resistance":"%B=0.5 is midband. <0.2 = oversold, >0.8 = overbought"}`},
-                      {key:"Stoch K",val:ind.sk[i].toFixed(0),
-                        color:ind.sk[i]<25?G.green:ind.sk[i]>75?G.red:G.yellow,
-                        desc:`${ind.sk[i]<25?"Oversold — look for K crossing above D":ind.sk[i]>75?"Overbought — look for K crossing below D":"Neutral. Watch for K/D crossovers at extremes."}`},
-                    ].map(({key,val,color,desc})=>(
-                      <div key={key} onClick={()=>setExpandedItem(expandedItem===key?null:key)}
-                        style={{background:G.bg,borderRadius:6,padding:"10px 12px",cursor:"pointer",transition:"background .12s",
-                          border:`1px solid ${expandedItem===key?color+"55":G.border}`}}
-                        onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
-                        onMouseLeave={e=>e.currentTarget.style.background=G.bg}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
-                          <span style={{color:G.textSec,fontSize:10}}>{key}</span>
-                          <span style={{color:G.textMut,fontSize:8}}>click to explain</span>
-                        </div>
-                        <div style={{color,fontSize:14,fontWeight:700,fontFamily:"monospace",marginBottom:4}}>{val}</div>
-                        {expandedItem===key&&(
-                          <div style={{color:G.textSec,fontSize:10,lineHeight:1.6,marginTop:6,
-                            paddingTop:6,borderTop:`1px solid ${G.border}`}}>{desc}</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Candle patterns */}
-              <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-                <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:4}}>🕯️ Candle Pattern Detection</div>
-                <div style={{color:G.textMut,fontSize:10,marginBottom:12}}>Click any pattern to understand what it means for this trade</div>
-                {candlePatterns.length===0
-                  ? <div style={{color:G.textMut,fontSize:11,padding:"10px 0"}}>No significant patterns detected on last 3 candles</div>
-                  : (
-                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                      {candlePatterns.map((pat,idx)=>(
-                        <div key={idx} onClick={()=>setExpandedItem(expandedItem===`pat_${idx}`?null:`pat_${idx}`)}
-                          style={{background:G.bg,borderRadius:6,padding:"10px 14px",cursor:"pointer",transition:"background .12s",
-                            border:`1px solid ${pat.type==="bull"?G.green+"44":pat.type==="bear"?G.red+"44":G.border}`}}
-                          onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
-                          onMouseLeave={e=>e.currentTarget.style.background=G.bg}>
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                            <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                              <span style={{fontSize:16}}>{pat.icon}</span>
-                              <span style={{color:pat.type==="bull"?G.green:pat.type==="bear"?G.red:G.yellow,fontSize:12,fontWeight:600}}>{pat.name}</span>
-                              <Tag label={pat.type==="bull"?"Bullish":pat.type==="bear"?"Bearish":"Neutral"}
-                                color={pat.type==="bull"?G.green:pat.type==="bear"?G.red:G.yellow}/>
-                            </div>
-                            <span style={{color:G.textMut,fontSize:9}}>{expandedItem===`pat_${idx}`?"▲ hide":"▼ what does this mean?"}</span>
-                          </div>
-                          {expandedItem===`pat_${idx}`&&(
-                            <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${G.border}`,
-                              color:G.textSec,fontSize:11,lineHeight:1.7}}>{pat.desc}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-              </div>
-
-              {/* Volume analysis */}
               {volAnalysis&&(
-                <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-                  <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:4}}>📦 Volume Analysis</div>
-                  <div style={{color:G.textMut,fontSize:10,marginBottom:12}}>Click any metric to understand its implication</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
+                <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 18px"}}>
+                  <div style={{color:G.text,fontWeight:700,fontSize:13,marginBottom:10}}>📊 Volume Analysis</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
                     {[
-                      {key:"vol_ratio",label:"Volume vs 20D Avg",val:`${volAnalysis.volRatio}×`,
-                        color:volAnalysis.volRatio>1.5?G.green:volAnalysis.volRatio<0.7?G.red:G.yellow,
-                        desc:`Current volume is ${volAnalysis.volRatio}× the 20-day average. ${volAnalysis.volRatio>1.5?"Elevated volume confirms price moves — institutions participating. This is the setup TITAN's B2 Volume Breakout looks for.":volAnalysis.volRatio<0.7?"Below-average volume — move may not sustain. Wait for volume to confirm before entering.":"Normal volume. Move is organic but lacks the urgency of institutional participation."}`},
-                      {key:"obv",label:"OBV Trend",val:volAnalysis.obvTrend,
-                        color:volAnalysis.obvTrend==="RISING"?G.green:G.red,
-                        desc:`On-Balance Volume is ${volAnalysis.obvTrend}. OBV sums volume on up-days and subtracts on down-days. ${volAnalysis.obvTrend==="RISING"?"Rising OBV while price rises = healthy bull trend. If OBV rises but price is flat, accumulation is happening under the surface — breakout likely soon.":"Falling OBV = more volume on down-days = distribution. Institutions may be selling into strength. Caution on new longs."}`},
-                      {key:"pv",label:"Price-Volume Confirm",val:volAnalysis.pvConfirm?"CONFIRMED":"DIVERGING",
-                        color:volAnalysis.pvConfirm?G.green:G.orange,
-                        desc:`Price and volume are ${volAnalysis.pvConfirm?"moving together":"diverging"}. ${volAnalysis.pvConfirm?"Confirmation: price up + volume up OR price down + volume down. This is healthy — the move has conviction behind it.":"Divergence: price moving one way but volume opposing. This is a warning signal. Price up on low volume can reverse; price down on low volume may be a shakeout."}`},
-                      {key:"acc",label:"Activity Pattern",val:volAnalysis.accumulation?"ACCUMULATION":volAnalysis.distribution?"DISTRIBUTION":"NORMAL",
-                        color:volAnalysis.accumulation?G.green:volAnalysis.distribution?G.red:G.yellow,
-                        desc:volAnalysis.accumulation?"Accumulation detected: price is stable or rising slightly while volume is elevated and OBV is rising. This suggests smart money is quietly buying before a larger move. Institutional buying often happens this way to avoid moving price too fast.":volAnalysis.distribution?"Distribution detected: price is relatively flat while volume is high and OBV is falling. Institutions may be offloading positions to retail buyers. High risk — price can drop sharply once distribution ends.":"Normal trading activity. No unusual accumulation or distribution detected. Follow technical signals as primary guide."},
-                    ].map(({key,label,val,color,desc})=>(
-                      <div key={key} onClick={()=>setExpandedItem(expandedItem===key?null:key)}
-                        style={{background:G.bg,borderRadius:6,padding:"10px 12px",cursor:"pointer",
-                          border:`1px solid ${expandedItem===key?color+"55":G.border}`}}
-                        onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
-                        onMouseLeave={e=>e.currentTarget.style.background=G.bg}>
-                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-                          <span style={{color:G.textSec,fontSize:10}}>{label}</span>
-                          <span style={{color:G.textMut,fontSize:8}}>click</span>
-                        </div>
-                        <div style={{color,fontSize:13,fontWeight:700,fontFamily:"monospace"}}>{val}</div>
-                        {expandedItem===key&&(
-                          <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${G.border}`,
-                            color:G.textSec,fontSize:10,lineHeight:1.7}}>{desc}</div>
-                        )}
+                      {label:"Vol Ratio",val:`${volAnalysis.volRatio}×`,color:volAnalysis.volRatio>1.5?G.green:volAnalysis.volRatio<0.7?G.red:G.yellow},
+                      {label:"OBV Trend",val:volAnalysis.obvTrend,color:volAnalysis.obvTrend==="RISING"?G.green:G.red},
+                      {label:"PV Confirm",val:volAnalysis.pvConfirm?"✓ Yes":"✗ No",color:volAnalysis.pvConfirm?G.green:G.red},
+                      {label:"Phase",val:volAnalysis.accumulation?"Accumulation":volAnalysis.distribution?"Distribution":"Neutral",color:volAnalysis.accumulation?G.green:volAnalysis.distribution?G.red:G.yellow},
+                    ].map(({label,val,color})=>(
+                      <div key={label}>
+                        <div style={{color:G.textMut,fontSize:9,marginBottom:3}}>{label}</div>
+                        <div style={{color,fontSize:12,fontWeight:700,fontFamily:"monospace"}}>{val}</div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
-              {/* MTF Alignment */}
-              <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-                <div style={{color:G.text,fontSize:13,fontWeight:600,marginBottom:4}}>⏱ Multi-Timeframe Alignment</div>
-                <div style={{color:G.textMut,fontSize:10,marginBottom:12}}>Click the alignment summary to understand what this means</div>
-                <div style={{display:"flex",gap:10,marginBottom:12}}>
-                  {mtfData.map(m=>(
-                    <div key={m.tf} style={{flex:1,textAlign:"center",background:G.bg,
-                      borderRadius:6,padding:"10px 4px",
-                      border:`1px solid ${m.votes===1?G.green+"44":G.red+"44"}`}}>
-                      <div style={{color:G.textMut,fontSize:9,marginBottom:4}}>{m.label}</div>
-                      <div style={{fontSize:16}}>{m.votes===1?"✅":"❌"}</div>
-                      <div style={{color:m.votes===1?G.green:G.red,fontSize:9,marginTop:3,fontFamily:"monospace"}}>
-                        {m.votes===1?"BULL":"BEAR"}
-                      </div>
+            </div>
+          )}
+          {tab==="signals"&&(
+            <div>
+              {stockSigs.length===0
+                ?<Empty icon="⚔️" title="No signals" sub="Not enough candle data to compute signals."/>
+                :<table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead><tr style={{background:G.bg}}>
+                    {["Strategy","Direction","Confidence","Reason"].map(h=>(
+                      <th key={h} style={{color:G.textSec,fontSize:10,padding:"8px 14px",textAlign:"left",fontWeight:500,borderBottom:`1px solid ${G.border}`}}>{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {stockSigs.map((sig,i)=>(
+                      <tr key={i} style={{borderBottom:`1px solid ${G.border}`}}>
+                        <td style={{padding:"9px 14px"}}><Tag label={sig.id??"-"} color={G.yellow}/></td>
+                        <td style={{padding:"9px 14px"}}><Tag label={sig.signal===1?"BUY":"SELL"} color={sig.signal===1?G.green:G.red}/></td>
+                        <td style={{padding:"9px 14px",color:G.textSec,fontSize:11,fontFamily:"monospace"}}>{((sig.confidence??0)*100).toFixed(0)}%</td>
+                        <td style={{padding:"9px 14px",color:G.textMut,fontSize:11}}>{sig.reason}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>}
+            </div>
+          )}
+          {tab==="fundamentals"&&(
+            <div>
+              {!fundamentals
+                ?<Empty icon="📋" title="No fundamentals" sub="Start backend for live fundamental data from screener.in."/>
+                :<div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+                  {Object.entries(fundamentals).map(([key,val])=>(
+                    <div key={key} style={{background:G.bg,borderRadius:6,padding:"10px 12px"}}>
+                      <div style={{color:G.textMut,fontSize:9,marginBottom:3}}>{key}</div>
+                      <div style={{color:G.text,fontSize:12,fontWeight:600,fontFamily:"monospace"}}>{val}</div>
                     </div>
                   ))}
-                </div>
-                <div onClick={()=>setExpandedItem(expandedItem==="mtf"?null:"mtf")}
-                  style={{background:G.bg,borderRadius:6,padding:"10px 14px",cursor:"pointer",
-                    border:`1px solid ${alignedCount>=4?G.green+"44":alignedCount>=3?G.yellow+"44":G.red+"44"}`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <span style={{color:alignedCount>=4?G.green:alignedCount>=3?G.yellow:G.red,
-                      fontSize:12,fontWeight:600}}>
-                      {alignedCount}/5 timeframes aligned {alignedCount>=4?"→ High confidence":alignedCount>=3?"→ Moderate":"→ Low confidence"}
-                    </span>
-                    <span style={{color:G.textMut,fontSize:9}}>click to understand</span>
-                  </div>
-                  {expandedItem==="mtf"&&(
-                    <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${G.border}`,
-                      color:G.textSec,fontSize:11,lineHeight:1.7}}>{mtfDesc}</div>
-                  )}
-                </div>
-              </div>
-
-              {/* TITAN signals list */}
-              {stockSigs.length>0&&(
-                <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
-                    <span style={{color:G.text,fontSize:13,fontWeight:600}}>⚔️ TITAN Strategy Signals</span>
-                    <div style={{display:"flex",gap:8}}>
-                      <Tag label={`${buySigs.length} BUY`} color={G.green}/>
-                      <Tag label={`${sellSigs.length} SELL`} color={G.red}/>
-                    </div>
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                    {stockSigs.slice(0,10).map((sig,j)=>(
-                      <div key={j} style={{display:"flex",gap:10,alignItems:"center",padding:"7px 10px",
-                        background:G.bg,borderRadius:6,borderLeft:`3px solid ${sig.signal===1?G.green:G.red}`}}>
-                        <Tag label={sig.id} color={G.yellow}/>
-                        <Tag label={sig.signal===1?"BUY":"SELL"} color={sig.signal===1?G.green:G.red}/>
-                        <span style={{color:G.textSec,fontSize:11,flex:1}}>{sig.reason}</span>
-                        <span style={{color:G.textMut,fontSize:10,fontFamily:"monospace"}}>{(sig.confidence*100).toFixed(0)}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── FUNDAMENTALS TAB ── */}
-          {tab==="fundamentals"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              {Object.keys(F).length===0
-                ? <Empty icon="📊" title="Fundamentals loading" sub="Fetched from yfinance/screener.in when backend is connected. Start backend for real data."/>
-                : (
-                  <>
-                    <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 16px"}}>
-                      <div style={{color:G.textSec,fontSize:12,lineHeight:1.7}}>{F.description||"No company description available."}</div>
-                    </div>
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10}}>
-                      {[
-                        {key:"pe_ratio",label:"P/E Ratio",val:F.pe_ratio?F.pe_ratio.toFixed(1):"—",desc:"Price-to-earnings. <15 is cheap, >30 is expensive relative to growth. Click to understand."},
-                        {key:"roe",label:"ROE %",val:F.roe!=null?`${F.roe.toFixed(1)}%`:"—",desc:"Return on Equity — how well the company uses shareholder money. >15% is good; >25% is excellent. Consistent ROE > 20% is a quality indicator."},
-                        {key:"market_cap",label:"Market Cap",val:F.market_cap_cr?`₹${(F.market_cap_cr/100).toFixed(0)}k Cr`:"—",desc:"Total market value of all shares. Large cap >₹20,000 Cr is more stable; mid cap ₹5,000-20,000 Cr has more growth potential."},
-                        {key:"pb",label:"P/B Ratio",val:F.price_to_book?F.price_to_book.toFixed(2):"—",desc:"Price-to-book. <1 = stock trading below asset value. Banking stocks often trade at P/B 1-3. High P/B only justified by high ROE."},
-                        {key:"rev_growth",label:"Revenue Growth",val:F.revenue_growth!=null?`${F.revenue_growth.toFixed(1)}%`:"—",desc:"YoY revenue growth. >15% is strong growth; >25% is high-growth territory. Negative = declining business."},
-                        {key:"debt_eq",label:"Debt/Equity",val:F.debt_to_equity?F.debt_to_equity.toFixed(2):"—",desc:"Total debt divided by equity. <0.5 is low debt; >2 is highly leveraged. High D/E OK for infrastructure but risky for cyclical sectors."},
-                        {key:"dividend",label:"Dividend Yield",val:F.dividend_yield?`${F.dividend_yield.toFixed(2)}%`:"—",desc:"Annual dividend as % of stock price. >3% is high yield. Good for income investors. Low yield may mean company reinvests for growth."},
-                        {key:"eps",label:"EPS",val:F.eps?`₹${F.eps.toFixed(2)}`:"—",desc:"Earnings Per Share. Rising EPS over 3+ years indicates consistent profitability. EPS × average P/E = fair value estimate."},
-                      ].map(({key,label,val,desc})=>(
-                        <div key={key} onClick={()=>setExpandedItem(expandedItem===key?null:key)}
-                          style={{background:G.bg,borderRadius:6,padding:"12px 14px",cursor:"pointer",
-                            border:`1px solid ${expandedItem===key?G.blue+"55":G.border}`}}
-                          onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
-                          onMouseLeave={e=>e.currentTarget.style.background=G.bg}>
-                          <div style={{color:G.textMut,fontSize:9,marginBottom:5}}>{label}</div>
-                          <div style={{color:G.text,fontSize:15,fontWeight:700,fontFamily:"monospace",marginBottom:4}}>{val}</div>
-                          {expandedItem===key&&(
-                            <div style={{color:G.textSec,fontSize:10,lineHeight:1.6,marginTop:6,
-                              paddingTop:6,borderTop:`1px solid ${G.border}`}}>{desc}</div>
-                          )}
-                          {expandedItem!==key&&<div style={{color:G.textMut,fontSize:8}}>click to understand</div>}
-                        </div>
-                      ))}
-                    </div>
-                    {/* 52-week range */}
-                    {F.week52_low&&F.week52_high&&(
-                      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-                        <div style={{color:G.text,fontSize:12,fontWeight:600,marginBottom:10}}>52-Week Range</div>
-                        <div style={{position:"relative",height:8,background:G.border,borderRadius:4,marginBottom:10}}>
-                          <div style={{position:"absolute",left:`${((price-F.week52_low)/(F.week52_high-F.week52_low))*100}%`,
-                            width:12,height:12,background:G.blue,borderRadius:"50%",top:-2,
-                            transform:"translateX(-50%)",boxShadow:`0 0 8px ${G.blue}`}}/>
-                          <div style={{position:"absolute",left:0,top:-2,color:G.red,fontSize:10,fontFamily:"monospace"}}>₹{F.week52_low.toFixed(0)}</div>
-                          <div style={{position:"absolute",right:0,top:-2,color:G.green,fontSize:10,fontFamily:"monospace"}}>₹{F.week52_high.toFixed(0)}</div>
-                        </div>
-                        <div style={{textAlign:"center",color:G.textSec,fontSize:11,marginTop:12}}>
-                          Current ₹{price.toFixed(0)} is {((price-F.week52_low)/(F.week52_high-F.week52_low)*100).toFixed(0)}% from 52W low
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-            </div>
-          )}
-
-          {/* ── NEWS TAB ── */}
-          {tab==="news"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              {stockNews.length===0
-                ? <Empty icon="📰" title="No news for this stock" sub="News feeds scan ET, Moneycontrol, Reuters, Business Standard every 5 min. Start backend for real news."/>
-                : stockNews.map((item,i)=>{
-                    const sent=SENTIMENT_LABEL[item.sentiment]??SENTIMENT_LABEL.NEUTRAL;
-                    return (
-                      <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 18px"}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                            <span style={{color:SOURCE_COLOR[item.source]??G.textSec,fontSize:11,fontWeight:600}}>{item.source}</span>
-                            <span style={{color:sent.color,fontSize:11,fontWeight:700}}>{sent.icon} {item.sentiment?.replace("_"," ")}</span>
-                          </div>
-                          <span style={{color:G.textMut,fontSize:10,fontFamily:"monospace"}}>{item.time}</span>
-                        </div>
-                        <div style={{color:G.text,fontSize:13,fontWeight:600,lineHeight:1.4,marginBottom:6}}>{item.headline}</div>
-                        {item.summary&&<div style={{color:G.textSec,fontSize:11,lineHeight:1.6}}>{item.summary}</div>}
-                        {item.impact&&(
-                          <div style={{marginTop:8,padding:"8px 12px",background:G.bg,borderRadius:6,
-                            borderLeft:`3px solid ${sent.color}`,color:G.textSec,fontSize:11,lineHeight:1.5}}>
-                            <strong style={{color:sent.color}}>Impact analysis:</strong> {item.impact}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-              }
+                </div>}
             </div>
           )}
         </div>
       </div>
     </div>
   );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// DEMO NEWS GENERATOR (until backend provides real feeds)
-// ═══════════════════════════════════════════════════════════════════════════
-function generateDemoNews(picks) {
-  const templates=[
-    {h:"Q3 results: net profit up 18% YoY on strong topline",sent:"BULLISH",src:"Economic Times",score:0.62},
-    {h:"FII inflows surge as global risk appetite improves",sent:"BULLISH",src:"Moneycontrol",score:0.45},
-    {h:"Management guidance raised for FY25 revenue",sent:"STRONGLY_BULLISH",src:"Business Standard",score:0.78},
-    {h:"Sector headwinds: raw material inflation continues",sent:"BEARISH",src:"Mint",score:-0.41},
-    {h:"SEBI directive may impact business temporarily",sent:"BEARISH",src:"Reuters",score:-0.35},
-    {h:"Analyst upgrade to Buy with target raised 15%",sent:"STRONGLY_BULLISH",src:"Bloomberg",score:0.82},
-    {h:"Promoter stake unchanged; no insider selling",sent:"NEUTRAL",src:"NDTV Business",score:0.05},
-    {h:"Weak guidance given for next quarter",sent:"BEARISH",src:"Financial Express",score:-0.38},
-  ];
-  const now=new Date();
-  return picks.slice(0,5).flatMap((p,pi)=>{
-    const items=templates.slice(0,2+pi%2).map((t,i)=>{
-      const mins=Math.floor(Math.random()*120);
-      const related=picks.filter(x=>x.s!==p.s&&x.sec===p.sec).slice(0,2).map(x=>x.s);
-      return {
-        symbol:p.s,related,headline:`${p.s}: ${t.h}`,summary:`${p.n} ${t.h.toLowerCase()}. Analysis by AlphaZero sentiment engine.`,
-        sentiment:t.sent,sentiment_score:t.score,source:t.src,
-        time:`${now.getHours()}:${String(now.getMinutes()-mins<0?0:now.getMinutes()-mins).padStart(2,"0")}`,
-        impact:`${t.sent.includes("BULL")?"Positive for share price":"Negative short-term pressure"}. ${p.s} SIGMA score adjusted accordingly.`,
-        confirmation:t.score>0.5?[t.src,"AlphaZero AI"]:t.score<-0.3?[t.src]:[],
-      };
-    });
-    return items;
-  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════════
 export default function App() {
-  // ── State ──────────────────────────────────────────────────────────────
-  const [tab,setTab]             = useState("overview");
-  const [connStatus,setConn]     = useState("connecting");
-  const [now,setNow]             = useState(new Date());
-  const [regime,setRegime]       = useState("TRENDING");
-  const [indices,setIndices]     = useState({nifty:24148,banknifty:51832,vix:14.2,market_open:false});
-  const [quotes,setQuotes]       = useState({});
-  const [picks,setPicks]         = useState([]);
-  const [positions,setPos]       = useState([]);
-  const [candleCache,setCaches]  = useState({});
-  const [allSigs,setAllSigs]     = useState([]);
-  const [evalStats,setEvalStats] = useState({});
-  const [evalHistory,setHistory] = useState([]);
-  const [agentScores,setAgtScores]= useState([]);
-  const [agentKpi,setAgentKpi]   = useState({});
+  const [tab,setTab]               = useState("overview");
+  const [connStatus,setConn]       = useState("connecting");
+  const [now,setNow]               = useState(new Date());
+  const [regime,setRegime]         = useState("TRENDING");
+  const [indices,setIndices]       = useState({nifty:24148,banknifty:51832,vix:14.2,market_open:false});
+  const [quotes,setQuotes]         = useState({});
+  const [picks,setPicks]           = useState([]);
+  const [positions,setPos]         = useState([]);
+  const [candleCache,setCaches]    = useState({});
+  const [allSigs,setAllSigs]       = useState([]);
+  const [evalStats,setEvalStats]   = useState({});
+  const [evalHistory,setHistory]   = useState([]);
+  const [agentScores,setAgtScores] = useState([]);
+  const [agentKpi,setAgentKpi]     = useState({});
   const [karmaStats,setKarmaStats] = useState({});
-  const [fundamentals,setFundamentals]=useState({});
-  const [news,setNews]           = useState([]);
-  const [events,setEvents]       = useState([]);
-  const [selectedStock,setSelected]=useState(null);
-  const [systemState,setSysState]=useState({status:"RUNNING",mode:"PAPER",iteration:0,uptime_s:0});
+  const [fundamentals,setFundamentals] = useState({});
+  const [news,setNews]             = useState([]);
+  const [events,setEvents]         = useState([]);
+  const [selectedStock,setSelected]= useState(null);
+  const [systemState,setSysState]  = useState({status:"RUNNING",mode:"PAPER",iteration:0,uptime_s:0});
+
+  // ── NEW: Active Portfolio state ──────────────────────────────────────────
+  const [apData,setApData]=useState({
+    open_positions:[],total_open:0,max_positions:10,slots_available:10,
+    total_invested:0,total_unrealised_pnl:0,total_realised_pnl:0,
+    win_rate_pct:0,total_trades:0,winning_trades:0,losing_trades:0,
+    near_target:[],near_sl:[],history:[],blocked_symbols:[],
+  });
+  const [dataSources,setDataSources]=useState({});
 
   // ── Refs ────────────────────────────────────────────────────────────────
   const cRef=useRef(candleCache);   cRef.current=candleCache;
@@ -1873,7 +1675,6 @@ export default function App() {
   const connRef=useRef(connStatus); connRef.current=connStatus;
   const startTs=useRef(Date.now());
 
-  // ── Event bus adder ────────────────────────────────────────────────────
   const addEvt=useCallback((type,agent,msg)=>{
     setEvents(prev=>[{type,agent,msg,ts:new Date().toLocaleTimeString("en-IN",{hour12:false})},...prev.slice(0,99)]);
   },[]);
@@ -1881,7 +1682,7 @@ export default function App() {
   // ── Clock ──────────────────────────────────────────────────────────────
   useEffect(()=>{const t=setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(t);},[]);
 
-  // ── System uptime ──────────────────────────────────────────────────────
+  // ── Uptime ────────────────────────────────────────────────────────────
   useEffect(()=>{
     const t=setInterval(()=>setSysState(prev=>({...prev,uptime_s:Math.floor((Date.now()-startTs.current)/1000)})),5000);
     return()=>clearInterval(t);
@@ -1896,79 +1697,76 @@ export default function App() {
         ws.onopen=()=>{if(alive){setConn("live");addEvt("SYSTEM","WS","Connected to AlphaZero backend");}};
         ws.onmessage=e=>{
           const msg=JSON.parse(e.data);
-          if(msg.quotes)setQuotes(msg.quotes);
-          if(msg.indices)setIndices(msg.indices);
-          if(msg.regime)setRegime(msg.regime);
-          if(msg.karma)setKarmaStats(msg.karma);
-          if(msg.fundamentals)setFundamentals(prev=>({...prev,...msg.fundamentals}));
-          if(msg.news)setNews(msg.news);
-          if(msg.eval_stats)setEvalStats(msg.eval_stats);
-          if(msg.agent_scores)setAgtScores(msg.agent_scores);
-          if(msg.agent_kpi)setAgentKpi(msg.agent_kpi);
-          if(msg.system)setSysState(msg.system);
-          if(msg.type==="PONG"){}
+          if(msg.quotes)     setQuotes(msg.quotes);
+          if(msg.indices)    setIndices(msg.indices);
+          if(msg.regime)     setRegime(msg.regime);
+          if(msg.karma)      setKarmaStats(msg.karma);
+          if(msg.fundamentals) setFundamentals(prev=>({...prev,...msg.fundamentals}));
+          if(msg.news)       setNews(msg.news);
+          if(msg.eval_stats) setEvalStats(msg.eval_stats);
+          if(msg.agent_scores) setAgtScores(msg.agent_scores);
+          if(msg.agent_kpi)  setAgentKpi(msg.agent_kpi);
+          if(msg.system)     setSysState(msg.system);
+          if(msg.picks)      setPicks(msg.picks);
+          if(msg.positions)  setPos(msg.positions);
+          if(msg.signals)    setAllSigs(msg.signals);
         };
         ws.onclose=()=>{if(alive){setConn("offline");setTimeout(()=>{if(alive)connect();},5000);}};
-        ws.onerror=()=>{if(alive){setConn("offline");}};
-        // Heartbeat
+        ws.onerror=()=>{if(alive)setConn("offline");};
         const ping=setInterval(()=>{if(ws.readyState===1)ws.send(JSON.stringify({type:"PING"}));},20000);
-        ws._pingInterval=ping;
-      } catch {if(alive)setConn("offline");}
+        ws._ping=ping;
+      } catch{if(alive)setConn("offline");}
     };
     connect();
-    return ()=>{alive=false;ws?.close();clearInterval(ws?._pingInterval);};
+    return()=>{alive=false;ws?.close();clearInterval(ws?._ping);};
   },[addEvt]);
 
-  // ── Regime drift (offline) ─────────────────────────────────────────────
+  // ── Active Portfolio + Data Sources REST fetch ────────────────────────
+  useEffect(()=>{
+    const f=async()=>{
+      try{const r=await fetch(`${BACKEND}/portfolio`);if(r.ok)setApData(await r.json());}catch{}
+      try{const r=await fetch(`${BACKEND}/sources`);if(r.ok)setDataSources(await r.json());}catch{}
+    };
+    f();const t=setInterval(f,15000);return()=>clearInterval(t);
+  },[]);
+
+  // ── Regime drift + demo data when offline ─────────────────────────────
   useEffect(()=>{
     if(connStatus==="live") return;
-    const r=["TRENDING","SIDEWAYS","VOLATILE","RISK_OFF"];
-    setKarmaStats({
-      episodes:847,win_rate:0.61,best_strategy:"T2 Triple EMA",
-      training_active:new Date().getHours()<9||new Date().getHours()>=18,
-      last_training:new Date().getHours()>=18?"Today "+new Date().getHours()+":00":"Yesterday 22:30",
-      strategy_weights:{"T2 Triple EMA":1.42,"T1 EMA Cross":1.28,"M1 RSI Rev":1.15,"B2 Vol Breakout":0.98,"V1 VWAP Cross":0.87,"M2 BB Bounce":0.72,"T5 ADX":1.06,"S1 Z-Score":0.65},
-      discovered_patterns:[
-        {pattern:"RSI<35 + ADX>25 + TRENDING",win_rate:0.74,description:"RSI oversold in trending market — high win reversal"},
-        {pattern:"Triple EMA stack + Volume surge",win_rate:0.81,description:"Strongest bull setup with institutional volume"},
-        {pattern:"BB squeeze + VWAP reclaim",win_rate:0.69,description:"Post-consolidation breakout with VWAP confirmation"},
-      ],
-      regime_win_rates:{TRENDING:{win_rate:0.68,trades:124},SIDEWAYS:{win_rate:0.57,trades:89},VOLATILE:{win_rate:0.44,trades:34},RISK_OFF:{win_rate:0.31,trades:12}},
-    });
+    setKarmaStats({episodes:847,win_rate:0.61,best_strategy:"T2 Triple EMA",
+      training_active:new Date().getHours()<9||new Date().getHours()>=18,last_training:"21:00 IST"});
+    const REGIMES=["TRENDING","SIDEWAYS","VOLATILE","RISK_OFF"];
     const t=setInterval(()=>{
-      setRegime(r[Math.floor(Math.random()*r.length)]);
-      setIndices(prev=>({
-        ...prev,
-        nifty:prev.nifty+(Math.random()-.49)*30,
-        banknifty:prev.banknifty+(Math.random()-.49)*80,
-        vix:Math.max(10,Math.min(35,prev.vix+(Math.random()-.5)*0.8)),
+      setRegime(REGIMES[Math.floor(Math.random()*4)]);
+      setIndices(prev=>({...prev,
+        nifty:+(prev.nifty*(0.999+Math.random()*.002)).toFixed(2),
+        banknifty:+(prev.banknifty*(0.999+Math.random()*.002)).toFixed(2),
+        vix:+(prev.vix*(0.998+Math.random()*.004)).toFixed(1),
         market_open:new Date().getHours()>=9&&new Date().getHours()<16&&new Date().getDay()>=1&&new Date().getDay()<=5,
       }));
       setAgentKpi(prev=>{
-        const agents=["ZEUS","ORACLE","ATLAS","SIGMA","APEX","NEXUS","HERMES","TITAN","GUARDIAN","MERCURY","LENS","KARMA"];
         const updated={...prev};
-        agents.forEach(a=>{updated[a]={kpi:0.55+Math.random()*0.35,cycles:(updated[a]?.cycles??0)+1};});
+        AGENT_LIST.forEach(a=>{updated[a.id]={kpi:0.55+Math.random()*.35,cycles:(updated[a.id]?.cycles??0)+1};});
         return updated;
       });
     },12000);
     return()=>clearInterval(t);
   },[connStatus]);
 
-  // ── Candle fetch (stable callback) ─────────────────────────────────────
+  // ── Candle fetch ──────────────────────────────────────────────────────
   const getCandles=useCallback(async(symbol)=>{
     if(cRef.current[symbol]) return cRef.current[symbol];
     if(connRef.current==="live"){
       try{
         const r=await fetch(`${BACKEND}/candles/${symbol}`);
         const d=await r.json();
-        if(d.candles?.length){
+        if(d?.candles?.length){
           const norm=d.candles.map(c=>({...c,close:c.close??c.Close??0}));
           setCaches(p=>({...p,[symbol]:norm}));
           return norm;
         }
       }catch{}
     }
-    // Synthetic fallback
     const st=NSE_UNIVERSE.find(x=>x.s===symbol);
     const base=st?.base??1000;
     const syn=[];
@@ -1983,7 +1781,7 @@ export default function App() {
     return syn;
   },[]);
 
-  // ── APEX stock selection (dynamic, whole universe) ─────────────────────
+  // ── APEX stock selection ───────────────────────────────────────────────
   const runSelect=useCallback(async()=>{
     const cr=rRef.current;
     const results=await Promise.all(NSE_UNIVERSE.map(async(st)=>{
@@ -2001,7 +1799,7 @@ export default function App() {
       const ef=ind&&Li>=0?(ind.e20[Li]>ind.e50[Li]?.7+Math.random()*.25:.3):.5;
       const vf=.4+Math.random()*.5,nf=.35+Math.random()*.6,fii=.25+Math.random()*.7,earn=.35+Math.random()*.55;
       const score=+(mf*.20+tf*.15+rf*.15+ef*.15+earn*.15+vf*.10+nf*.10+fii*.05).toFixed(3);
-      const tt=ind&&Li>=0&&ind.adx[Li]>40?"SHORT_TERM":ind&&Li>=0&&ind.adx[Li]<18&&cr==="SIDEWAYS"?"INTRADAY":cr==="TRENDING"&&tf>.55?"LONG_TERM":"SWING";
+      const tt=ind&&Li>=0&&ind.adx[Li]>40?"SHORT_TERM":cr==="TRENDING"&&tf>.55?"LONG_TERM":"SWING";
       const pools={TRENDING:["T1 EMA Cross","T2 Triple EMA","T4 MACD","T5 ADX","T7 Donchian","B2 Vol Breakout"],SIDEWAYS:["M1 RSI Rev","M2 BB Bounce","M3 BB Squeeze","V1 VWAP Cross","S1 Z-Score"],VOLATILE:["M1 RSI Rev","M2 BB Bounce","V1 VWAP Cross"],RISK_OFF:["M1 RSI Rev"]};
       const pool=pools[cr]??pools.TRENDING;
       const ss=pool[Math.floor(Math.random()*pool.length)];
@@ -2009,115 +1807,42 @@ export default function App() {
       const stockSigs=cdl?titanSignals(cdl,cr):[];
       const buys=stockSigs.filter(x=>x.signal===1).length;
       const sells=stockSigs.filter(x=>x.signal===-1).length;
-      const mtfRaw=Array(5).fill(0).map(()=>Math.random()>.45?1:0);
-      const mtfVotes=mtfRaw.filter(Boolean).length;
-      const topReason=stockSigs[0]?.reason??"SIGMA ranked top by multi-factor model";
-      const selectionReason=`${cr} regime · ${ss} strategy confirmed · RSI ${ind&&Li>=0?ind.rsi[Li].toFixed(0):"—"} · ADX ${ind&&Li>=0?ind.adx[Li].toFixed(0):"—"} · ${buys} buy signals · ${mtfVotes}/5 MTF confirmed · SIGMA score ${(score*100).toFixed(0)}/100`;
-      return {...st,score,tt,confidence:+(.52+Math.random()*.42).toFixed(2),
-        price,chgPct:+chg.toFixed(2),entry:price,sl:+(price-1.5*atr).toFixed(2),
-        target:+(price+1.5*atr).toFixed(2),cons:+(price+.8*atr).toFixed(2),opt:+(price+2.5*atr).toFixed(2),
-        regime:cr,sid,sname:sname.join(" "),mtfVotes,selectionReason,
-        sigmaFactors:{momentum:+mf.toFixed(2),trend:+tf.toFixed(2),earnings:+earn.toFixed(2),
-          relStrength:+ef.toFixed(2),news:+nf.toFixed(2),volume:+vf.toFixed(2),
-          volatility:+(1-atr/price*30).toFixed(2),fii:+fii.toFixed(2)},
-      };
+      const mtfVotes=Math.floor(Math.random()*3)+2;
+      const topReason=stockSigs[0]?.reason??"Momentum aligning with regime";
+      const confidence=+(score*.5+(buys-sells)/Math.max(buys+sells,1)*.3+mtfVotes/5*.2).toFixed(3);
+      const entry=price,target=+(price*(1+atr/price*2.5)).toFixed(2),sl=+(price*(1-atr/price*1.2)).toFixed(2);
+      return {...st,price,chgPct:chg,score,confidence,tt,sid,sname:sname.join(" "),
+        entry,target,sl,regime:cr,mtfVotes,
+        selectionReason:`SIGMA Score ${score.toFixed(3)}. ${topReason}. MTF: ${mtfVotes}/5 aligned. R:R ${((target-entry)/(entry-sl)).toFixed(2)}.`};
     }));
     const top5=results.sort((a,b)=>b.score-a.score).slice(0,5);
     setPicks(top5);
-    addEvt("SELECTION","APEX",`Selected: ${top5.map(s=>s.s).join(", ")} from ${NSE_UNIVERSE.length} stocks · ${cr}`);
-
-    // Collect all signals
-    const sigs=[];
-    for(const st of top5){
+    const sigs=results.flatMap(st=>{
       const cdl=cRef.current[st.s];
-      if(cdl){
-        const tSigs=titanSignals(cdl,cr).slice(0,3).map(s=>({...s,symbol:st.s,regime:cr,ts:new Date().toLocaleTimeString("en-IN",{hour12:false})}));
-        sigs.push(...tSigs);
-      }
-    }
-    setAllSigs(sigs);
-
-    // Auto-open positions for high confidence picks
-    top5.filter(s=>s.confidence>.65&&s.mtfVotes>=3).forEach(stock=>{
-      if(!pRef.current.find(p=>p.symbol===stock.s&&p.status==="OPEN")){
-        const qty=Math.max(1,Math.floor(50000/stock.price));
-        setPos(prev=>{
-          if(prev.filter(p=>p.status==="OPEN").length>=8) return prev;
-          return [...prev.filter(p=>!(p.symbol===stock.s&&p.status==="OPEN")),
-            {id:`${stock.s}-${Date.now()}`,symbol:stock.s,entryPrice:stock.price,cp:stock.price,
-             sl:stock.sl,target:stock.target,qty,sid:stock.sid,tt:stock.tt,
-             pnl:0,pnlPct:0,status:"OPEN",time:new Date().toLocaleTimeString("en-IN",{hour12:false})}
-          ].slice(0,10);
-        });
-        addEvt("ORDER","MERCURY",`[${systemState.mode}] BUY ${qty}×${stock.s} @₹${stock.price} | ${stock.sid} | conf:${(stock.confidence*100).toFixed(0)}%`);
-      }
+      return cdl?titanSignals(cdl,cr).map(s=>({...s,symbol:st.s,regime:cr,ts:new Date().toLocaleTimeString("en-IN",{hour12:false})})):[];
     });
-  },[getCandles,addEvt]);
+    setAllSigs(sigs);
+  },[getCandles]);
 
-  useEffect(()=>{runSelect();const t=setInterval(runSelect,40000);return()=>clearInterval(t);},[runSelect]);
-
-  // ── Live price updater ─────────────────────────────────────────────────
   useEffect(()=>{
-    const update=()=>{
-      setPos(prev=>prev.map(pos=>{
-        if(pos.status!=="OPEN") return pos;
-        const candles=cRef.current[pos.symbol];
-        const last=candles?.[candles.length-1];
-        const cp=qRef.current[pos.symbol]?.ltp??(last?.close??last?.Close??pos.entryPrice);
-        const grossPnl=(cp-pos.entryPrice)*pos.qty;
-        const c=calcNetPnl({...pos,cp});
-        // Monitoring check for long-term/swing
-        let alert=null;
-        if((pos.tt==="LONG_TERM"||pos.tt==="SWING")&&cp<=pos.sl){
-          alert="SL HIT — exit";
-          addEvt("RISK","GUARDIAN",`${pos.symbol} hit stop loss at ₹${cp.toFixed(0)}`);
-        }
-        if(cp>=pos.target) alert="TARGET reached";
-        return {...pos,cp:+cp.toFixed(2),pnl:c.netPnl,pnlPct:c.netPct,alert};
-      }));
-    };
-    const t=setInterval(update,8000);
+    runSelect();
+    const t=setInterval(runSelect,40000);
     return()=>clearInterval(t);
-  },[addEvt]);
+  },[runSelect]);
 
-  // ── Auto-close SL/target hits ──────────────────────────────────────────
-  useEffect(()=>{
-    const check=()=>{
-      setPos(prev=>prev.map(p=>{
-        if(p.status!=="OPEN") return p;
-        if(p.alert==="SL HIT — exit"||p.alert==="TARGET reached"){
-          addEvt("EXEC","MERCURY",`CLOSED ${p.symbol} @₹${p.cp} — ${p.alert}`);
-          return {...p,status:"CLOSED",exitPrice:p.cp};
-        }
-        return p;
-      }));
-    };
-    const t=setInterval(check,15000);
-    return()=>clearInterval(t);
-  },[addEvt]);
-
-  // ── TITAN signals ──────────────────────────────────────────────────────
+  // ── Demo signal events ─────────────────────────────────────────────────
   useEffect(()=>{
     const run=()=>{
-      picks.slice(0,3).forEach(stock=>{
-        const cdl=cRef.current[stock.s];
-        if(!cdl||cdl.length<15) return;
-        const sigs=titanSignals(cdl,rRef.current);
-        if(sigs.length>0){
-          const top=sigs[0];
-          addEvt("SIGNAL","TITAN",`${stock.s} — ${top.id} → ${top.signal===1?"BUY":"SELL"} (${(top.confidence*100).toFixed(0)}%) · ${top.reason}`);
-        }
-      });
+      const top=allSigs[0];
+      if(top){addEvt("SIGNAL","TITAN",`${top.signal===1?"BUY":"SELL"} (${(top.confidence*100).toFixed(0)}%) · ${top.reason}`);}
     };
     const t=setInterval(run,10000);
     return()=>clearInterval(t);
-  },[picks,addEvt]);
+  },[allSigs,addEvt]);
 
   // ── News generation ────────────────────────────────────────────────────
   useEffect(()=>{
-    if(picks.length>0&&connStatus!=="live"){
-      setNews(generateDemoNews(picks));
-    }
+    if(picks.length>0&&connStatus!=="live")setNews(generateDemoNews(picks));
   },[picks,connStatus]);
 
   // ── Fundamentals fetch ─────────────────────────────────────────────────
@@ -2125,11 +1850,7 @@ export default function App() {
     if(connStatus!=="live") return;
     picks.forEach(async st=>{
       if(fundamentals[st.s]) return;
-      try{
-        const r=await fetch(`${BACKEND}/fundamentals/${st.s}`);
-        const d=await r.json();
-        setFundamentals(prev=>({...prev,[st.s]:d}));
-      }catch{}
+      try{const r=await fetch(`${BACKEND}/fundamentals/${st.s}`);const d=await r.json();setFundamentals(prev=>({...prev,[st.s]:d}));}catch{}
     });
   },[picks,connStatus,fundamentals]);
 
@@ -2143,21 +1864,18 @@ export default function App() {
           fetch(`${BACKEND}/evaluation/history?limit=30`).then(r=>r.json()),
           fetch(`${BACKEND}/evaluation/agents`).then(r=>r.json()),
         ]);
-        setEvalStats(sr);
-        setHistory(hr);
-        setAgtScores(ar);
+        setEvalStats(sr);setHistory(hr);setAgtScores(ar);
       }catch{}
     };
     f();const t=setInterval(f,30000);return()=>clearInterval(t);
   },[connStatus]);
 
-  // ── Net P&L for topnav ─────────────────────────────────────────────────
+  // ── Net P&L ───────────────────────────────────────────────────────────
   const openPositions=positions.filter(p=>p.status==="OPEN");
   const netPnlTotal=openPositions.reduce((s,p)=>s+calcNetPnl(p).netPnl,0);
   const closedPnl=positions.filter(p=>p.status==="CLOSED").reduce((s,p)=>s+calcNetPnl({...p,cp:p.exitPrice??p.cp??p.entryPrice}).netPnl,0);
   const totalNetPnl=netPnlTotal+closedPnl;
 
-  // ── Counts for tab badges ──────────────────────────────────────────────
   const tabCounts={pos:openPositions.length,sigs:allSigs.length,news:news.length,eval:evalStats?.total_evaluated??0};
 
   return (
@@ -2175,7 +1893,7 @@ export default function App() {
             evalStats={evalStats} indices={indices} candleCache={candleCache}
             news={news} onStock={setSelected}/>}
         {tab==="positions"&&
-          <PositionsTab positions={positions} mode={systemState.mode}/>}
+          <PositionsTab positions={positions} mode={systemState.mode} apData={apData}/>}
         {tab==="signals"&&
           <SignalsTab signals={allSigs} onStock={setSelected} picks={picks}/>}
         {tab==="news"&&
@@ -2185,10 +1903,9 @@ export default function App() {
         {tab==="evaluation"&&
           <EvaluationTab evalStats={evalStats} evalHistory={evalHistory} agentScores={agentScores}/>}
         {tab==="agents"&&
-          <AgentsTab agentKpi={agentKpi} events={events} karmaStats={karmaStats}/>}
+          <AgentsTab agentKpi={agentKpi} events={events} karmaStats={karmaStats} dataSources={dataSources}/>}
       </div>
 
-      {/* Footer */}
       <footer style={{borderTop:`1px solid ${G.border}`,background:G.surface,
         padding:"14px 24px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",gap:16,alignItems:"center"}}>
@@ -2210,30 +1927,31 @@ export default function App() {
           <div style={{width:1,height:12,background:G.border}}/>
           <span style={{color:G.textMut,fontSize:10}}>
             {systemState.mode==="LIVE"
-              ? <span style={{color:G.red}}>🔴 LIVE — real orders via OpenAlgo</span>
-              : <span style={{color:G.yellow}}>📄 PAPER — all strategies run, no real orders</span>
-            }
+              ?<span style={{color:G.red}}>🔴 LIVE — real orders via OpenAlgo</span>
+              :<span style={{color:G.yellow}}>📄 PAPER — all strategies run, no real orders</span>}
           </span>
           <div style={{width:1,height:12,background:G.border}}/>
-          <span style={{color:G.textMut,fontSize:10,fontFamily:"monospace"}}>
-            {now.toLocaleTimeString("en-IN",{hour12:false})} IST
-          </span>
+          <span style={{color:G.textMut,fontSize:10,fontFamily:"monospace"}}>{now.toLocaleTimeString("en-IN",{hour12:false})} IST</span>
         </div>
       </footer>
 
-      {/* Stock detail modal */}
       {selectedStock&&(
-        <StockModal
-          stock={selectedStock}
-          onClose={()=>setSelected(null)}
-          candles={candleCache[selectedStock.s]}
-          quotes={quotes}
+        <StockModal stock={selectedStock} onClose={()=>setSelected(null)}
+          candles={candleCache[selectedStock.s]} quotes={quotes}
           signals={allSigs.filter(s=>s.symbol===selectedStock.s)}
-          fundamentals={fundamentals}
-          news={news}
-          mode={systemState.mode}
-        />
+          fundamentals={fundamentals[selectedStock.s]}
+          news={news} mode={systemState.mode}/>
       )}
+
+      <style>{`
+        @keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        ::-webkit-scrollbar{width:5px;height:5px}
+        ::-webkit-scrollbar-track{background:${G.bg}}
+        ::-webkit-scrollbar-thumb{background:${G.border};border-radius:3px}
+        ::-webkit-scrollbar-thumb:hover{background:${G.borderMid}}
+        *{box-sizing:border-box}
+      `}</style>
     </div>
   );
 }

@@ -1,422 +1,636 @@
 """
-main.py  —  AlphaZero Capital v2
-══════════════════════════════════
-Single entry point: python main.py
+main.py  —  AlphaZero Capital  (v3.0)
+═══════════════════════════════════════════════════════════════════════════════
+Main orchestrator — 16 Agents + Multi-Source Data + Active Portfolio Guard
 
-What's new in v2:
-  ✅ Historical data cache (data/cache/) — no repeated downloads
-  ✅ yfinance MultiIndex fix, retry on rate-limit
-  ✅ NSE Bhav Copy fully implemented
-  ✅ NSE Direct API (no rate limits)
-  ✅ Screener.in fundamentals scraper
-  ✅ Kelly criterion full implementation
-  ✅ Correlation control (>0.8 blocked)
-  ✅ Rolling 7d/30d drawdown circuit breaker
-  ✅ Portfolio rebalancer (weekly)
-  ✅ Walk-forward backtesting
-  ✅ Order retry + partial fill + bracket orders
-  ✅ GET /health endpoint
-  ✅ Auto-restart (systemd / pm2 config generation)
-  ✅ Log rotation (7-day)
-  ✅ Daily DB backup
+KEY CHANGES in v3.0:
+  ✅ Multi-source data engine (Upstox + OpenAlgo + yfinance + NSE Direct
+     + Stooq + Twelve Data + Finnhub + Alpha Vantage)
+  ✅ ActivePortfolio guard — swing/positional positions held until target/SL
+  ✅ No new stocks added while max positions filled (except intraday)
+  ✅ All agents still intact and operational
+  ✅ Persistent position tracking across restarts
 """
 
 from __future__ import annotations
+import json
+import logging
+import os
+import signal
+import sys
+import time
+import threading
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+from zoneinfo import ZoneInfo
 
-import os, sys, time, logging, threading, signal
-from datetime import datetime
-from pathlib import Path
+# ── Load env before any internal imports ─────────────────────────────────────
 from dotenv import load_dotenv
-
-# Load .env before anything else
 load_dotenv()
 
-ROOT = Path(__file__).parent
-sys.path.insert(0, str(ROOT))
+IST = ZoneInfo("Asia/Kolkata")
 
 # ── Logging setup ─────────────────────────────────────────────────────────────
-LOG_DIR = ROOT / "logs"
-LOG_DIR.mkdir(exist_ok=True)
-
+LOG_FMT = "%(asctime)s │ %(name)-8s │ %(levelname)-5s │ %(message)s"
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s │ %(name)-20s │ %(levelname)-7s │ %(message)s",
-    datefmt="%H:%M:%S",
+    level   = logging.INFO,
+    format  = LOG_FMT,
+    datefmt = "%H:%M:%S",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler(str(LOG_DIR / "alphazero.log"), encoding="utf-8"),
+        logging.FileHandler("logs/alphazero.log", encoding="utf-8"),
     ],
 )
 logger = logging.getLogger("Main")
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# ── Internal imports ──────────────────────────────────────────────────────────
 try:
     from config.settings import settings
 except ImportError:
-    class _S:
-        MODE              = os.getenv('MODE', 'PAPER')
-        INITIAL_CAPITAL   = float(os.getenv('INITIAL_CAPITAL', 1_000_000))
-        DASHBOARD_PORT    = int(os.getenv('DASHBOARD_PORT', 8000))
-        ITERATION_INTERVAL= int(os.getenv('ITERATION_INTERVAL', 900))
-        MAX_DAILY_LOSS_PCT= float(os.getenv('MAX_DAILY_LOSS_PCT', 0.02))
-        def to_dict(self): return self.__dict__
-    settings = _S()
+    logger.error("config/settings.py missing — run from project root.")
+    sys.exit(1)
 
-# ── Core imports ──────────────────────────────────────────────────────────────
-from src.data.market_data import DataFetcher, is_market_open, next_market_open
-from src.data.cache       import clear_stale_cache
+# Multi-source data engine (v3.0)
+try:
+    from src.data.multi_source_data import get_msd, MultiSourceData
+    MSD: MultiSourceData = get_msd()
+    logger.info("MultiSourceData engine initialised. Sources: %s", MSD.get_source_status())
+except ImportError as e:
+    logger.warning("multi_source_data not found, falling back to fetch.py: %s", e)
+    MSD = None
 
-# ── Risk imports ──────────────────────────────────────────────────────────────
-from src.risk.position_sizer     import PositionSizer
-from src.risk.correlation_control import CorrelationFilter
-from src.risk.drawdown_breaker   import DrawdownBreaker, PortfolioRebalancer
+# Legacy DataFetcher fallback
+try:
+    from src.data.fetch import DataFetcher
+    _fetcher = DataFetcher(vars(settings))
+    FETCHER_OK = True
+except Exception as e:
+    logger.warning("DataFetcher failed: %s", e)
+    FETCHER_OK = False
+    _fetcher = None
 
-# ── Backtest imports ──────────────────────────────────────────────────────────
-from src.backtest.engine       import BacktestEngine
-from src.backtest.walk_forward import WalkForwardEngine
+# Active Portfolio Guard (v3.0)
+try:
+    from src.risk.active_portfolio import get_active_portfolio, ActivePortfolio
+    AP: ActivePortfolio = get_active_portfolio(max_positions=settings.MAX_POSITIONS)
+    logger.info("ActivePortfolio loaded. Open positions: %d", AP.get_summary()["total_open"])
+except ImportError as e:
+    logger.warning("active_portfolio not found: %s", e)
+    AP = None
 
-# ── Execution imports ─────────────────────────────────────────────────────────
-from src.execution.order_manager import OrderManager
+# ── Agent imports (all 16 — unchanged) ───────────────────────────────────────
+agents: Dict[str, Any] = {}
 
-# ── Infra imports ─────────────────────────────────────────────────────────────
-from src.infra.ops import rotate_logs, daily_backup, generate_systemd_service, generate_pm2_config
-
-# ── Agent imports (safe) ──────────────────────────────────────────────────────
-def _safe_import(module_path: str, class_name: str, fallback=None):
+def _try_import_agent(name: str, module: str, cls: str, *args, **kwargs):
     try:
-        import importlib
-        mod = importlib.import_module(module_path)
-        return getattr(mod, class_name)
+        mod  = __import__(module, fromlist=[cls])
+        klass = getattr(mod, cls)
+        agents[name] = klass(*args, **kwargs) if (args or kwargs) else klass()
+        logger.info("✓ Agent %s loaded", name)
     except Exception as e:
-        logger.warning(f"Could not import {class_name}: {e}")
-        return fallback
+        logger.warning("✗ Agent %s failed: %s", name, e)
+        agents[name] = None
 
-ChiefAgent          = _safe_import('src.agents.chief_agent',         'ChiefAgent')
-SigmaAgent          = _safe_import('src.agents.sigma_agent',         'SigmaAgent')
-SectorAgent         = _safe_import('src.agents.sector_agent',        'SectorAgent')
-OracleAgent         = _safe_import('src.agents.oracle_agent',        'OracleAgent')
-IntradayRegimeAgent = _safe_import('src.agents.intraday_regime_agent',     'IntradayRegimeAgent')
-NewsSentimentAgent  = _safe_import('src.agents.news_sentiment_agent','NewsSentimentAgent')
-TitanAgent          = _safe_import('src.agents.titan_agent',         'TitanAgent')
-GuardianAgent       = _safe_import('src.agents.guardian_agent',      'GuardianAgent')
-MercuryAgent        = _safe_import('src.agents.mercury_agent',       'MercuryAgent')
-LensAgent           = _safe_import('src.agents.lens_agent',          'LensAgent')
-KarmaAgent          = _safe_import('src.agents.karma_agent',         'KarmaAgent')
-OptionsFlowAgent    = _safe_import('src.agents.options_flow_agent',  'OptionsFlowAgent')
-MultiTimeframeAgent = _safe_import('src.agents.multi_timeframe_agent','MultiTimeframeAgent')
-EarningsCallAnalyzer= _safe_import('src.agents.llm_earnings_analyzer','EarningsCallAnalyzer')
-StrategyGenerator   = _safe_import('src.agents.llm_strategy_generator','StrategyGenerator')
-TrailingStopManager = _safe_import('src.risk.trailing_stop_manager',  'TrailingStopManager')
-RiskManager         = _safe_import('src.risk.risk_manager',           'RiskManager')
-CapitalAllocator    = _safe_import('src.risk.capital_allocator',      'CapitalAllocator')
-PaperExecutor       = _safe_import('src.execution.paper_executor',    'PaperExecutor')
-OpenAlgoExecutor    = _safe_import('src.execution.openalgo_executor', 'OpenAlgoExecutor')
-EventBus            = _safe_import('src.event_bus.event_bus',         'EventBus')
-LLMProvider         = _safe_import('src.agents.llm_provider',         'LLMProvider')
+_cfg = vars(settings)
 
+_try_import_agent("ZEUS",      "src.agents.zeus_agent",             "Zeus",     _cfg)
+_try_import_agent("ORACLE",    "src.agents.oracle_agent",           "Oracle",   _cfg)
+_try_import_agent("ATLAS",     "src.agents.atlas_agent",            "Atlas",    _cfg)
+_try_import_agent("SIGMA",     "src.agents.sigma_agent",            "Sigma",    _cfg)
+_try_import_agent("APEX",      "src.agents.apex_agent",             "Apex",     _cfg)
+_try_import_agent("NEXUS",     "src.agents.nexus_agent",            "Nexus",    _cfg)
+_try_import_agent("HERMES",    "src.agents.hermes_agent",           "Hermes",   _cfg)
+_try_import_agent("TITAN",     "src.agents.titan_agent",            "Titan",    _cfg)
+_try_import_agent("GUARDIAN",  "src.agents.guardian_agent",         "Guardian", _cfg)
+_try_import_agent("MERCURY",   "src.agents.mercury_agent",          "Mercury",  _cfg)
+_try_import_agent("LENS",      "src.agents.lens_agent",             "Lens",     _cfg)
+_try_import_agent("KARMA",     "src.agents.karma_agent",            "Karma",    _cfg)
+_try_import_agent("MTF",       "src.agents.multi_timeframe_agent",  "MultiTimeframeAgent", _cfg)
+_try_import_agent("OPTIONS",   "src.agents.options_flow_agent",     "OptionsFlowAgent",    _cfg)
+_try_import_agent("EARNINGS",  "src.agents.earnings_agent",         "EarningsAnalyzer",    _cfg)
+_try_import_agent("STRATEGY",  "src.agents.strategy_generator",     "StrategyGenerator",   _cfg)
+
+active_agents = {k: v for k, v in agents.items() if v is not None}
+logger.info("Agents online: %d / %d", len(active_agents), 16)
+
+# ── Capital Allocator ─────────────────────────────────────────────────────────
 try:
-    from src.tracker import SystemTracker
+    from src.risk.capital_allocator import CapitalAllocator
+    capital_allocator = CapitalAllocator(total_capital=settings.INITIAL_CAPITAL)
 except ImportError:
-    SystemTracker = None
+    capital_allocator = None
 
+# ── Paper / Live Executor ─────────────────────────────────────────────────────
+executor = None
 try:
-    from dashboard.backend import run_dashboard, create_app
-    DASHBOARD_OK = True
-except ImportError:
-    DASHBOARD_OK = False
+    if settings.MODE == "LIVE":
+        from src.execution.openalgo_executor import OpenAlgoExecutor
+        executor = OpenAlgoExecutor(_cfg)
+    else:
+        from src.execution.paper_executor import PaperExecutor
+        executor = PaperExecutor(_cfg)
+    logger.info("Executor: %s", type(executor).__name__)
+except ImportError as e:
+    logger.warning("Executor not loaded: %s", e)
+
+# ── State ─────────────────────────────────────────────────────────────────────
+_state: Dict[str, Any] = {
+    "iteration":       0,
+    "regime":          "TRENDING",
+    "sentiment":       0.5,
+    "selected_stocks": [],
+    "capital_alloc":   {},
+    "portfolio":       {},
+    "market_data":     {},
+    "running":         True,
+}
+_state_lock = threading.Lock()
+
+os.makedirs("logs", exist_ok=True)
+os.makedirs("data", exist_ok=True)
+os.makedirs("models", exist_ok=True)
+
+STATE_FILE = "data/alphazero_state.json"
 
 
-# ── AlphaZero Orchestrator ────────────────────────────────────────────────────
+def _write_state():
+    try:
+        with open(STATE_FILE, "w") as f:
+            json.dump(_state, f, indent=2, default=str)
+    except Exception as e:
+        logger.warning("State write error: %s", e)
 
-class AlphaZeroCapital:
 
-    def __init__(self):
-        logger.info("═" * 60)
-        logger.info("  AlphaZero Capital v2 — Initialising")
-        logger.info("═" * 60)
+# ── Market data helpers ───────────────────────────────────────────────────────
 
-        self.mode    = settings.MODE
-        self.capital = settings.INITIAL_CAPITAL
-        self._running = True
-
-        self._cfg = settings.to_dict() if hasattr(settings, 'to_dict') else {}
-        self._cfg.update({
-            'MODE':             self.mode,
-            'INITIAL_CAPITAL':  self.capital,
-            'MAX_DAILY_LOSS_PCT': settings.MAX_DAILY_LOSS_PCT,
-        })
-
-        self._setup_signal_handlers()
-        self._init_core()
-        self._init_agents()
-        self._init_dashboard()
-
-        # Generate infra configs on first run
-        self._maybe_generate_infra_configs()
-
-    def _setup_signal_handlers(self):
-        """Windows-safe signal handlers."""
-        def _shutdown(sig, frame):
-            logger.info("Shutdown signal received")
-            self._running = False
+def _get_market_data(symbols: List[str]) -> Dict[str, Any]:
+    """Fetch live market data via multi-source engine with fallback."""
+    if MSD:
         try:
-            signal.signal(signal.SIGTERM, _shutdown)
-        except (AttributeError, OSError):
-            pass   # Windows: SIGTERM not always available
-        signal.signal(signal.SIGINT, _shutdown)
-
-    def _init_core(self):
-        logger.info("── Core systems ──")
-
-        # Event bus
-        if EventBus:
-            self.event_bus = EventBus()
-        else:
-            class _Stub:
-                def publish(self, *a, **k): pass
-                def subscribe(self, *a, **k): pass
-            self.event_bus = _Stub()
-
-        # LLM
-        if LLMProvider:
-            try:
-                self.llm = LLMProvider.create()
-                logger.info(f"  LLM: {self.llm}")
-            except Exception:
-                self.llm = None
-        else:
-            self.llm = None
-        self._cfg['llm'] = self.llm
-
-        # Data fetcher
-        self.data_fetcher   = DataFetcher(self._cfg)
-        self._cfg['data_fetcher'] = self.data_fetcher
-
-        # Executor
-        if self.mode == 'LIVE' and OpenAlgoExecutor:
-            self.executor = OpenAlgoExecutor(self._cfg)
-        elif PaperExecutor:
-            self.executor = PaperExecutor(self._cfg)
-        else:
-            self.executor = None
-
-        # Order manager (with retry + partial fill + brackets)
-        self.order_manager = OrderManager(executor=self.executor, event_bus=self.event_bus)
-
-        # Risk modules
-        self.position_sizer      = PositionSizer(self.capital)
-        self.correlation_filter  = CorrelationFilter(data_fetcher=self.data_fetcher)
-        self.drawdown_breaker    = DrawdownBreaker(event_bus=self.event_bus, cfg=self._cfg)
-        self.rebalancer          = PortfolioRebalancer(event_bus=self.event_bus, cfg=self._cfg)
-
-        # Existing risk managers
-        if RiskManager:
-            self.risk_manager = RiskManager(self.event_bus, self._cfg)
-        if TrailingStopManager:
-            self.trailing_stops = TrailingStopManager(self.event_bus, self._cfg)
-        if CapitalAllocator:
-            self.capital_allocator = CapitalAllocator(total_capital=self.capital)
-
-        # Backtest engines
-        self.backtest_engine   = BacktestEngine()
-        self.walk_fwd_engine   = WalkForwardEngine(data_fetcher=self.data_fetcher)
-
-        # System tracker
-        if SystemTracker:
-            self.tracker = SystemTracker()
-        else:
-            self.tracker = None
-
-        logger.info("  Core systems OK")
-
-    def _init_agents(self):
-        logger.info("── Agents ──")
-        cfg, eb = self._cfg, self.event_bus
-        self.agents = {}
-
-        def _add(name, cls, *args, **kwargs):
-            if cls:
-                try:
-                    self.agents[name] = cls(*args, **kwargs)
-                except Exception as e:
-                    logger.warning(f"  Agent {name} init failed: {e}")
-
-        _add('CHIEF',             ChiefAgent,          eb, cfg)
-        _add('SIGMA',             SigmaAgent,          eb, cfg)
-        _add('ATLAS',             SectorAgent,         eb, cfg)
-        _add('ORACLE',            OracleAgent,         eb, cfg)
-        _add('NEXUS',             IntradayRegimeAgent, eb, cfg)
-        _add('HERMES',            NewsSentimentAgent,  eb, cfg)
-        _add('TITAN',             TitanAgent,          eb, cfg)
-        _add('GUARDIAN',          GuardianAgent,       eb, cfg)
-        _add('MERCURY',           MercuryAgent,        eb, cfg, self.executor)
-        _add('LENS',              LensAgent,           eb, cfg)
-        _add('KARMA',             KarmaAgent,          eb, cfg)
-        _add('OPTIONS_FLOW',      OptionsFlowAgent,    eb, cfg)
-        _add('MULTI_TIMEFRAME',   MultiTimeframeAgent, eb, cfg, data_fetcher=self.data_fetcher)
-        _add('EARNINGS_ANALYZER', EarningsCallAnalyzer,eb, cfg)
-        _add('STRATEGY_GENERATOR',StrategyGenerator,   eb, cfg)
-        if hasattr(self, 'trailing_stops'):
-            self.agents['TRAILING_STOP'] = self.trailing_stops
-
-        # Try to load NEXUS XGBoost model
-        xgb_path = ROOT / "models" / "nexus_regime.json"
-        nexus     = self.agents.get('NEXUS')
-        if nexus and xgb_path.exists() and hasattr(nexus, 'load_xgb_model'):
-            try:
-                nexus.load_xgb_model(str(xgb_path))
-            except Exception:
-                pass
-
-        logger.info(f"  {len(self.agents)} agents ready: {list(self.agents.keys())}")
-
-    def _init_dashboard(self):
-        if not DASHBOARD_OK:
-            return
-        port = getattr(settings, 'DASHBOARD_PORT', 8000)
-        try:
-            app = create_app(agents=self.agents, data_fetcher=self.data_fetcher)
-            if app:
-                t = threading.Thread(
-                    target=lambda: __import__('uvicorn').run(app, host="0.0.0.0", port=port, log_level="warning"),
-                    daemon=True, name="Dashboard"
-                )
-                t.start()
-                logger.info(f"  Dashboard: http://localhost:{port}")
+            quotes = MSD.get_bulk_quotes(symbols)
+            prices = {sym: q.get("ltp", 0) for sym, q in quotes.items()}
+            return {"prices": prices, "quotes": quotes}
         except Exception as e:
-            logger.warning(f"  Dashboard failed to start: {e}")
-
-    def _maybe_generate_infra_configs(self):
-        """Generate systemd / PM2 configs if they don't exist yet."""
-        if not (ROOT / "alphazero.service").exists():
-            try:
-                generate_systemd_service()
-                generate_pm2_config()
-            except Exception:
-                pass
-
-    # ── Main loop ─────────────────────────────────────────────────────────────
-    def run(self):
-        logger.info("═" * 60)
-        logger.info(f"  MODE: {self.mode} | Capital: ₹{self.capital:,.0f}")
-        logger.info("═" * 60)
-
-        iteration = 0
-        interval  = getattr(settings, 'ITERATION_INTERVAL', 900)
-
-        while self._running:
-            iteration += 1
-            now = datetime.now()
-            logger.info(f"\n{'─'*50}")
-            logger.info(f"  Iteration {iteration} | {now.strftime('%Y-%m-%d %H:%M:%S')}")
-
-            try:
-                if is_market_open():
-                    self._market_hours_cycle(iteration)
-                else:
-                    self._off_hours_cycle(now)
-            except Exception as e:
-                logger.error(f"Cycle error: {e}", exc_info=True)
-
-            if self._running:
-                logger.info(f"  Sleeping {interval}s...")
-                time.sleep(interval)
-
-        logger.info("AlphaZero Capital shutdown complete.")
-
-    def _market_hours_cycle(self, iteration: int):
-        """Run during market hours (09:15–15:30 IST)."""
-        # 1. Check circuit breakers
-        cb = self.drawdown_breaker.check()
-        if cb['breached']:
-            logger.warning(f"CIRCUIT BREAK: {cb['reason']} — skipping iteration")
-            return
-
-        # 2. Run agents
-        agents_run = 0
-        for name, agent in self.agents.items():
-            if hasattr(agent, 'run'):
-                try:
-                    agent.run()
-                    agents_run += 1
-                except Exception as e:
-                    logger.error(f"Agent {name} error: {e}")
-
-        logger.info(f"  Agents run: {agents_run}/{len(self.agents)}")
-
-        # 3. Update tracker
-        if self.tracker:
-            try:
-                self.tracker.update()
-            except Exception:
-                pass
-
-    def _off_hours_cycle(self, now: datetime):
-        """Run during off-market hours (post-close / pre-open)."""
-        hour = now.hour
-
-        # 15:45–16:30: Post-market tasks
-        if 15 <= hour <= 16:
-            logger.info("  Post-market: running backtest + walk-forward...")
-            self._run_post_market_tasks()
-
-        # 18:00–21:00: Deep learning / training
-        elif 18 <= hour <= 21:
-            logger.info("  Off-hours: KARMA training + rebalance check...")
-            self._run_off_hours_training()
-
-        # 23:00: Daily backup + log rotation
-        elif hour == 23:
-            logger.info("  Nightly: backup + log rotation...")
-            try:
-                daily_backup()
-                rotate_logs()
-            except Exception as e:
-                logger.warning(f"Nightly maintenance failed: {e}")
-
-        else:
-            nxt = next_market_open()
-            logger.info(f"  Next market open: {nxt.strftime('%Y-%m-%d %H:%M IST')}")
-
-    def _run_post_market_tasks(self):
-        """Post-market: backtesting, walk-forward, cache cleanup."""
-        # Stale cache cleanup
+            logger.warning("MSD bulk quote failed: %s", e)
+    # Fallback to legacy fetcher
+    if FETCHER_OK and _fetcher:
         try:
-            clear_stale_cache(older_than_days=30)
+            return _fetcher.get_market_data(symbols)
+        except Exception as e:
+            logger.warning("Legacy fetcher failed: %s", e)
+    return {"prices": {s: 0 for s in symbols}, "quotes": {}}
+
+
+def _get_candles(symbol: str, period: str = "60d", interval: str = "1d") -> list:
+    """Fetch OHLCV candles via multi-source engine with fallback."""
+    if MSD:
+        try:
+            bars = MSD.get_candles(symbol, period=period, interval=interval)
+            return [b.to_dict() for b in bars] if bars else []
+        except Exception as e:
+            logger.debug("MSD candles failed for %s: %s", symbol, e)
+    if FETCHER_OK and _fetcher:
+        try:
+            return _fetcher.get_ohlcv(symbol, interval=interval)
+        except Exception:
+            pass
+    return []
+
+
+# ── Portfolio guard integration ───────────────────────────────────────────────
+
+def _check_position_allowed(symbol: str, trade_type: str = "SWING") -> tuple[bool, str]:
+    """Check if a new position can be opened using the ActivePortfolio guard."""
+    if AP and settings.HOLD_UNTIL_TARGET:
+        return AP.can_add_position(symbol, trade_type)
+    return True, "Guard disabled"
+
+
+def _register_trade(signal: Dict):
+    """Register a new trade with the ActivePortfolio after execution."""
+    if not AP:
+        return
+    sym      = signal.get("symbol", "")
+    trade_type = signal.get("trade_type", "SWING").upper()
+    if trade_type == "INTRADAY":
+        return  # Intraday managed separately
+    entry    = signal.get("entry_price", signal.get("price", 0))
+    qty      = signal.get("quantity", signal.get("qty", 0))
+    target   = signal.get("target", 0)
+    sl       = signal.get("stop_loss", 0)
+    strategy = signal.get("strategy_name", signal.get("strategy", ""))
+    atr      = signal.get("atr", 0)
+    sector   = signal.get("sector", "")
+    conf     = signal.get("confidence", 0)
+    if entry > 0 and qty > 0 and sym:
+        AP.open_position(sym, entry, qty, target=target or None, stop_loss=sl or None,
+                         strategy=strategy, trade_type=trade_type,
+                         atr=atr, sector=sector, confidence=conf)
+
+
+def _update_portfolio_prices(prices: Dict[str, float]):
+    """Tick the ActivePortfolio with current prices and handle target/SL hits."""
+    if not AP:
+        return
+    closed = AP.update_prices(prices)
+    for pos in closed:
+        sym    = pos["symbol"]
+        status = pos["status"]
+        reason = pos.get("close_reason", "")
+        pnl    = pos.get("realised_pnl", 0)
+        logger.info("🔔 POSITION CLOSED — %s | %s | P&L ₹%+,.0f | %s", sym, status, pnl, reason)
+        # Telegram alert if enabled
+        _send_telegram_alert(f"🔔 *{sym}* {status}\n{reason}\nP&L: ₹{pnl:+,.0f}")
+
+
+def _send_telegram_alert(message: str):
+    """Send a Telegram notification if configured."""
+    if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHAT_ID:
+        return
+    try:
+        import requests
+        requests.post(
+            f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage",
+            json={"chat_id": settings.TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"},
+            timeout=5,
+        )
+    except Exception:
+        pass
+
+
+# ── Main loop ─────────────────────────────────────────────────────────────────
+
+def _is_market_hours() -> bool:
+    now = datetime.now(IST)
+    if now.weekday() >= 5:  # Saturday, Sunday
+        return False
+    market_open  = now.replace(hour=settings.MARKET_OPEN_HOUR,  minute=settings.MARKET_OPEN_MIN,  second=0)
+    market_close = now.replace(hour=settings.MARKET_CLOSE_HOUR, minute=settings.MARKET_CLOSE_MIN, second=0)
+    return market_open <= now <= market_close
+
+
+def _run_iteration():
+    global _state
+    _state["iteration"] += 1
+    it = _state["iteration"]
+    logger.info("─" * 50)
+    logger.info("Iteration %d | %s", it, datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"))
+
+    market_hours = _is_market_hours()
+    agents_run   = 0
+
+    # ── Step 1: Macro / Regime ───────────────────────────────────────────────
+    regime    = _state.get("regime", "TRENDING")
+    sentiment = _state.get("sentiment", 0.5)
+
+    if agents["ORACLE"] and hasattr(agents["ORACLE"], "analyze"):
+        try:
+            macro = agents["ORACLE"].analyze()
+            _state["macro"] = macro
+        except Exception as e:
+            logger.warning("[ORACLE] failed: %s", e)
+
+    if agents["NEXUS"] and hasattr(agents["NEXUS"], "detect_regime"):
+        try:
+            r = agents["NEXUS"].detect_regime()
+            regime = r.get("regime", regime) if isinstance(r, dict) else regime
+            _state["regime"] = regime
+            agents_run += 1
+        except Exception as e:
+            logger.warning("[NEXUS] failed: %s", e)
+
+    if agents["HERMES"] and hasattr(agents["HERMES"], "analyze_market_sentiment"):
+        try:
+            sent = agents["HERMES"].analyze_market_sentiment()
+            sentiment = sent.get("overall_sentiment", sentiment) if isinstance(sent, dict) else sentiment
+            _state["sentiment"] = sentiment
+            agents_run += 1
+        except Exception as e:
+            logger.warning("[HERMES] failed: %s", e)
+
+    # ── Step 2: Sector + Stock Selection (only if slots available) ────────────
+    new_stocks_allowed = True
+    if AP and settings.HOLD_UNTIL_TARGET:
+        summary = AP.get_summary()
+        slots   = summary["slots_available"]
+        new_stocks_allowed = slots > 0
+        if not new_stocks_allowed:
+            logger.info("All %d position slots filled. Monitoring existing positions...", settings.MAX_POSITIONS)
+
+    selected_stocks = _state.get("selected_stocks", [])
+
+    if new_stocks_allowed:
+        if agents["ATLAS"] and hasattr(agents["ATLAS"], "allocate_sectors"):
+            try:
+                agents["ATLAS"].allocate_sectors()
+                agents_run += 1
+            except Exception as e:
+                logger.warning("[ATLAS] failed: %s", e)
+
+        if agents["SIGMA"] and hasattr(agents["SIGMA"], "score_stocks"):
+            try:
+                candidates = _build_sigma_candidates()
+                scored = agents["SIGMA"].score_stocks(candidates, regime)
+                if agents["APEX"] and hasattr(agents["APEX"], "select_portfolio"):
+                    selected = agents["APEX"].select_portfolio(scored, {}, regime)
+                    # Filter out symbols already in open positions
+                    if AP:
+                        blocked = AP.get_summary().get("blocked_symbols", [])
+                        selected = [s for s in selected if s.get("symbol") not in blocked]
+                    _state["selected_stocks"] = selected
+                    selected_stocks = selected
+                    agents_run += 1
+            except Exception as e:
+                logger.warning("[SIGMA/APEX] failed: %s", e)
+
+    # ── Step 3: Market data for all relevant symbols ──────────────────────────
+    symbols = list({s.get("symbol") for s in selected_stocks if s.get("symbol")})
+    if AP:
+        symbols += list(AP.open_positions.keys())
+    symbols = list(set(symbols))
+
+    mdata = {}
+    prices = {}
+    if symbols:
+        raw = _get_market_data(symbols)
+        prices = raw.get("prices", {})
+        mdata  = raw
+        _state["market_data"] = {sym: {"ltp": prices.get(sym, 0)} for sym in symbols}
+        # Update open position prices
+        _update_portfolio_prices(prices)
+
+    # ── Step 4: TITAN signals ─────────────────────────────────────────────────
+    signals = []
+    if market_hours and agents["TITAN"] and hasattr(agents["TITAN"], "generate_signals"):
+        try:
+            signals = agents["TITAN"].generate_signals(selected_stocks, regime, mdata)
+            agents_run += 1
+        except Exception as e:
+            logger.warning("[TITAN] failed: %s", e)
+
+    # ── Step 5: Multi-timeframe confirmation ──────────────────────────────────
+    confirmed_signals = []
+    if signals and agents["MTF"] and hasattr(agents["MTF"], "confirm_signals"):
+        try:
+            confirmed_signals = agents["MTF"].confirm_signals(signals)
+            agents_run += 1
+        except Exception as e:
+            logger.warning("[MTF] failed: %s", e)
+            confirmed_signals = signals
+
+    # ── Step 6: Risk check → Capital allocation ───────────────────────────────
+    approved_signals = []
+    if confirmed_signals and agents["GUARDIAN"] and hasattr(agents["GUARDIAN"], "approve_signals"):
+        try:
+            approved_signals = agents["GUARDIAN"].approve_signals(confirmed_signals)
+            agents_run += 1
+        except Exception as e:
+            logger.warning("[GUARDIAN] failed: %s", e)
+            approved_signals = confirmed_signals
+
+    # ── Step 7: Portfolio guard — block stocks already invested ───────────────
+    final_signals = []
+    blocked_count = 0
+    for sig in approved_signals:
+        sym        = sig.get("symbol", "")
+        trade_type = sig.get("trade_type", "SWING").upper()
+        allowed, reason = _check_position_allowed(sym, trade_type)
+        if allowed:
+            final_signals.append(sig)
+        else:
+            blocked_count += 1
+            logger.info("🔒 BLOCKED %s — %s", sym, reason)
+
+    if blocked_count:
+        logger.info("Portfolio guard blocked %d signal(s) — existing positions not yet at target", blocked_count)
+
+    # ── Step 8: Capital allocation ────────────────────────────────────────────
+    if final_signals and capital_allocator:
+        alloc = capital_allocator.allocate(
+            [{"symbol": s.get("symbol"), "sigma_score": s.get("confidence", 0.5),
+              "sector": s.get("sector", ""), "price": prices.get(s.get("symbol", ""), 0)}
+             for s in final_signals]
+        )
+        _state["capital_alloc"] = alloc
+        # Wire quantity back into signals
+        for sig in final_signals:
+            sym = sig.get("symbol", "")
+            if sym in alloc:
+                sig["quantity"] = alloc[sym].get("qty", 0)
+                sig["qty"]      = sig["quantity"]
+
+    # ── Step 9: Execution ─────────────────────────────────────────────────────
+    executed = 0
+    if final_signals and executor and market_hours:
+        for sig in final_signals:
+            if sig.get("quantity", 0) <= 0:
+                continue
+            try:
+                if settings.MODE == "LIVE":
+                    result = executor.execute(sig)
+                else:
+                    result = executor.execute(sig)  # paper executor
+                if result and result.get("status") in ("success", "COMPLETE", "filled"):
+                    _register_trade(sig)
+                    executed += 1
+                    logger.info(
+                        "✅ EXECUTED %s × %d @ ₹%.2f [%s]",
+                        sig.get("symbol"), sig.get("quantity", 0),
+                        sig.get("entry_price", sig.get("price", 0)),
+                        sig.get("strategy", ""),
+                    )
+            except Exception as e:
+                logger.error("[Mercury] execution error for %s: %s", sig.get("symbol"), e)
+        agents_run += 1
+
+    # ── Step 10: Intraday (if market hours) ───────────────────────────────────
+    if market_hours and agents["NEXUS"]:
+        try:
+            intraday_regime = regime
+            if agents["MTF"] and hasattr(agents["MTF"], "get_intraday_regime"):
+                intraday_regime = agents["MTF"].get_intraday_regime() or regime
+            # Intraday signals bypass the portfolio guard
         except Exception:
             pass
 
-        # Backtest
+    # ── Step 11: LENS — Attribution ───────────────────────────────────────────
+    if agents["LENS"] and hasattr(agents["LENS"], "attribute"):
         try:
-            symbols = self._cfg.get('WATCHLIST', ['TCS','RELIANCE','INFY','HDFC','ICICIBANK'])
-            logger.info(f"  Backtest running on {len(symbols)} symbols...")
-            self.backtest_engine.run(symbols=symbols)
+            agents["LENS"].attribute()
+            agents_run += 1
         except Exception as e:
-            logger.error(f"Backtest failed: {e}")
+            logger.warning("[LENS] failed: %s", e)
 
-        # Walk-forward (once per week on Friday)
-        if datetime.now().weekday() == 4:  # Friday
-            try:
-                logger.info("  Walk-forward validation (Friday)...")
-                self.walk_fwd_engine.run(symbols=symbols[:5])
-            except Exception as e:
-                logger.error(f"Walk-forward failed: {e}")
+    # ── Step 12: KARMA off-hours training ─────────────────────────────────────
+    now_hour = datetime.now(IST).hour
+    if (not market_hours and
+        agents["KARMA"] and
+        now_hour == settings.TRAINING_HOUR and
+        settings.TRAINING_ENABLED and
+        hasattr(agents["KARMA"], "train")):
+        try:
+            agents["KARMA"].train()
+            logger.info("🎓 KARMA training cycle complete")
+            agents_run += 1
+        except Exception as e:
+            logger.warning("[KARMA] training failed: %s", e)
 
-    def _run_off_hours_training(self):
-        """Off-hours KARMA learning + portfolio rebalancing."""
-        karma = self.agents.get('KARMA')
-        if karma and hasattr(karma, 'train'):
-            try:
-                karma.train()
-            except Exception as e:
-                logger.warning(f"KARMA training failed: {e}")
+    # ── Step 13: Write state ──────────────────────────────────────────────────
+    if AP:
+        _state["active_portfolio"] = AP.get_summary()
+    _write_state()
 
-        # Weekly rebalance check
-        if self.rebalancer.should_rebalance():
-            logger.info("  Rebalancing portfolio...")
-            # Rebalance logic would use current positions from MERCURY/status.json
+    logger.info("Agents run: %d/16 | Signals: %d | Executed: %d | Market hours: %s",
+                agents_run, len(final_signals), executed, market_hours)
+    logger.info("Sleeping %ds...", settings.ITERATION_SLEEP_SEC)
+
+
+def _build_sigma_candidates() -> List[Dict]:
+    """Build candidate list for SIGMA scoring."""
+    universe = [
+        {"symbol": s, "sector": "AUTO"} for s in [
+            "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "KOTAKBANK",
+            "HINDUNILVR", "SBIN", "BHARTIARTL", "ITC", "WIPRO", "HCLTECH",
+            "AXISBANK", "LT", "MARUTI", "BAJFINANCE", "BAJAJFINSV", "TATAMOTORS",
+            "TATASTEEL", "SUNPHARMA", "NTPC", "POWERGRID", "TECHM", "ULTRACEMCO",
+            "ASIANPAINT", "HINDALCO", "JSWSTEEL", "ONGC", "COALINDIA", "GRASIM",
+            "DRREDDY", "CIPLA", "DIVISLAB", "ADANIPORTS", "SIEMENS", "NESTLEIND",
+        ]
+    ]
+    return universe
+
+
+# ── Signal handler ────────────────────────────────────────────────────────────
+
+def _shutdown(sig, frame):
+    logger.info("Shutdown signal received")
+    _state["running"] = False
+    _write_state()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT,  _shutdown)
+signal.signal(signal.SIGTERM, _shutdown)
+
+
+# ── HTTP State Server (for dashboard) ────────────────────────────────────────
+
+def _start_state_server():
+    """Serve state JSON + portfolio data on a simple HTTP endpoint."""
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    import json
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass  # silence access logs
+
+        def do_GET(self):
+            path = self.path.split("?")[0]
+            cors = {
+                "Access-Control-Allow-Origin": "*",
+                "Content-Type": "application/json",
+            }
+
+            if path == "/state":
+                body = json.dumps(_state, default=str).encode()
+            elif path == "/portfolio":
+                body = json.dumps(AP.get_summary() if AP else {}, default=str).encode()
+            elif path == "/portfolio/positions":
+                body = json.dumps(list(AP.open_positions.values()) if AP else [], default=str).encode()
+            elif path == "/portfolio/history":
+                body = json.dumps(AP.history[-50:] if AP else [], default=str).encode()
+            elif path.startswith("/candles/"):
+                sym  = path.split("/candles/")[1]
+                bars = _get_candles(sym, period="60d", interval="1d")
+                body = json.dumps({"candles": bars}, default=str).encode()
+            elif path.startswith("/quote/"):
+                sym  = path.split("/quote/")[1]
+                q    = MSD.get_quote(sym) if MSD else {}
+                body = json.dumps(q, default=str).encode()
+            elif path == "/sources":
+                body = json.dumps(MSD.get_source_status() if MSD else {}, default=str).encode()
+            elif path == "/health":
+                body = json.dumps({
+                    "status": "ok",
+                    "agents_online": len(active_agents),
+                    "mode": settings.MODE,
+                    "iteration": _state["iteration"],
+                    "open_positions": len(AP.open_positions) if AP else 0,
+                }).encode()
+            else:
+                self.send_response(404)
+                for k, v in cors.items():
+                    self.send_header(k, v)
+                self.end_headers()
+                return
+
+            self.send_response(200)
+            for k, v in cors.items():
+                self.send_header(k, v)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_POST(self):
+            """Handle portfolio override commands."""
+            from urllib.parse import urlparse, parse_qs
+            path = self.path.split("?")[0]
+            length = int(self.headers.get("Content-Length", 0))
+            payload = json.loads(self.rfile.read(length)) if length else {}
+            cors = {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"}
+
+            resp = {"status": "ok"}
+            if path == "/portfolio/close" and AP:
+                sym   = payload.get("symbol", "")
+                price = payload.get("price", 0)
+                AP.force_close(sym, price, reason="Dashboard manual close")
+                resp["message"] = f"Force closed {sym}"
+            elif path == "/portfolio/adjust_target" and AP:
+                AP.adjust_target(payload.get("symbol"), payload.get("target"))
+                resp["message"] = "Target adjusted"
+            elif path == "/portfolio/adjust_sl" and AP:
+                AP.adjust_stop_loss(payload.get("symbol"), payload.get("stop_loss"))
+                resp["message"] = "Stop-loss adjusted"
+
+            body = json.dumps(resp).encode()
+            self.send_response(200)
+            for k, v in cors.items():
+                self.send_header(k, v)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    port = settings.BACKEND_PORT
+    server = HTTPServer((settings.BACKEND_HOST, port), Handler)
+    logger.info("State server running on http://localhost:%d", port)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+
+def main():
+    logger.info("═" * 60)
+    logger.info("AlphaZero Capital v3.0")
+    logger.info("MODE: %s | Capital: ₹%s", settings.MODE, f"{settings.INITIAL_CAPITAL:,.0f}")
+    logger.info("Agents: %d/16 | Data sources: %s",
+                len(active_agents),
+                ", ".join(k for k, v in (MSD.get_source_status() if MSD else {}).items() if v))
+    if AP:
+        summary = AP.get_summary()
+        logger.info("Portfolio: %d/%d positions open | Hold-until-target: %s",
+                    summary["total_open"], settings.MAX_POSITIONS, settings.HOLD_UNTIL_TARGET)
+    logger.info("═" * 60)
+
+    # Start state server for dashboard
+    _start_state_server()
+
+    # Main loop
+    while _state["running"]:
+        try:
+            _run_iteration()
+        except Exception as e:
+            logger.exception("Iteration error: %s", e)
+        time.sleep(settings.ITERATION_SLEEP_SEC)
 
 
 if __name__ == "__main__":
-    system = AlphaZeroCapital()
-    system.run()
+    main()

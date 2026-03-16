@@ -1,0 +1,28 @@
+{
+  "iteration": 1,
+  "regime": "TRENDING",
+  "sentiment": 0.5,
+  "selected_stocks": [],
+  "capital_alloc": {},
+  "portfolio": {},
+  "market_data": {},
+  "running": false,
+  "active_portfolio": {
+    "open_positions": [],
+    "total_open": 0,
+    "max_positions": 10,
+    "slots_available": 10,
+    "total_invested": 0,
+    "total_unrealised_pnl": 0,
+    "total_realised_pnl": 0,
+    "win_rate_pct": 0.0,
+    "total_trades": 0,
+    "winning_trades": 0,
+    "losing_trades": 0,
+    "near_target": [],
+    "near_sl": [],
+    "history": [],
+    "last_updated": "2026-03-13T13:34:09.160115+05:30",
+    "blocked_symbols": []
+  }
+}
