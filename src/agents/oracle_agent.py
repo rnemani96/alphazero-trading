@@ -302,28 +302,26 @@ class OracleAgent(BaseAgent):
         if YFINANCE_OK:
             try:
                 d = yf.download("^GSPC", period="2d", progress=False)
-
                 if len(d) >= 2:
-                    return (
-                        (d["Close"].iloc[-1] / d["Close"].iloc[-2] - 1)
-                        * 100
-                    )
+                    c1 = d["Close"].iloc[-1]
+                    c2 = d["Close"].iloc[-2]
+                    if hasattr(c1, "iloc"): c1 = c1.iloc[0]
+                    if hasattr(c2, "iloc"): c2 = c2.iloc[0]
+                    return float((c1 / c2 - 1) * 100)
             except Exception:
                 pass
-
         return 0.0
 
     def _fetch_crude_return(self):
-
         if YFINANCE_OK:
             try:
                 d = yf.download("BZ=F", period="2d", progress=False)
-
                 if len(d) >= 2:
-                    return (
-                        (d["Close"].iloc[-1] / d["Close"].iloc[-2] - 1)
-                        * 100
-                    )
+                    c1 = d["Close"].iloc[-1]
+                    c2 = d["Close"].iloc[-2]
+                    if hasattr(c1, "iloc"): c1 = c1.iloc[0]
+                    if hasattr(c2, "iloc"): c2 = c2.iloc[0]
+                    return float((c1 / c2 - 1) * 100)
             except Exception:
                 pass
 

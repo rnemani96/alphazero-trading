@@ -32,9 +32,7 @@ print(f"\n📊 Python files: {py_files}")
 print("="*70)
 if all_good:
     print("✅ Package verification PASSED!\n")
-    return 0
 else:
     print("❌ Package verification FAILED\n")
-    return 1
 
 sys.exit(0 if all_good else 1)

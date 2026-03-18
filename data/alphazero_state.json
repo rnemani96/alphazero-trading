@@ -2,11 +2,508 @@
   "iteration": 1,
   "regime": "TRENDING",
   "sentiment": 0.5,
-  "selected_stocks": [],
+  "selected_stocks": [
+    {
+      "symbol": "JIOFIN",
+      "change": 4.461275493447769,
+      "sector": "AUTO",
+      "sigma_score": 0.04,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "MAZDOCK",
+      "change": 4.004565531908333,
+      "sector": "AUTO",
+      "sigma_score": 0.04,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "ADANIENSOL",
+      "change": 3.6078329469074744,
+      "sector": "AUTO",
+      "sigma_score": 0.04,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "PFC",
+      "change": 3.396725899215558,
+      "sector": "AUTO",
+      "sigma_score": 0.04,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "ETERNAL",
+      "change": 3.3712603838844,
+      "sector": "AUTO",
+      "sigma_score": 0.04,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "NAUKRI",
+      "change": 3.3018429689792406,
+      "sector": "AUTO",
+      "sigma_score": 0.04,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "TECHM",
+      "change": 3.2344537758553393,
+      "sector": "AUTO",
+      "sigma_score": 0.04,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "RECLTD",
+      "change": 3.0648431186885317,
+      "sector": "AUTO",
+      "sigma_score": 0.04,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "DLF",
+      "change": 2.792987976252226,
+      "sector": "AUTO",
+      "sigma_score": 0.04,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "INFY",
+      "change": 2.773943587853256,
+      "sector": "AUTO",
+      "sigma_score": 0.04,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    }
+  ],
+  "candidates": [
+    {
+      "symbol": "JIOFIN",
+      "change": 4.461275493447769,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MAZDOCK",
+      "change": 4.004565531908333,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ADANIENSOL",
+      "change": 3.6078329469074744,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PFC",
+      "change": 3.396725899215558,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ETERNAL",
+      "change": 3.3712603838844,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NAUKRI",
+      "change": 3.3018429689792406,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TECHM",
+      "change": 3.2344537758553393,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RECLTD",
+      "change": 3.0648431186885317,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DLF",
+      "change": 2.792987976252226,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "INFY",
+      "change": 2.773943587853256,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "M&M",
+      "change": 2.738988078471438,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HCLTECH",
+      "change": 2.732569544551411,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ADANIPORTS",
+      "change": 2.6656920112825055,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LTM",
+      "change": 2.6162418663504328,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ADANIGREEN",
+      "change": 2.6074900986947647,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ENRIN",
+      "change": 2.589483110307067,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "INDHOTEL",
+      "change": 2.3953098153619123,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TVSMOTOR",
+      "change": 2.31386165028995,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BAJAJHFL",
+      "change": 2.201713676435224,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GAIL",
+      "change": 2.193480527457603,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "VBL",
+      "change": 2.1533160744609425,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TCS",
+      "change": 2.0529371852097134,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AXISBANK",
+      "change": 2.043805560207912,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HAVELLS",
+      "change": 2.0347771106899115,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BAJAJHLDNG",
+      "change": 2.0283555831522193,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PIDILITIND",
+      "change": 2.019161710689943,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JINDALSTEL",
+      "change": 1.8923270906214595,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LT",
+      "change": 1.837525477543056,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BAJAJ-AUTO",
+      "change": 1.767288693743141,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TMPV",
+      "change": 1.7387179137603015,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "EICHERMOT",
+      "change": 1.700434153400865,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "INDIGO",
+      "change": 1.6954732379075077,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SHRIRAMFIN",
+      "change": 1.6922158484111716,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MOTHERSON",
+      "change": 1.6834990222018398,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DMART",
+      "change": 1.6554741437807108,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AMBUJACEM",
+      "change": 1.623672868440007,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ADANIENT",
+      "change": 1.609796819114906,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SBILIFE",
+      "change": 1.5734188084570055,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IRFC",
+      "change": 1.560887088665086,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "WIPRO",
+      "change": 1.557597539963007,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BHARTIARTL",
+      "change": 1.5544622010981168,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SIEMENS",
+      "change": 1.493615955372607,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GRASIM",
+      "change": 1.483250031822081,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "UNITDSPR",
+      "change": 1.452284006416238,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LODHA",
+      "change": 1.4189043022827308,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TITAN",
+      "change": 1.344578902334681,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BAJFINANCE",
+      "change": 1.3239696434762527,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GODREJCP",
+      "change": 1.2198706694849237,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BPCL",
+      "change": 1.2164721088343988,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ULTRACEMCO",
+      "change": 1.1784814681540023,
+      "sector": "AUTO"
+    }
+  ],
+  "last_training_date": "2026-03-18",
   "capital_alloc": {},
   "portfolio": {},
-  "market_data": {},
-  "running": true,
+  "market_data": {
+    "NAUKRI": {
+      "ltp": 994.9
+    },
+    "JIOFIN": {
+      "ltp": 248.2
+    },
+    "BAJFINANCE": {
+      "ltp": 880.1
+    },
+    "ADANIPORTS": {
+      "ltp": 1401.9
+    },
+    "AXISBANK": {
+      "ltp": 1253.2
+    },
+    "PFC": {
+      "ltp": 432.25
+    },
+    "INFY": {
+      "ltp": 1267.1
+    },
+    "GRASIM": {
+      "ltp": 2723.1
+    },
+    "DMART": {
+      "ltp": 3844.0
+    },
+    "UNITDSPR": {
+      "ltp": 1320.3
+    },
+    "SBILIFE": {
+      "ltp": 1962.5
+    },
+    "TMPV": {
+      "ltp": 324.75
+    },
+    "TECHM": {
+      "ltp": 1385.2
+    },
+    "MAZDOCK": {
+      "ltp": 2456.9
+    },
+    "ULTRACEMCO": {
+      "ltp": 11247.0
+    },
+    "LT": {
+      "ltp": 3607.9
+    },
+    "TVSMOTOR": {
+      "ltp": 3572.8
+    },
+    "SIEMENS": {
+      "ltp": 3220.9
+    },
+    "ADANIENSOL": {
+      "ltp": 1036.7
+    },
+    "BAJAJHLDNG": {
+      "ltp": 9859.0
+    },
+    "PIDILITIND": {
+      "ltp": 1384.4
+    },
+    "ADANIENT": {
+      "ltp": 2007.2
+    },
+    "HCLTECH": {
+      "ltp": 1357.2
+    },
+    "LTM": {
+      "ltp": 4298.8
+    },
+    "BAJAJ-AUTO": {
+      "ltp": 9271.0
+    },
+    "BAJAJHFL": {
+      "ltp": 83.09
+    },
+    "IRFC": {
+      "ltp": 98.25
+    },
+    "AMBUJACEM": {
+      "ltp": 441.25
+    },
+    "TCS": {
+      "ltp": 2440.8
+    },
+    "VBL": {
+      "ltp": 415.1
+    },
+    "ETERNAL": {
+      "ltp": 242.54
+    },
+    "JINDALSTEL": {
+      "ltp": 1179.2
+    },
+    "BHARTIARTL": {
+      "ltp": 1855.4
+    },
+    "M&M": {
+      "ltp": 3214.6
+    },
+    "TITAN": {
+      "ltp": 4145.5
+    },
+    "GODREJCP": {
+      "ltp": 1053.8
+    },
+    "ADANIGREEN": {
+      "ltp": 891.3
+    },
+    "HAVELLS": {
+      "ltp": 1343.9
+    },
+    "MOTHERSON": {
+      "ltp": 117.78
+    },
+    "ENRIN": {
+      "ltp": 2840.6
+    },
+    "RECLTD": {
+      "ltp": 348.05
+    },
+    "INDIGO": {
+      "ltp": 4360.6
+    },
+    "GAIL": {
+      "ltp": 150.95
+    },
+    "BPCL": {
+      "ltp": 303.7
+    },
+    "DLF": {
+      "ltp": 563.1
+    },
+    "EICHERMOT": {
+      "ltp": 7027.5
+    },
+    "SHRIRAMFIN": {
+      "ltp": 1021.6
+    },
+    "WIPRO": {
+      "ltp": 194.3
+    },
+    "LODHA": {
+      "ltp": 854.15
+    },
+    "INDHOTEL": {
+      "ltp": 636.95
+    }
+  },
+  "running": false,
+  "macro": {
+    "macro_bias": "NEUTRAL",
+    "risk_level": "MEDIUM",
+    "size_mult": 0.8,
+    "regime_hint": "SIDEWAYS",
+    "vix": 15.0,
+    "fii_flow_cr": 0.0,
+    "usdinr": 83.3,
+    "spx_ret_pct": 0.24942548757938,
+    "crude_ret_pct": 4.206148279963218,
+    "timestamp": "2026-03-18T18:47:12.337408"
+  },
   "active_portfolio": {
     "open_positions": [],
     "total_open": 0,
@@ -22,7 +519,6 @@
     "near_target": [],
     "near_sl": [],
     "history": [],
-    "last_updated": "2026-03-13T13:34:09.160115+05:30",
+    "last_updated": "2026-03-18T18:47:11.980927+05:30",
     "blocked_symbols": []
   }
-}

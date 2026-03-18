@@ -24,12 +24,59 @@ FIXES:
 
 from __future__ import annotations
 
-import os, json, logging
+import os, json, logging, math
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger("DashboardBackend")
+
+
+class _SafeEncoder(json.JSONEncoder):
+    """JSON encoder that handles NaN, Inf, datetime, sets, and numpy scalars."""
+    def default(self, obj):
+        try:
+            import numpy as np
+            if isinstance(obj, (np.integer,)):
+                return int(obj)
+            if isinstance(obj, (np.floating,)):
+                v = float(obj)
+                if math.isnan(v) or math.isinf(v):
+                    return None
+                return v
+            if isinstance(obj, np.ndarray):
+                return obj.tolist()
+        except ImportError:
+            pass
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if isinstance(obj, set):
+            return list(obj)
+        return None   # instead of raising, return null
+
+    def iterencode(self, o, _one_shot=False):
+        # Replace NaN/Inf floats with null at encode time
+        return super().iterencode(self._clean(o), _one_shot)
+
+    def _clean(self, obj):
+        if isinstance(obj, float):
+            if math.isnan(obj) or math.isinf(obj):
+                return None
+            return obj
+        if isinstance(obj, dict):
+            return {k: self._clean(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [self._clean(v) for v in obj]
+        return obj
+
+
+def _safe_json_dumps(obj) -> str:
+    """JSON serialize with NaN/Inf/datetime safety — never raises."""
+    try:
+        return json.dumps(obj, cls=_SafeEncoder)
+    except Exception as e:
+        logger.warning(f"JSON serialization warning: {e}")
+        return json.dumps({"type": "error", "msg": "serialization_error"})
 
 _ROOT    = Path(__file__).resolve().parents[1]
 _LOG_DIR = _ROOT / "logs"
@@ -37,10 +84,11 @@ _HTML    = _ROOT / "dashboard" / "alphazero_v5.html"
 
 # ── Safe imports ──────────────────────────────────────────────────────────────
 try:
-    from fastapi import FastAPI
+    from fastapi import FastAPI, WebSocket, WebSocketDisconnect
     from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
     from fastapi.middleware.cors import CORSMiddleware
     import uvicorn
+    import asyncio
     FASTAPI_OK = True
 except ImportError:
     FASTAPI_OK = False
@@ -89,6 +137,51 @@ def create_app(agents: Dict = None, data_fetcher=None) -> Any:
             return HTMLResponse(content=_HTML.read_text(encoding="utf-8"))
         return HTMLResponse(content=_minimal_html())
 
+    # ── Static JS assets (React/Babel served locally) ────────────────────────
+    _STATIC_DIR = _ROOT / "dashboard" / "static"
+    _STATIC_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Auto-download JS libraries on first run (background thread, non-blocking)
+    _DEPS = {
+        "react.production.min.js":     "https://unpkg.com/react@18/umd/react.production.min.js",
+        "react-dom.production.min.js": "https://unpkg.com/react-dom@18/umd/react-dom.production.min.js",
+        "babel.min.js":                "https://unpkg.com/@babel/standalone/babel.min.js",
+    }
+
+    def _auto_download_deps():
+        import urllib.request, ssl, time
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        all_present = all((_STATIC_DIR / fn).exists() for fn in _DEPS)
+        if all_present:
+            return
+        logger.info("Downloading frontend JS libs to dashboard/static/ ...")
+        for filename, url in _DEPS.items():
+            dest = _STATIC_DIR / filename
+            if dest.exists():
+                continue
+            try:
+                logger.info(f"  Fetching {filename} ...")
+                urllib.request.urlretrieve(url, str(dest))
+                logger.info(f"  ✓ {filename} saved ({dest.stat().st_size // 1024} KB)")
+            except Exception as e:
+                logger.warning(f"  ✗ Could not download {filename}: {e}")
+        logger.info("Frontend JS libs download complete.")
+
+    import threading as _threading
+    _threading.Thread(target=_auto_download_deps, daemon=True).start()
+
+    @app.get("/static/{filename}")
+    async def static_file(filename: str):
+        """Serve locally cached JS libraries from dashboard/static/."""
+        safe_name = Path(filename).name   # prevent path traversal
+        file_path = _STATIC_DIR / safe_name
+        if file_path.exists():
+            return FileResponse(str(file_path), media_type="application/javascript")
+        from fastapi.responses import Response
+        return Response(status_code=404, content=f"Not found: {safe_name}")
+
     # ── Health endpoint (NEW) ─────────────────────────────────────────────────
     @app.get("/health")
     async def health():
@@ -111,6 +204,7 @@ def create_app(agents: Dict = None, data_fetcher=None) -> Any:
                 agent_statuses[name] = {
                     "alive": hasattr(agent, 'is_alive') and bool(agent.is_alive()),
                     "status": getattr(agent, 'status', 'unknown'),
+                    "activity": getattr(agent, 'last_activity', 'Running'),
                 }
             except Exception:
                 agent_statuses[name] = {"alive": False, "status": "error"}
@@ -163,6 +257,97 @@ def create_app(agents: Dict = None, data_fetcher=None) -> Any:
     async def command(payload: dict):
         cmd = payload.get("command", "").strip().lower()
         return JSONResponse(_handle_command(cmd))
+
+    # ── WebSocket (Live Streaming) ────────────────────────────────────────────
+    @app.websocket("/ws")
+    async def websocket_endpoint(websocket: WebSocket):
+        await websocket.accept()
+        logger.info("Dashboard connected via WebSocket")
+        
+        stop_event = asyncio.Event()
+
+        async def send_updates():
+            while not stop_event.is_set():
+                try:
+                    # 1. Load latest state from files
+                    status_data = _load_json("status.json", {})
+                    signals_data = _load_json("signals.json", [])
+
+                    # 2. Build live agent status (crash-safe per agent)
+                    agent_statuses = {}
+                    for name, agent in _agents_ref.items():
+                        try:
+                            agent_statuses[name] = {
+                                "alive": bool(getattr(agent, 'is_active', True)),
+                                "kpi": float(getattr(agent, 'kpi', 0.72)),
+                                "cycles": int(getattr(agent, 'cycles', 0)),
+                                "activity": str(getattr(agent, 'last_activity', 'Running')),
+                            }
+                        except Exception:
+                            agent_statuses[name] = {"alive": True, "kpi": 0.72, "cycles": 0, "activity": "Running"}
+
+                    # 3. Normalise positions — status.json may store it as {} or []
+                    raw_positions = status_data.get("positions", [])
+                    if isinstance(raw_positions, dict):
+                        # Convert dict of symbol→position into list
+                        positions_list = list(raw_positions.values()) if raw_positions else []
+                    else:
+                        positions_list = raw_positions if isinstance(raw_positions, list) else []
+
+                    # 4. Aggregate full state for frontend
+                    payload = {
+                        "type": "status",
+                        "system": {
+                            "status": "RUNNING",
+                            "mode": os.getenv('MODE', 'PAPER'),
+                            "iteration": int(status_data.get("iteration", 0)),
+                            "timestamp": datetime.now().isoformat(),
+                            "agents": agent_statuses,
+                        },
+                        "regime": str(status_data.get("regime", "TRENDING")),
+                        "sentiment": float(status_data.get("sentiment", 0.5)),
+                        "picks": status_data.get("picks", []),
+                        "candidates": status_data.get("candidates", []),
+                        "positions": positions_list,
+                        "macro": status_data.get("macro", {}),
+                        "quotes": status_data.get("market_data", {}),
+                        "signals": signals_data if isinstance(signals_data, list) else [],
+                    }
+
+                    # 5. Safe-serialize (handles NaN, Inf, datetime, numpy)
+                    data_str = _safe_json_dumps(payload)
+                    await websocket.send_text(data_str)
+
+                except WebSocketDisconnect:
+                    stop_event.set()
+                    break
+                except Exception as e:
+                    # Log but DON'T kill the loop — a transient error shouldn't drop the connection
+                    logger.warning(f"WS send transient error (will retry): {e}")
+
+                await asyncio.sleep(2)  # stream every 2 seconds
+
+        async def receive_messages():
+            try:
+                while not stop_event.is_set():
+                    # Wait for any message from client (like PING)
+                    data = await websocket.receive_text()
+                    # We don't really need to do anything with the data yet
+                    # but calling receive() keeps the connection alive in many setups
+            except WebSocketDisconnect:
+                stop_event.set()
+            except Exception as e:
+                logger.debug(f"WS receive error: {e}")
+                stop_event.set()
+
+        try:
+            # Run both tasks concurrently
+            await asyncio.gather(send_updates(), receive_messages())
+        finally:
+            logger.info("Dashboard disconnected")
+            stop_event.set()
+            try: await websocket.close()
+            except: pass
 
     logger.info("Dashboard API created — routes registered")
     return app

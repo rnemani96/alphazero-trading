@@ -23,6 +23,7 @@ import threading
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
+from src.data.discovery import get_best_performing_stocks
 
 # ── Load env before any internal imports ─────────────────────────────────────
 from dotenv import load_dotenv
@@ -38,7 +39,7 @@ logging.basicConfig(
     datefmt = "%H:%M:%S",
     handlers=[
         logging.StreamHandler(sys.stdout),
-        logging.FileHandler("logs/alphazero.log", encoding="utf-8"),
+        logging.FileHandler("logs/alphazero_v3.log", encoding="utf-8"),
     ],
 )
 logger = logging.getLogger("Main")
@@ -78,7 +79,29 @@ except ImportError as e:
     logger.warning("active_portfolio not found: %s", e)
     AP = None
 
-# ── Agent imports (all 16 — unchanged) ───────────────────────────────────────
+# ── Event Bus ─────────────────────────────────────────────────────────────────
+eb = None
+try:
+    from src.event_bus.event_bus import EventBus
+    eb = EventBus()
+except ImportError as e:
+    logger.warning("EventBus not loaded: %s", e)
+
+# ── Paper / Live Executor ─────────────────────────────────────────────────────
+_cfg = vars(settings)
+executor = None
+try:
+    if settings.MODE == "LIVE":
+        from src.execution.openalgo_executor import OpenAlgoExecutor
+        executor = OpenAlgoExecutor()
+    else:
+        from src.execution.paper_executor import PaperExecutor
+        executor = PaperExecutor(_cfg)
+    logger.info("Executor: %s", type(executor).__name__)
+except ImportError as e:
+    logger.warning("Executor not loaded: %s", e)
+
+# ── Agent imports (all 16) ───────────────────────────────────────────────────
 agents: Dict[str, Any] = {}
 
 def _try_import_agent(name: str, module: str, cls: str, *args, **kwargs):
@@ -91,24 +114,22 @@ def _try_import_agent(name: str, module: str, cls: str, *args, **kwargs):
         logger.warning("✗ Agent %s failed: %s", name, e)
         agents[name] = None
 
-_cfg = vars(settings)
-
-_try_import_agent("ZEUS",      "src.agents.zeus_agent",             "ZeusAgent",     _cfg)
-_try_import_agent("ORACLE",    "src.agents.oracle_agent",           "OracleAgent",   _cfg)
-_try_import_agent("ATLAS",     "src.agents.sector_agent",            "SectorAgent",    _cfg)
-_try_import_agent("SIGMA",     "src.agents.sigma_agent",            "SigmaAgent",    _cfg)
-_try_import_agent("APEX",      "src.agents.chief_agent",             "ChiefAgent",     _cfg)
-_try_import_agent("NEXUS",     "src.agents.intraday_regime_agent",            "IntradayRegimeAgent",    _cfg)
-_try_import_agent("HERMES",    "src.agents.news_sentiment_agent",           "NewsSentimentAgent",   _cfg)
-_try_import_agent("TITAN",     "src.agents.titan_agent",            "TitanAgent",    _cfg)
-_try_import_agent("GUARDIAN",  "src.agents.guardian_agent",         "GuardianAgent", _cfg)
-_try_import_agent("MERCURY",   "src.agents.mercury_agent",          "MercuryAgent",  _cfg)
-_try_import_agent("LENS",      "src.agents.lens_agent",             "LensAgent",     _cfg)
-_try_import_agent("KARMA",     "src.agents.karma_agent",            "KarmaAgent",    _cfg)
-_try_import_agent("MTF",       "src.agents.multi_timeframe_agent",  "MultiTimeframeAgent", _cfg)
-_try_import_agent("OPTIONS",   "src.agents.options_flow_agent",     "OptionsFlowAgent",    _cfg)
-_try_import_agent("EARNINGS",  "src.agents.earnings_agent",         "EarningsAnalyzer",    _cfg)
-_try_import_agent("STRATEGY",  "src.agents.strategy_generator",     "StrategyGenerator",   _cfg)
+_try_import_agent("ZEUS",      "src.agents.zeus_agent",             "ZeusAgent",     eb, _cfg)
+_try_import_agent("ORACLE",    "src.agents.oracle_agent",           "OracleAgent",   eb, _cfg)
+_try_import_agent("ATLAS",     "src.agents.sector_agent",           "SectorAgent",   eb, _cfg)
+_try_import_agent("SIGMA",     "src.agents.sigma_agent",            "SigmaAgent",    eb, _cfg)
+_try_import_agent("APEX",      "src.agents.chief_agent",            "ChiefAgent",    eb, _cfg)
+_try_import_agent("NEXUS",     "src.agents.intraday_regime_agent",  "IntradayRegimeAgent", eb, _cfg)
+_try_import_agent("HERMES",    "src.agents.news_sentiment_agent",   "NewsSentimentAgent",  eb, _cfg)
+_try_import_agent("TITAN",     "src.agents.titan_agent",            "TitanAgent",    eb, _cfg)
+_try_import_agent("GUARDIAN",  "src.agents.guardian_agent",         "GuardianAgent", eb, _cfg)
+_try_import_agent("MERCURY",   "src.agents.mercury_agent",          "MercuryAgent",  eb, _cfg, executor)
+_try_import_agent("LENS",      "src.agents.lens_agent",             "LensAgent",     eb, _cfg)
+_try_import_agent("KARMA",     "src.agents.karma_agent",            "KarmaAgent",    eb, _cfg)
+_try_import_agent("MTF",       "src.agents.multi_timeframe_agent",  "MultiTimeframeAgent", eb, _cfg)
+_try_import_agent("OPTIONS",   "src.agents.options_flow_agent",     "OptionsFlowAgent",    eb, _cfg)
+_try_import_agent("EARNINGS",  "src.agents.llm_earnings_analyzer",  "EarningsCallAnalyzer", eb, _cfg)
+_try_import_agent("STRATEGY",  "src.agents.llm_strategy_generator", "StrategyGenerator",   eb, _cfg)
 
 active_agents = {k: v for k, v in agents.items() if v is not None}
 logger.info("Agents online: %d / %d", len(active_agents), 16)
@@ -120,25 +141,14 @@ try:
 except ImportError:
     capital_allocator = None
 
-# ── Paper / Live Executor ─────────────────────────────────────────────────────
-executor = None
-try:
-    if settings.MODE == "LIVE":
-        from src.execution.openalgo_executor import OpenAlgoExecutor
-        executor = OpenAlgoExecutor(_cfg)
-    else:
-        from src.execution.paper_executor import PaperExecutor
-        executor = PaperExecutor(_cfg)
-    logger.info("Executor: %s", type(executor).__name__)
-except ImportError as e:
-    logger.warning("Executor not loaded: %s", e)
-
 # ── State ─────────────────────────────────────────────────────────────────────
 _state: Dict[str, Any] = {
     "iteration":       0,
     "regime":          "TRENDING",
     "sentiment":       0.5,
     "selected_stocks": [],
+    "candidates":      [],
+    "last_training_date": None,
     "capital_alloc":   {},
     "portfolio":       {},
     "market_data":     {},
@@ -155,8 +165,28 @@ STATE_FILE = "data/alphazero_state.json"
 
 def _write_state():
     try:
+        # Internal persistent state
         with open(STATE_FILE, "w") as f:
             json.dump(_state, f, indent=2, default=str)
+        
+        # Dashboard status.json sync
+        status_data = {
+            "picks": _state.get("selected_stocks", []),
+            "candidates": _state.get("candidates", []),
+            "positions": _state.get("portfolio", {}),
+            "pnl": _state.get("net_pnl", 0),
+            "macro": _state.get("macro", {}),
+            "regime": _state.get("regime", "TRENDING"),
+            "sentiment": _state.get("sentiment", 0.5),
+            "iteration": _state.get("iteration", 0)
+        }
+        with open("logs/status.json", "w") as f:
+            json.dump(status_data, f, indent=2, default=str)
+            
+        # Dashboard signals.json sync (for the Signals tab)
+        with open("logs/signals.json", "w") as f:
+            json.dump(_state.get("latest_signals", []), f, indent=2, default=str)
+            
     except Exception as e:
         logger.warning("State write error: %s", e)
 
@@ -278,6 +308,51 @@ def _run_iteration():
 
     market_hours = _is_market_hours()
     agents_run   = 0
+    
+    # ── Step 0: Market Data Global Fetch ──────────────────────────────────────
+    universe_symbols = [s.get("symbol") for s in _build_sigma_candidates()]
+    if AP:
+        universe_symbols += list(AP.open_positions.keys())
+    universe_symbols = list(set(universe_symbols))
+    
+    mdata = {}
+    mdata_history = {} # Full candle history for KARMA training
+    prices = {}
+    
+    import pandas as pd
+    from src.data.indicators import add_all_indicators
+
+    if universe_symbols:
+        raw_quotes = _get_market_data(universe_symbols)
+        prices = raw_quotes.get("prices", {})
+        
+        for sym in universe_symbols:
+            try:
+                # 250 days ensures indicators like EMA200/MA200 have enough data
+                bars = _get_candles(sym, period="250d", interval="1d")
+                if not bars:
+                    continue
+                mdata_history[sym] = bars
+                df = pd.DataFrame(bars)
+                df.columns = [str(c).lower() for c in df.columns]
+                if 'close' not in df.columns:
+                    continue
+                
+                # Update last bar with latest live price
+                if prices.get(sym, 0) > 0:
+                    df.loc[df.index[-1], 'close'] = prices[sym]
+                
+                df = add_all_indicators(df)
+                if not df.empty:
+                    latest = dict(df.iloc[-1])
+                    latest['price'] = latest.get('close', prices.get(sym, 0))
+                    mdata[sym] = latest
+            except Exception as e:
+                logger.debug("MData build failed for %s: %s", sym, e)
+
+        # Update global state for dashboard and portfolio
+        _state["market_data"] = {sym: {"ltp": prices.get(sym, 0)} for sym in universe_symbols}
+        _update_portfolio_prices(prices)
 
     # ── Step 1: Macro / Regime ───────────────────────────────────────────────
     regime    = _state.get("regime", "TRENDING")
@@ -285,16 +360,21 @@ def _run_iteration():
 
     if agents["ORACLE"] and hasattr(agents["ORACLE"], "analyze"):
         try:
-            macro = agents["ORACLE"].analyze()
+            agents["ORACLE"].update_activity("Analyzing macro indicators...")
+            macro = agents["ORACLE"].analyze(mdata)
             _state["macro"] = macro
+            agents["ORACLE"].update_activity(f"Bias: {macro.get('bias', 'NEUTRAL')}")
+            agents_run += 1
         except Exception as e:
             logger.warning("[ORACLE] failed: %s", e)
 
     if agents["NEXUS"] and hasattr(agents["NEXUS"], "detect_regime"):
         try:
-            r = agents["NEXUS"].detect_regime()
+            agents["NEXUS"].update_activity("Detecting market regime...")
+            r = agents["NEXUS"].detect_regime(mdata)
             regime = r.get("regime", regime) if isinstance(r, dict) else regime
             _state["regime"] = regime
+            agents["NEXUS"].update_activity(f"Regime: {regime}")
             agents_run += 1
         except Exception as e:
             logger.warning("[NEXUS] failed: %s", e)
@@ -329,9 +409,12 @@ def _run_iteration():
 
         if agents["SIGMA"] and hasattr(agents["SIGMA"], "score_stocks"):
             try:
+                agents["SIGMA"].update_activity("Scoring discovered stocks...")
                 candidates = _build_sigma_candidates()
+                _state["candidates"] = candidates
                 scored = agents["SIGMA"].score_stocks(candidates, regime)
                 if agents["APEX"] and hasattr(agents["APEX"], "select_portfolio"):
+                    agents["APEX"].update_activity("Constructing optimal portfolio...")
                     selected = agents["APEX"].select_portfolio(scored, {}, regime)
                     # Filter out symbols already in open positions
                     if AP:
@@ -339,34 +422,34 @@ def _run_iteration():
                         selected = [s for s in selected if s.get("symbol") not in blocked]
                     _state["selected_stocks"] = selected
                     selected_stocks = selected
+                    agents["APEX"].update_activity(f"Selected {len(selected)} candidates")
                     agents_run += 1
             except Exception as e:
                 logger.warning("[SIGMA/APEX] failed: %s", e)
 
-    # ── Step 3: Market data for all relevant symbols ──────────────────────────
-    symbols = list({s.get("symbol") for s in selected_stocks if s.get("symbol")})
+    # ── Step 3: Filtered mdata for TITAN ──────────────────────────────────────
+    selected_symbols = list({s.get("symbol") for s in selected_stocks if s.get("symbol")})
     if AP:
-        symbols += list(AP.open_positions.keys())
-    symbols = list(set(symbols))
+        selected_symbols += list(AP.open_positions.keys())
+    selected_symbols = list(set(selected_symbols))
 
-    mdata = {}
-    prices = {}
-    if symbols:
-        raw = _get_market_data(symbols)
-        prices = raw.get("prices", {})
-        mdata  = raw
-        _state["market_data"] = {sym: {"ltp": prices.get(sym, 0)} for sym in symbols}
-        # Update open position prices
-        _update_portfolio_prices(prices)
+    # mdata is already built for the whole universe in step 0. 
+    # Just ensure we have what we need for the selected ones.
+    mdata_filtered = {s: mdata[s] for s in selected_symbols if s in mdata}
+
 
     # ── Step 4: TITAN signals ─────────────────────────────────────────────────
     signals = []
     if market_hours and agents["TITAN"] and hasattr(agents["TITAN"], "generate_signals"):
         try:
-            signals = agents["TITAN"].generate_signals(selected_stocks, regime, mdata)
+            agents["TITAN"].update_activity(f"Generating signals for {len(mdata_filtered)} stocks...")
+            signals = agents["TITAN"].generate_signals(mdata_filtered, regime=regime)
+            _state["latest_signals"] = signals
+            agents["TITAN"].update_activity(f"Generated {len(signals)} signals")
             agents_run += 1
         except Exception as e:
             logger.warning("[TITAN] failed: %s", e)
+
 
     # ── Step 5: Multi-timeframe confirmation ──────────────────────────────────
     confirmed_signals = []
@@ -461,19 +544,28 @@ def _run_iteration():
         except Exception as e:
             logger.warning("[LENS] failed: %s", e)
 
-    # ── Step 12: KARMA off-hours training ─────────────────────────────────────
-    now_hour = datetime.now(IST).hour
-    if (not market_hours and
-        agents["KARMA"] and
-        now_hour == settings.TRAINING_HOUR and
-        settings.TRAINING_ENABLED and
-        hasattr(agents["KARMA"], "train")):
+    # ── Step 12: Training ─────────────────────────────────────────────────────
+    # Post-market training on 8 months of history (as requested)
+    now_ist = datetime.now(IST)
+    is_training_time = now_ist.hour >= 18 or (now_ist.hour == 18 and now_ist.minute >= 30)
+    today_str = now_ist.strftime("%Y-%m-%d")
+
+    if is_training_time and _state.get("last_training_date") != today_str:
+        if agents["KARMA"] and hasattr(agents["KARMA"], "run_offline_training"):
+            try:
+                agents["KARMA"].update_activity("Running deep 8-mo historical training...")
+                _run_post_market_training()
+                _state["last_training_date"] = today_str
+                agents_run += 1
+            except Exception as e:
+                logger.warning("[KARMA] training failed: %s", e)
+    elif market_hours and agents["KARMA"] and hasattr(agents["KARMA"], "train"):
+        # Live lighter training during market hours
         try:
-            agents["KARMA"].train()
-            logger.info("🎓 KARMA training cycle complete")
+            agents["KARMA"].train(mdata_history)
             agents_run += 1
         except Exception as e:
-            logger.warning("[KARMA] training failed: %s", e)
+            logger.warning("[KARMA] live training failed: %s", e)
 
     # ── Step 13: Write state ──────────────────────────────────────────────────
     if AP:
@@ -486,18 +578,50 @@ def _run_iteration():
 
 
 def _build_sigma_candidates() -> List[Dict]:
-    """Build candidate list for SIGMA scoring."""
-    universe = [
-        {"symbol": s, "sector": "AUTO"} for s in [
-            "RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "KOTAKBANK",
-            "HINDUNILVR", "SBIN", "BHARTIARTL", "ITC", "WIPRO", "HCLTECH",
-            "AXISBANK", "LT", "MARUTI", "BAJFINANCE", "BAJAJFINSV", "TATAMOTORS",
-            "TATASTEEL", "SUNPHARMA", "NTPC", "POWERGRID", "TECHM", "ULTRACEMCO",
-            "ASIANPAINT", "HINDALCO", "JSWSTEEL", "ONGC", "COALINDIA", "GRASIM",
-            "DRREDDY", "CIPLA", "DIVISLAB", "ADANIPORTS", "SIEMENS", "NESTLEIND",
-        ]
-    ]
-    return universe
+    """Build candidate list for SIGMA scoring using dynamic discovery."""
+    return get_best_performing_stocks(limit=50)
+
+
+def _run_post_market_training():
+    """Identifies top/bottom movers and trains KARMA on 8 months of '1day' history."""
+    from src.data.discovery import get_market_movers
+    import yfinance as yf
+    
+    logger.info("🎓 Starting deep 8-month historical training cycle...")
+    movers = get_market_movers(limit=10, index="NIFTY 500")
+    training_symbols = [s["symbol"] for s in movers.get("gainers", []) + movers.get("losers", [])]
+    
+    if not training_symbols:
+        logger.warning("No training symbols found.")
+        return
+
+    yf_symbols = [f"{s}.NS" for s in training_symbols]
+    historical_data = {}
+    
+    try:
+        logger.info(f"Downloading 8 months of data for {len(yf_symbols)} symbols...")
+        data = yf.download(yf_symbols, period="8mo", interval="1d", progress=False, group_by='ticker')
+        
+        for sym_ns in yf_symbols:
+            sym = sym_ns.replace(".NS", "")
+            if sym_ns in data.columns.get_level_values(0):
+                df = data[sym_ns].dropna()
+                candles = []
+                for ts, row in df.iterrows():
+                    candles.append({
+                        "timestamp": ts.isoformat(),
+                        "open":  row["Open"], "high":  row["High"],
+                        "low":   row["Low"],  "close": row["Close"], 
+                        "volume": row["Volume"]
+                    })
+                historical_data[sym] = candles
+        
+        if historical_data:
+            agents["KARMA"].run_offline_training(historical_data)
+            logger.info("🎓 Post-market training complete.")
+            
+    except Exception as e:
+        logger.error(f"Post-market training data fetch failed: {e}")
 
 
 # ── Signal handler ────────────────────────────────────────────────────────────
@@ -515,94 +639,19 @@ signal.signal(signal.SIGTERM, _shutdown)
 # ── HTTP State Server (for dashboard) ────────────────────────────────────────
 
 def _start_state_server():
-    """Serve state JSON + portfolio data on a simple HTTP endpoint."""
-    from http.server import HTTPServer, BaseHTTPRequestHandler
-    import json
-
-    class Handler(BaseHTTPRequestHandler):
-        def log_message(self, *args):
-            pass  # silence access logs
-
-        def do_GET(self):
-            path = self.path.split("?")[0]
-            cors = {
-                "Access-Control-Allow-Origin": "*",
-                "Content-Type": "application/json",
-            }
-
-            if path == "/state":
-                body = json.dumps(_state, default=str).encode()
-            elif path == "/portfolio":
-                body = json.dumps(AP.get_summary() if AP else {}, default=str).encode()
-            elif path == "/portfolio/positions":
-                body = json.dumps(list(AP.open_positions.values()) if AP else [], default=str).encode()
-            elif path == "/portfolio/history":
-                body = json.dumps(AP.history[-50:] if AP else [], default=str).encode()
-            elif path.startswith("/candles/"):
-                sym  = path.split("/candles/")[1]
-                bars = _get_candles(sym, period="60d", interval="1d")
-                body = json.dumps({"candles": bars}, default=str).encode()
-            elif path.startswith("/quote/"):
-                sym  = path.split("/quote/")[1]
-                q    = MSD.get_quote(sym) if MSD else {}
-                body = json.dumps(q, default=str).encode()
-            elif path == "/sources":
-                body = json.dumps(MSD.get_source_status() if MSD else {}, default=str).encode()
-            elif path == "/health":
-                body = json.dumps({
-                    "status": "ok",
-                    "agents_online": len(active_agents),
-                    "mode": settings.MODE,
-                    "iteration": _state["iteration"],
-                    "open_positions": len(AP.open_positions) if AP else 0,
-                }).encode()
-            else:
-                self.send_response(404)
-                for k, v in cors.items():
-                    self.send_header(k, v)
-                self.end_headers()
-                return
-
-            self.send_response(200)
-            for k, v in cors.items():
-                self.send_header(k, v)
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-
-        def do_POST(self):
-            """Handle portfolio override commands."""
-            from urllib.parse import urlparse, parse_qs
-            path = self.path.split("?")[0]
-            length = int(self.headers.get("Content-Length", 0))
-            payload = json.loads(self.rfile.read(length)) if length else {}
-            cors = {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"}
-
-            resp = {"status": "ok"}
-            if path == "/portfolio/close" and AP:
-                sym   = payload.get("symbol", "")
-                price = payload.get("price", 0)
-                AP.force_close(sym, price, reason="Dashboard manual close")
-                resp["message"] = f"Force closed {sym}"
-            elif path == "/portfolio/adjust_target" and AP:
-                AP.adjust_target(payload.get("symbol"), payload.get("target"))
-                resp["message"] = "Target adjusted"
-            elif path == "/portfolio/adjust_sl" and AP:
-                AP.adjust_stop_loss(payload.get("symbol"), payload.get("stop_loss"))
-                resp["message"] = "Stop-loss adjusted"
-
-            body = json.dumps(resp).encode()
-            self.send_response(200)
-            for k, v in cors.items():
-                self.send_header(k, v)
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-
-    port = settings.BACKEND_PORT
-    server = HTTPServer((settings.BACKEND_HOST, port), Handler)
-    logger.info("State server running on http://localhost:%d", port)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
+    """Start the FastAPI dashboard backend from dashboard/backend.py"""
+    try:
+        from dashboard.backend import run_dashboard
+        import threading
+        port = settings.BACKEND_PORT
+        logger.info("Starting FastAPI Dashboard server on http://localhost:%d", port)
+        threading.Thread(
+            target=run_dashboard, 
+            args=(port, agents, MSD), 
+            daemon=True
+        ).start()
+    except Exception as e:
+        logger.warning("Could not start dashboard backend: %s", e)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

@@ -16,7 +16,7 @@ from pathlib import Path
 logger = logging.getLogger("LENS")
 
 # FIX: absolute path — relative "logs/" breaks when run from any dir except project root
-DB_PATH = Path(__file__).resolve().parent.parent.parent / "logs" / "evaluation.db"
+DB_PATH = Path(__file__).resolve().parent.parent / "logs" / "evaluation.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 

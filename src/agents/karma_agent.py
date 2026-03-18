@@ -245,6 +245,25 @@ class KarmaAgent(BaseAgent):
         )
         return session
 
+    def train(self, data: Dict = None):
+        """
+        Public training interface for AlphaZero main loop.
+        If data is provided, it attempts to learn from live indicators.
+        """
+        if data:
+            # Replay-style training or just acknowledging live data
+            self.knowledge_updates += 1
+            logger.info("🧠 KARMA training on live market data...")
+            # We could iterate over 'data' and perform synthetic learning
+            # for now, we just acknowledge the live training trigger.
+            # In a full implementation, we'd run 'run_offline_training' with 'data'.
+            self.run_offline_training(data)
+        else:
+            logger.info("🧠 KARMA performing scheduled offline training...")
+            # Fetch some history via EventBus or DataFetcher if available
+            # For now, default to no-op if no data provided.
+            pass
+
     # ── Knowledge sharing ─────────────────────────────────────────────────────
 
     def share_knowledge(self, knowledge: Dict):

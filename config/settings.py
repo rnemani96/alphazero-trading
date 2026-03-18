@@ -106,7 +106,7 @@ class Settings:
 
     # ── Dashboard / Backend ────────────────────────────────────────────────
     BACKEND_HOST: str             = os.getenv('BACKEND_HOST', '0.0.0.0')
-    BACKEND_PORT: int             = int(os.getenv('BACKEND_PORT', '8000'))
+    BACKEND_PORT: int             = int(os.getenv('BACKEND_PORT', '8001'))
     DASHBOARD_PORT: int           = int(os.getenv('DASHBOARD_PORT', '3000'))
 
     def data_source_summary(self) -> dict:

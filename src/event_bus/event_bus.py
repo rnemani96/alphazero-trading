@@ -92,7 +92,13 @@ class BaseAgent:
         self.name      = name
         self.logger    = logging.getLogger(f"Agent.{name}")
         self.is_active = True
+        self.last_activity = "Initialised"
         self.logger.info(f"{self.name} initialized")
+
+    def update_activity(self, msg: str):
+        """Update the agent's latest activity message for the dashboard."""
+        self.last_activity = msg
+        self.logger.debug(f"Activity update: {msg}")
 
     def publish_event(
         self,
@@ -119,8 +125,12 @@ class BaseAgent:
             self.logger.warning("No event bus - cannot subscribe")
 
     def get_status(self) -> Dict[str, Any]:
-        return {'name': self.name, 'active': self.is_active,
-                'has_event_bus': self.event_bus is not None}
+        return {
+            'name': self.name, 
+            'active': self.is_active,
+            'has_event_bus': self.event_bus is not None,
+            'last_activity': self.last_activity
+        }
 
     def shutdown(self):
         self.is_active = False

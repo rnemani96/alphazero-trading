@@ -1118,6 +1118,15 @@ class MultiSourceData:
             "alpha_vantage": AV_OK,
         }
 
+    def cache_info(self) -> Dict[str, Any]:
+        """Summary of data engine for health checks."""
+        return {
+            "sources_active": sum(1 for v in self.get_source_status().values() if v),
+            "source_status": self.get_source_status(),
+            "timestamp": datetime.now(IST).isoformat(),
+            "ok": True
+        }
+
     def refresh_upstox_token(self, new_token: str):
         """Update Upstox access token (call after daily OAuth refresh)."""
         self._upstox_token = new_token

@@ -173,4 +173,4 @@ class ZeusAgent(BaseAgent):
 
 
 # Alias kept for legacy imports
-ZeusAgent = Zeus
+Zeus = ZeusAgent

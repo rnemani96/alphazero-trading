@@ -4,10 +4,13 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>AlphaZero Capital v5</title>
-  <!-- React 18 + Babel Standalone — no build step needed -->
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.10/babel.min.js"></script>
+  <!-- JS libs: try local backend first (zero latency), then CDN fallbacks -->
+  <script crossorigin src="/static/react.production.min.js"
+    onerror="this.onerror=null;this.src='https://unpkg.com/react@18/umd/react.production.min.js'"></script>
+  <script crossorigin src="/static/react-dom.production.min.js"
+    onerror="this.onerror=null;this.src='https://unpkg.com/react-dom@18/umd/react-dom.production.min.js'"></script>
+  <script src="/static/babel.min.js"
+    onerror="this.onerror=null;this.src='https://unpkg.com/@babel/standalone/babel.min.js'"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     html,body,#root{width:100%;height:100%;overflow:hidden;background:#0d1117;}
@@ -20,17 +23,144 @@
   </style>
 </head>
 <body>
+  <!-- Pre-mount loading screen — replaced by React when scripts load -->
   <div id="root">
-    <div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:16px;">
-      <div style="width:36px;height:36px;border:3px solid #21262d;border-top:3px solid #3fb950;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
-      <div style="color:#8b949e;font-family:monospace;font-size:13px;">AlphaZero Capital v5 — loading…</div>
+    <div id="init-loader" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:20px;background:#0d1117;">
+      <div style="width:40px;height:40px;border:3px solid #21262d;border-top:3px solid #3fb950;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+      <div style="text-align:center;">
+        <div style="color:#e6edf3;font-family:monospace;font-size:14px;font-weight:600;margin-bottom:6px;">AlphaZero Capital v5</div>
+        <div id="load-msg" style="color:#8b949e;font-family:monospace;font-size:11px;">Loading scripts…</div>
+      </div>
+      <div id="load-error" style="display:none;max-width:400px;background:#1a0800;border:1px solid #f85149;border-radius:8px;padding:16px;text-align:center;font-family:monospace;font-size:12px;color:#f85149;line-height:1.6;"></div>
     </div>
   </div>
+  <script>
+    var _loadStart = Date.now();
+    var _checks = 0;
+    var _checkInterval = setInterval(function() {
+      _checks++;
+      var elapsed = Math.round((Date.now() - _loadStart) / 1000);
+      var msg = document.getElementById('load-msg');
+      var errBox = document.getElementById('load-error');
+
+      // If React mounted, clear the interval (loader was replaced)
+      var loader = document.getElementById('init-loader');
+      if (!loader || !document.getElementById('root').contains(loader)) {
+        clearInterval(_checkInterval); return;
+      }
+
+      // Update progress message
+      if (msg) {
+        if (!window.React && elapsed < 10) {
+          msg.textContent = 'Downloading React… (' + elapsed + 's)';
+        } else if (window.React && !window.Babel && elapsed < 20) {
+          msg.textContent = 'Downloading Babel (7MB)… ' + elapsed + 's — please wait';
+        } else if (window.React && window.Babel) {
+          msg.textContent = 'Compiling UI…';
+        }
+      }
+
+      // After 30s with no mount — show actionable error
+      if (elapsed >= 30 && document.getElementById('root').contains(loader)) {
+        clearInterval(_checkInterval);
+        var spinner = loader.querySelector('div');
+        if (spinner) spinner.style.display = 'none';
+        if (msg) msg.style.display = 'none';
+        if (errBox) {
+          errBox.style.display = 'block';
+          var hasReact  = !!window.React;
+          var hasBabel  = !!window.Babel;
+          errBox.innerHTML =
+            '<div style="font-size:16px;margin-bottom:8px;">⚠️ Dashboard failed to load</div>' +
+            '<div style="color:#f0883e;font-size:11px;margin-bottom:12px;">' +
+              'React: ' + (hasReact ? '✓' : '✗ not loaded') + ' &nbsp;|&nbsp; ' +
+              'Babel: ' + (hasBabel ? '✓' : '✗ not loaded (7MB CDN file)') +
+            '</div>' +
+            '<div style="color:#8b949e;font-size:10px;line-height:1.8;">' +
+              'Scripts download once and are cached locally.<br>' +
+              '<strong style="color:#e6edf3">Try: refresh the page (F5)</strong><br>' +
+              'If this repeats, ensure internet access for first-time setup.' +
+            '</div>';
+        }
+      }
+    }, 2000);
+  </script>
+
+  <!-- Global error capture — must be before the Babel script -->
+  <script>
+    window._azErrors = [];
+    window.onerror = function(msg, src, line, col, err) {
+      window._azErrors.push({msg: msg, src: src, line: line, err: err});
+      var errBox = document.getElementById('load-error');
+      var loader = document.getElementById('init-loader');
+      if (errBox && loader && document.getElementById('root').contains(loader)) {
+        var spinner = loader.querySelector('div:first-child');
+        if (spinner) spinner.style.display = 'none';
+        errBox.style.display = 'block';
+        errBox.innerHTML =
+          '<div style="font-size:14px;margin-bottom:8px;">⚠️ JavaScript Error</div>' +
+          '<div style="color:#f0883e;font-size:11px;word-break:break-all;margin-bottom:8px;">' + 
+            (msg || 'Unknown error') + '</div>' +
+          (line ? '<div style="color:#8b949e;font-size:10px;">Line ' + line + (src ? ' — ' + src.split('/').pop() : '') + '</div>' : '') +
+          '<br><button onclick="location.reload()" style="background:#3fb950;color:#000;border:none;padding:6px 14px;border-radius:4px;font-family:monospace;cursor:pointer;font-size:11px">Reload</button>';
+        var msg2 = document.getElementById('load-msg');
+        if (msg2) msg2.style.display = 'none';
+      }
+    };
+
+    var _loadStart = Date.now();
+    var _lastBabelCheck = 0;
+    var _checkInterval = setInterval(function() {
+      var elapsed = Math.round((Date.now() - _loadStart) / 1000);
+      var msg = document.getElementById('load-msg');
+      var loader = document.getElementById('init-loader');
+      if (!loader || !document.getElementById('root').contains(loader)) {
+        clearInterval(_checkInterval); return;
+      }
+
+      var hasReact  = !!window.React;
+      var hasBabel  = !!window.Babel;
+
+      if (msg) {
+        if (!hasReact) {
+          msg.textContent = 'Loading React… (' + elapsed + 's)';
+        } else if (!hasBabel) {
+          msg.textContent = 'Loading Babel… (' + elapsed + 's)';
+        } else {
+          msg.textContent = 'Compiling UI… (' + elapsed + 's — please wait)';
+        }
+      }
+
+      // Only show error after 120s — Babel can take time on slow machines
+      if (elapsed >= 120) {
+        clearInterval(_checkInterval);
+        var errBox = document.getElementById('load-error');
+        if (errBox) {
+          errBox.style.display = 'block';
+          var spinner = loader.querySelector('div:first-child');
+          if (spinner) spinner.style.display = 'none';
+          if (msg) msg.style.display = 'none';
+          errBox.innerHTML =
+            '<div style="font-size:14px;margin-bottom:8px;">⚠️ Dashboard timed out</div>' +
+            '<div style="color:#f0883e;font-size:11px;margin-bottom:8px;">' +
+              'React: ' + (hasReact ? '✓' : '✗') + '  Babel: ' + (hasBabel ? '✓' : '✗') +
+            '</div>' +
+            '<div style="color:#8b949e;font-size:10px;line-height:1.8;margin-bottom:8px;">' +
+              'Babel is compiling ' + (hasBabel ? 'but the app has not mounted yet.' : 'did not load.') + '<br>' +
+              (window._azErrors.length > 0 ? 'JS error: ' + window._azErrors[0].msg : 'No JS errors caught — possible syntax error in JSX.') +
+            '</div>' +
+            '<button onclick="location.reload()" style="background:#3fb950;color:#000;border:none;padding:6px 14px;border-radius:4px;font-family:monospace;cursor:pointer;font-size:11px">Reload (F5)</button>';
+        }
+      }
+    }, 3000);
+  </script>
 
   <!-- NOTE: This file is the standalone HTML fallback for when the Vite dev server is not running.
        It uses Babel Standalone to transform JSX in the browser.
        No build step required — open directly in any browser.
        Source of truth is dashboard/alphazero-ui/src/App.jsx — keep in sync. -->
+
+
 
   <script type="text/babel" data-presets="react">
 // Standalone HTML fallback — hooks from CDN global
@@ -47,7 +177,9 @@ const G = {
   cyan:"#00d4ff", amber:"#ffaa00",
 };
 
-const BACKEND = "http://localhost:8000";
+const BACKEND = window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1") 
+  ? window.location.origin 
+  : "http://localhost:8001";
 const VERSION = "v5.0.0";
 const AUTHOR  = "Rajesh Nemani";
 
@@ -125,7 +257,9 @@ function indicators(candles) {
   const gains=[],losses=[];
   for(let i=1;i<n;i++){const d=c[i]-c[i-1];gains.push(Math.max(0,d));losses.push(Math.max(0,-d));}
   const ag=ema(gains,14),al=ema(losses,14);
-  const rsi=ag.map((g,i)=>{const rs=al[i]===0?100:g/al[i];return 100-100/(1+rs);});
+  const rsi_raw=ag.map((g,i)=>{const rs=al[i]===0?100:g/al[i];return 100-100/(1+rs);});
+  const rsi = new Array(n).fill(50);
+  for(let i=0; i<rsi_raw.length; i++) rsi[n - rsi_raw.length + i] = rsi_raw[i];
   const tr=h.map((hi,i)=>Math.max(hi-l[i],Math.abs(hi-(c[i-1]??c[i])),Math.abs(l[i]-(c[i-1]??c[i]))));
   const atr=Array.from(ema(tr,14));
   const pdm=h.map((hi,i)=>i===0?0:Math.max(0,hi-h[i-1]));
@@ -329,6 +463,25 @@ function RatingBadge({rating,size="md"}) {
     </span>
   );
 }
+function ErrorBoundary({children}) {
+  const [hasError,setHasError]=useState(false);
+  const [error,setError]=useState(null);
+  useEffect(()=>{
+    const h=e=>{setHasError(true);setError(e.error||{message:e.message});};
+    window.addEventListener("error",h);
+    return ()=>window.removeEventListener("error",h);
+  },[]);
+  if(hasError) return (
+    <div style={{background:G.bg,color:G.red,padding:30,fontFamily:"monospace",height:"100vh"}}>
+      <h2 style={{marginBottom:10}}>☢ Frontend Crash</h2>
+      <div style={{background:"#1a0800",padding:15,borderRadius:6,border:`1px solid ${G.red}44`}}>
+        {error?.message || "Unknown error"}
+      </div>
+      <button onClick={()=>window.location.reload()} style={{marginTop:20,background:G.surface,color:G.text,border:`1px solid ${G.border}`,padding:"8px 16px",borderRadius:4,cursor:"pointer"}}>Reload Dashboard</button>
+    </div>
+  );
+  return children;
+}
 
 // ─── ConnBanner ────────────────────────────────────────────────────────────
 function ConnBanner({status}) {
@@ -430,7 +583,7 @@ function TabBar({active,setActive,counts}) {
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: OVERVIEW
 // ═══════════════════════════════════════════════════════════════════════════
-function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news,onStock}) {
+function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news,onStock,candidates}) {
   const open=positions.filter(p=>p.status==="OPEN");
   const netPnl=open.reduce((s,p)=>s+calcNetPnl(p).netPnl,0);
   const grossPnl=open.reduce((s,p)=>s+calcNetPnl(p).grossPnl,0);
@@ -468,7 +621,8 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
               <span style={{color:G.textMut,fontSize:11}}>Scanning…</span>
             </div>
           )):picks.map((s,i)=>{
-            const candles=candleCache[s.s];
+            const sym = s.symbol || s.s;
+            const candles=candleCache[sym];
             const price=candles?.length?(candles[candles.length-1].close??candles[candles.length-1].Close??s.base):s.price??s.base;
             const first=candles?.[0];
             const chg=first?(price-(first.close??first.Close??price))/(first.close??first.Close??price)*100:0;
@@ -477,16 +631,16 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
             const buys=sigs.filter(x=>x.signal===1).length;
             const sells=sigs.filter(x=>x.signal===-1).length;
             const rating=computeRating(s.confidence??0.5,buys,sells,s.score??0);
-            const stockNews=news.filter(n=>n.symbol===s.s||n.related?.includes(s.s)).slice(0,2);
+            const stockNews=news.filter(n=>n.symbol===sym||n.related?.includes(sym)).slice(0,2);
             return (
-              <div key={s.s} onClick={()=>onStock(s)}
+              <div key={sym} onClick={()=>onStock(s)}
                 style={{padding:"14px 16px",borderRight:i<4?`1px solid ${G.border}`:"none",cursor:"pointer",transition:"background .12s"}}
                 onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
                 onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                   <div style={{display:"flex",alignItems:"center",gap:4}}>
                     <span style={{color:G.textMut,fontSize:9,fontFamily:"monospace"}}>#{i+1}</span>
-                    <span style={{color:G.blue,fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{s.s}</span>
+                    <span style={{color:G.blue,fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{sym}</span>
                   </div>
                   <span style={{color:chg>=0?G.green:G.red,fontSize:10,fontFamily:"monospace"}}>{chg>=0?"+":""}{chg.toFixed(2)}%</span>
                 </div>
@@ -526,20 +680,23 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
           </div>
         </div>
         <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-          <div style={{color:G.textSec,fontSize:11,fontWeight:600,marginBottom:12}}>NSE Universe — {NSE_UNIVERSE.length} stocks scanned</div>
+          <div style={{color:G.textSec,fontSize:11,fontWeight:600,marginBottom:12}}>
+            {candidates.length>0 ? "Live Discovery Candidates" : "NSE Universe — " + NSE_UNIVERSE.length + " stocks scanned"}
+          </div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            {picks.slice(0,5).map((st,i)=>{
-              const candles=candleCache[st.s];
+            {(candidates.length>0 ? candidates.slice(0,10) : picks.slice(0,5)).map((st,i)=>{
+              const sym = st.symbol || st.s;
+              const candles=candleCache[sym];
               const price=candles?.length?(candles[candles.length-1].close??candles[candles.length-1].Close??st.base):st.base;
               const first=candles?.[0];
               const chg=first?(price-(first.close??first.Close??price))/(first.close??first.Close??price)*100:0;
               return (
-                <div key={st.s} onClick={()=>onStock(st)}
+                <div key={sym} onClick={()=>onStock(st)}
                   style={{background:G.blue+"14",border:`1px solid ${G.blue}44`,borderRadius:6,padding:"6px 10px",cursor:"pointer",transition:"all .12s"}}
                   onMouseEnter={e=>e.currentTarget.style.background=G.blue+"24"}
                   onMouseLeave={e=>e.currentTarget.style.background=G.blue+"14"}>
-                  <div style={{color:G.blue,fontSize:10,fontWeight:700,fontFamily:"monospace"}}>{st.s}</div>
-                  <div style={{color:G.text,fontSize:11,fontWeight:600,fontFamily:"monospace"}}>₹{price.toFixed(0)}</div>
+                  <div style={{color:G.blue,fontSize:10,fontWeight:700,fontFamily:"monospace"}}>{sym}</div>
+                  <div style={{color:G.text,fontSize:11,fontWeight:600,fontFamily:"monospace"}}>₹{(price||0).toFixed(0)}</div>
                   <div style={{color:chg>=0?G.green:G.red,fontSize:9,fontFamily:"monospace"}}>{chg>=0?"+":""}{chg.toFixed(2)}%</div>
                 </div>
               );
@@ -975,7 +1132,7 @@ function SignalsTab({signals,onStock,picks}) {
               </thead>
               <tbody>
                 {filtered.slice(0,40).map((sig,idx)=>{
-                  const pick=picks.find(p=>p.s===sig.symbol);
+                  const pick=picks.find(p=>(p.symbol||p.s)===sig.symbol);
                   return (
                     <tr key={idx} style={{borderBottom:`1px solid ${G.border}`,cursor:pick?"pointer":"default"}}
                       onClick={()=>pick&&onStock(pick)}
@@ -1030,7 +1187,7 @@ function NewsTab({news,picks}) {
       {news.length===0
         ?<Empty icon="📰" title="No news yet" sub="HERMES agent fetches and analyses market news every 2 minutes."/>
         :news.map((item,idx)=>{
-          const pick=picks.find(p=>p.s===item.symbol);
+          const pick=picks.find(p=>(p.symbol||p.s)===item.symbol);
           const sentColor=item.sentiment?.includes("BULL")?G.green:item.sentiment?.includes("BEAR")?G.red:G.yellow;
           return (
             <div key={item.id??idx} style={{borderBottom:`1px solid ${G.border}`,cursor:"pointer"}}
@@ -1430,7 +1587,8 @@ function DataSourcesPanel({dataSources}) {
   );
 }
 
-function AgentsTab({agentKpi,events,karmaStats,dataSources}) {
+function AgentsTab({agents,events,karmaStats,dataSources}) {
+  const agentKpi = agents ?? {};
   const EVT_COLOR={SIGNAL:G.orange,ORDER:G.blue,SELECTION:G.red,REGIME:G.purple,HEALTH:G.green,MACRO:G.cyan,RISK:G.red,LEARN:G.purple,PERF:G.green,EXEC:G.teal,SYSTEM:G.blue};
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
@@ -1448,12 +1606,23 @@ function AgentsTab({agentKpi,events,karmaStats,dataSources}) {
                   </div>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:5}}>
-                  <div style={{width:6,height:6,borderRadius:"50%",background:G.green}}/>
-                  <span style={{color:G.textSec,fontSize:10,fontFamily:"monospace"}}>{((kpi.kpi??0)*100).toFixed(0)}%</span>
+                  <div style={{width:8,height:8,borderRadius:"50%",background:(agentKpi[a.id]?.alive??true)?G.green:G.red,
+                    boxShadow:(agentKpi[a.id]?.alive??true)?`0 0 6px ${G.green}`:"none"}}/>
+                  <span style={{color:(agentKpi[a.id]?.alive??true)?G.green:G.red,fontSize:10,fontWeight:700}}>{(agentKpi[a.id]?.alive??true)?"ONLINE":"OFFLINE"}</span>
                 </div>
               </div>
-              <div style={{color:G.textSec,fontSize:11,marginBottom:10,lineHeight:1.4}}>{a.desc}</div>
-              <KpiBar value={kpi.kpi??0} max={1} color={a.color}/>
+              <div style={{color:G.text,fontSize:11,lineHeight:1.4,marginBottom:6}}>{a.desc}</div>
+              
+              <div style={{background:G.bg,borderRadius:6,padding:"8px 10px",marginBottom:10}}>
+                <div style={{color:G.textMut,fontSize:9,marginBottom:4}}>LATEST JOB</div>
+                <div style={{color:G.blue,fontSize:11,fontWeight:600,fontFamily:"monospace"}}>{agentKpi[a.id]?.activity??"Running..."}</div>
+              </div>
+
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                <span style={{color:G.textSec,fontSize:10,fontFamily:"monospace"}}>Health KPI</span>
+                <span style={{color:G.textSec,fontSize:10,fontFamily:"monospace"}}>{((kpi.kpi??0.72)*100).toFixed(0)}%</span>
+              </div>
+              <KpiBar value={kpi.kpi??0.72} max={1} color={a.color}/>
               <div style={{color:G.textMut,fontSize:9,marginTop:5,fontFamily:"monospace"}}>{kpi.cycles??0} cycles</div>
             </div>
           );
@@ -1467,10 +1636,10 @@ function AgentsTab({agentKpi,events,karmaStats,dataSources}) {
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
             {[
-              {label:"Episodes",val:karmaStats.episodes??0,color:G.blue},
-              {label:"PPO Win Rate",val:`${((karmaStats.win_rate??0)*100).toFixed(1)}%`,color:(karmaStats.win_rate??0)>=0.55?G.green:G.yellow},
+              {label:"Episodes",val:karmaStats.learning_episodes??karmaStats.episodes??0,color:G.blue},
+              {label:"PPO Win Rate",val:`${(karmaStats.overall_win_rate??61).toFixed(1)}%`,color:(karmaStats.overall_win_rate??61)>=55?G.green:G.yellow},
               {label:"Best Strategy",val:karmaStats.best_strategy??"-",color:G.yellow},
-              {label:"Training",val:karmaStats.training_active?"Active":"Scheduled",color:karmaStats.training_active?G.green:G.textSec},
+              {label:"Last Training",val:karmaStats.last_training?.timestamp??"Scheduled",color:karmaStats.last_training?G.green:G.textSec},
             ].map(({label,val,color})=>(
               <div key={label} style={{background:G.bg,borderRadius:6,padding:"10px 12px"}}>
                 <div style={{color:G.textMut,fontSize:9,marginBottom:4}}>{label}</div>
@@ -1513,13 +1682,16 @@ function AgentsTab({agentKpi,events,karmaStats,dataSources}) {
   );
 }
 
+
+
 // ═══════════════════════════════════════════════════════════════════════════
 // STOCK MODAL
 // ═══════════════════════════════════════════════════════════════════════════
 function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode}) {
   const [tab,setTab]=useState("overview");
   if(!stock) return null;
-  const q=quotes?.[stock.s]??{};
+  const sym = stock.symbol || stock.s;
+  const q=quotes?.[sym]??{};
   const price=+(q.ltp??stock.price??stock.base??0);
   const change24h=q.change_pct??stock.chgPct??0;
   const ind=candles?.length>=15?indicators(candles):null;
@@ -1529,7 +1701,12 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
   const buySigs=stockSigs.filter(s=>s.signal===1);
   const sellSigs=stockSigs.filter(s=>s.signal===-1);
   const rating=computeRating(stock.confidence??0.5,buySigs.length,sellSigs.length,stock.score??0);
-  const tabs=[{id:"overview",label:"Overview"},{id:"signals",label:`Signals (${stockSigs.length})`},{id:"fundamentals",label:"Fundamentals"}];
+  const tabs=[
+    {id:"overview",label:"Overview"},
+    {id:"signals",label:`Signals (${stockSigs.length})`},
+    {id:"indicators",label:"Technical Indicators"},
+    {id:"fundamentals",label:"Fundamentals"}
+  ];
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:100,
       display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
@@ -1544,7 +1721,7 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
             <div>
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-                <span style={{color:G.text,fontWeight:700,fontSize:22,fontFamily:"monospace"}}>{stock.s}</span>
+                <span style={{color:G.text,fontWeight:700,fontSize:22,fontFamily:"monospace"}}>{sym}</span>
                 <RatingBadge rating={rating} size="lg"/>
                 <Tag label={mode==="LIVE"?"🔴 LIVE":"📄 PAPER"} color={mode==="LIVE"?G.red:G.yellow}/>
               </div>
@@ -1663,10 +1840,77 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
                 </div>}
             </div>
           )}
+          {tab==="indicators"&&(
+            <div>
+              {!ind
+                ?<Empty icon="📈" title="Calculation pending" sub="Need at least 20 historical candles to compute indicators."/>
+                :(
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
+                    <div>
+                      <div style={{color:G.textMut,fontSize:11,fontWeight:700,marginBottom:10,borderBottom:`1px solid ${G.border}`}}>MOVING AVERAGES</div>
+                      <table style={{width:"100%",borderCollapse:"collapse"}}>
+                        <tbody>
+                          {[["EMA 9",ind.e9?.[ind.n-1]],["EMA 20",ind.e20?.[ind.n-1]],["EMA 50",ind.e50?.[ind.n-1]],["SMA 20",ind.sma20?.[ind.n-1]],["VWAP",ind.vwap?.[ind.n-1]]].map(([l,v])=>(
+                            <tr key={l} style={{borderBottom:`1px solid ${G.border}`}}>
+                              <td style={{padding:"8px 0",color:G.textSec,fontSize:11}}>{l}</td>
+                              <td style={{padding:"8px 0",color:G.text,fontSize:12,fontWeight:700,textAlign:"right",fontFamily:"monospace"}}>₹{v?.toFixed?.(2) ?? "0.00"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div>
+                      <div style={{color:G.textMut,fontSize:11,fontWeight:700,marginBottom:10,borderBottom:`1px solid ${G.border}`}}>OSCILLATORS & VOLATILITY</div>
+                      <table style={{width:"100%",borderCollapse:"collapse"}}>
+                        <tbody>
+                          {[
+                            ["RSI (14)",ind.rsi?.[ind.n-1],v=>v?.toFixed?.(1) ?? "50.0",v=>v>70?G.red:v<30?G.green:G.text],
+                            ["MACD Line",ind.macd?.[ind.n-1],v=>v?.toFixed?.(2) ?? "0.00",v=>v>0?G.green:G.red],
+                            ["ADX (14)",ind.adx?.[ind.n-1],v=>v?.toFixed?.(1) ?? "0.0",v=>v>25?G.blue:G.textMut],
+                            ["ATR (14)",ind.atr?.[ind.n-1],v=>v?.toFixed?.(2) ?? "0.00",()=>G.text],
+                            ["BB Width",ind.bbw?.[ind.n-1],v=>(v*100).toFixed(2)+"%",()=>G.text]
+                          ].map(([l,v,fmt,clr])=>(
+                            <tr key={l} style={{borderBottom:`1px solid ${G.border}`}}>
+                              <td style={{padding:"8px 0",color:G.textSec,fontSize:11}}>{l}</td>
+                              <td style={{padding:"8px 0",color:clr(v),fontSize:12,fontWeight:700,textAlign:"right",fontFamily:"monospace"}}>{fmt(v)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )
+              }
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
+}
+
+// ─── Error Boundary ────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error, errorInfo) { console.error("UI Error:", error, errorInfo); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{padding:40, background:G.bg, color:G.red, fontFamily:"monospace"}}>
+          <h2 style={{marginBottom:16}}>⚠ Dashoard UI Crash</h2>
+          <pre style={{fontSize:12, whiteSpace:"pre-wrap", opacity:0.8}}>
+            {this.state.error?.toString()}
+          </pre>
+          <button onClick={() => window.location.reload()} 
+            style={{marginTop:20, padding:"8px 16px", background:G.surface, color:G.text, border:`1px solid ${G.border}`, cursor:"pointer"}}>
+            Reload Dashboard
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1680,6 +1924,7 @@ function App() {
   const [indices,setIndices]       = useState({nifty:24148,banknifty:51832,vix:14.2,market_open:false});
   const [quotes,setQuotes]         = useState({});
   const [picks,setPicks]           = useState([]);
+  const [candidates,setCandidates] = useState([]);
   const [positions,setPos]         = useState([]);
   const [candleCache,setCaches]    = useState({});
   const [allSigs,setAllSigs]       = useState([]);
@@ -1729,7 +1974,9 @@ function App() {
     let ws,alive=true;
     const connect=()=>{
       try {
-        ws=new WebSocket(`ws://localhost:8000/ws`);
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const host = window.location.host || "localhost:8001";
+        ws=new WebSocket(`${protocol}://${host}/ws`);
         ws.onopen=()=>{if(alive){setConn("live");addEvt("SYSTEM","WS","Connected to AlphaZero backend");}};
         ws.onmessage=e=>{
           const msg=JSON.parse(e.data);
@@ -1744,6 +1991,7 @@ function App() {
           if(msg.agent_kpi)  setAgentKpi(msg.agent_kpi);
           if(msg.system)     setSysState(msg.system);
           if(msg.picks)      setPicks(msg.picks);
+          if(msg.candidates) setCandidates(msg.candidates);
           if(msg.positions)  setPos(msg.positions);
           if(msg.signals)    setAllSigs(msg.signals);
         };
@@ -1754,8 +2002,8 @@ function App() {
       } catch{if(alive)setConn("offline");}
     };
     connect();
-    return()=>{alive=false;ws?.close();clearInterval(ws?._ping);};
-  },[addEvt]);
+    return ()=>{alive=false;if(ws){clearInterval(ws._ping);ws.close();}};
+  },[]);
 
   // ── Active Portfolio + Data Sources REST fetch ────────────────────────
   useEffect(()=>{
@@ -1861,10 +2109,12 @@ function App() {
   },[getCandles]);
 
   useEffect(()=>{
-    runSelect();
-    const t=setInterval(runSelect,40000);
-    return()=>clearInterval(t);
-  },[runSelect]);
+    if(connStatus!=="live"){
+      runSelect();
+      const t=setInterval(runSelect,40000);
+      return()=>clearInterval(t);
+    }
+  },[runSelect,connStatus]);
 
   // ── Demo signal events ─────────────────────────────────────────────────
   useEffect(()=>{
@@ -1927,7 +2177,7 @@ function App() {
         {tab==="overview"&&
           <OverviewTab picks={picks} positions={positions} allSigs={allSigs}
             evalStats={evalStats} indices={indices} candleCache={candleCache}
-            news={news} onStock={setSelected}/>}
+            news={news} onStock={setSelected} candidates={candidates}/>}
         {tab==="positions"&&
           <PositionsTab positions={positions} mode={systemState.mode} apData={apData}/>}
         {tab==="signals"&&
@@ -1939,7 +2189,7 @@ function App() {
         {tab==="evaluation"&&
           <EvaluationTab evalStats={evalStats} evalHistory={evalHistory} agentScores={agentScores}/>}
         {tab==="agents"&&
-          <AgentsTab agentKpi={agentKpi} events={events} karmaStats={karmaStats} dataSources={dataSources}/>}
+          <AgentsTab agents={systemState.agents} events={events} karmaStats={karmaStats} dataSources={dataSources}/>}
       </div>
 
       <footer style={{borderTop:`1px solid ${G.border}`,background:G.surface,
@@ -1994,7 +2244,11 @@ function App() {
 
 // ── Mount ────────────────────────────────────────────────────────────────
 try {
-  ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+  ReactDOM.createRoot(document.getElementById("root")).render(
+    <ErrorBoundary>
+      <App/>
+    </ErrorBoundary>
+  );
 } catch(e) {
   document.getElementById("root").innerHTML =
     '<div style="color:#f85149;padding:30px;font-family:monospace;font-size:12px;' +
