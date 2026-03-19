@@ -47,7 +47,7 @@ class TitanStrategyEngine:
             ("T3",  "Supertrend Follower",      "Trend",          "15m+1D", self.t3_supertrend),
             ("T4",  "MACD Momentum",            "Trend",          "1D",     self.t4_macd),
             ("T5",  "ADX Trend Strength",       "Trend",          "1D",     self.t5_adx),
-            ("T6",  "Parabolic SAR",            "Trend",          "15m",    self.t6_psar),
+            ("T6",  "Parabolic SAR",            "Trend",          "5m",     self.t6_psar),
             ("T7",  "Donchian Breakout",        "Trend",          "1D",     self.t7_donchian),
             ("T8",  "Hull Moving Average",      "Trend",          "15m",    self.t8_hma),
             ("T9",  "Ichimoku Cloud",           "Trend",          "1D",     self.t9_ichimoku),
@@ -66,7 +66,7 @@ class TitanStrategyEngine:
             ("M9",  "Z-Score Reversion",        "Mean Reversion", "1D",     self.m9_zscore),
             ("M10", "Price Momentum Oscillator","Mean Reversion", "1D",     self.m10_pmo),
             # ── Category C: Breakout (8) ──────────────────────────────────
-            ("B1",  "ORB Strategy",             "Breakout",       "15m",    self.b1_orb),
+            ("B1",  "ORB Strategy",             "Breakout",       "5m",     self.b1_orb),
             ("B2",  "Volume Breakout",          "Breakout",       "15m+1D", self.b2_volume_bo),
             ("B3",  "52-Week High Break",       "Breakout",       "1D",     self.b3_52wk),
             ("B4",  "Inside Bar Breakout",      "Breakout",       "1D",     self.b4_inside),
@@ -75,11 +75,11 @@ class TitanStrategyEngine:
             ("B7",  "Cup and Handle",           "Breakout",       "1D",     self.b7_cup),
             ("B8",  "Volatility Squeeze BO",    "Breakout",       "15m",    self.b8_squeeze_bo),
             # ── Category D: VWAP (5) ──────────────────────────────────────
-            ("V1",  "VWAP Cross",               "VWAP",           "15m",    self.v1_vwap_cross),
-            ("V2",  "VWAP Deviation",           "VWAP",           "15m",    self.v2_vwap_dev),
-            ("V3",  "VWAP Anchored",            "VWAP",           "15m",    self.v3_vwap_anchored),
-            ("V4",  "VWAP Bands",               "VWAP",           "15m",    self.v4_vwap_bands),
-            ("V5",  "VWAP Slope",               "VWAP",           "15m",    self.v5_vwap_slope),
+            ("V1",  "VWAP Cross",               "VWAP",           "5m",     self.v1_vwap_cross),
+            ("V2",  "VWAP Deviation",           "VWAP",           "5m",     self.v2_vwap_dev),
+            ("V3",  "VWAP Anchored",            "VWAP",           "5m",     self.v3_vwap_anchored),
+            ("V4",  "VWAP Bands",               "VWAP",           "5m",     self.v4_vwap_bands),
+            ("V5",  "VWAP Slope",               "VWAP",           "5m",     self.v5_vwap_slope),
             # ── Category E: Volume (5) ────────────────────────────────────
             ("VL1", "OBV Trend",                "Volume",         "1D",     self.vl1_obv),
             ("VL2", "Volume Price Trend",       "Volume",         "1D",     self.vl2_vpt),
@@ -642,7 +642,7 @@ class TitanStrategyEngine:
 
     # ── Master runner ─────────────────────────────────────────────────────────
 
-    def compute_all(self, df: pd.DataFrame, symbol: str = "", regime: str = "TRENDING") -> list[Signal]:
+    def compute_all(self, df: pd.DataFrame, symbol: str = "", regime: str = "TRENDING", timeframe: Optional[str] = None) -> list[Signal]:
         """Run all 45 strategies. Returns list of Signal objects."""
         if df.empty or len(df) < 5:
             logger.warning(f"TITAN: insufficient data for {symbol}")
@@ -651,6 +651,9 @@ class TitanStrategyEngine:
         ind = self._compute_base(df)
         signals = []
         for sid, name, cat, tf, fn in self.strategies:
+            # Timeframe filter (e.g. only run '5m' strategies)
+            if timeframe and timeframe not in tf:
+                continue
             try:
                 sig = fn(df, ind)
                 if sig.signal != 0:  # Only non-neutral signals

@@ -47,6 +47,7 @@ class EventType(Enum):
 
     # SYSTEM
     SYSTEM_COMMAND      = "system_command"
+    STATE_UPDATED       = "state_updated"
 
 
 @dataclass

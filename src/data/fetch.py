@@ -63,55 +63,7 @@ logger = logging.getLogger(__name__)
 # Index tickers are different (no .NS)
 
 NSE_TO_YAHOO: Dict[str, str] = {
-    # ── NIFTY 50 components (common universe) ───────────────────────────────
-    "RELIANCE":     "RELIANCE.NS",
-    "TCS":          "TCS.NS",
-    "HDFCBANK":     "HDFCBANK.NS",
-    "INFY":         "INFY.NS",
-    "ICICIBANK":    "ICICIBANK.NS",
-    "KOTAKBANK":    "KOTAKBANK.NS",
-    "HINDUNILVR":   "HINDUNILVR.NS",
-    "SBIN":         "SBIN.NS",
-    "BHARTIARTL":   "BHARTIARTL.NS",
-    "ITC":          "ITC.NS",
-    "WIPRO":        "WIPRO.NS",
-    "HCLTECH":      "HCLTECH.NS",
-    "AXISBANK":     "AXISBANK.NS",
-    "LT":           "LT.NS",
-    "MARUTI":       "MARUTI.NS",
-    "BAJFINANCE":   "BAJFINANCE.NS",
-    "BAJAJFINSV":   "BAJAJFINSV.NS",
-    "TATAMOTORS":   "TATAMOTORS.NS",
-    "TATASTEEL":    "TATASTEEL.NS",
-    "SUNPHARMA":    "SUNPHARMA.NS",
-    "NTPC":         "NTPC.NS",
-    "POWERGRID":    "POWERGRID.NS",
-    "TECHM":        "TECHM.NS",
-    "ULTRACEMCO":   "ULTRACEMCO.NS",
-    "ASIANPAINT":   "ASIANPAINT.NS",
-    "HINDALCO":     "HINDALCO.NS",
-    "JSWSTEEL":     "JSWSTEEL.NS",
-    "ONGC":         "ONGC.NS",
-    "COALINDIA":    "COALINDIA.NS",
-    "GRASIM":       "GRASIM.NS",
-    "DRREDDY":      "DRREDDY.NS",
-    "CIPLA":        "CIPLA.NS",
-    "DIVISLAB":     "DIVISLAB.NS",
-    "VEDL":         "VEDL.NS",
-    "ADANIPORTS":   "ADANIPORTS.NS",
-    "SIEMENS":      "SIEMENS.NS",
-    "NESTLEIND":    "NESTLEIND.NS",
-    "BRITANNIA":    "BRITANNIA.NS",
-    "M&M":          "M&M.NS",
-    "BAJAJ-AUTO":   "BAJAJ-AUTO.NS",
-    "HEROMOTOCO":   "HEROMOTOCO.NS",
-    "BIOCON":       "BIOCON.NS",
-    "DABUR":        "DABUR.NS",
-    "MUTHOOTFIN":   "MUTHOOTFIN.NS",
-    "CHOLAFIN":     "CHOLAFIN.NS",
-    "INDUSTOWER":   "INDUSTOWER.NS",
-    "LTIM":         "LTIM.NS",
-    # ── Indices (no .NS — special Yahoo tickers) ─────────────────────────────
+    # ── Indices (special Yahoo tickers) ───────────────────────────────────
     "NIFTY50":      "^NSEI",
     "NIFTY":        "^NSEI",
     "BANKNIFTY":    "^NSEBANK",
@@ -119,6 +71,7 @@ NSE_TO_YAHOO: Dict[str, str] = {
     "VIX":          "^INDIAVIX",
     "INDIAVIX":     "^INDIAVIX",
 }
+
 
 # yfinance interval mapping: our interval strings → yfinance format
 _YF_INTERVAL: Dict[str, str] = {
@@ -147,12 +100,12 @@ _YF_PERIOD: Dict[str, str] = {
 
 def _to_yahoo(symbol: str) -> str:
     """Convert NSE symbol to Yahoo Finance ticker."""
-    if symbol in NSE_TO_YAHOO:
-        return NSE_TO_YAHOO[symbol]
-    # Handle symbols not in map: assume NSE equity
-    if symbol.endswith(".NS") or symbol.startswith("^"):
-        return symbol
-    return symbol + ".NS"
+    s = str(symbol).strip().upper()
+    if s in NSE_TO_YAHOO:
+        return NSE_TO_YAHOO[s]
+    if s.endswith(".NS") or s.startswith("^"):
+        return s
+    return f"{s}.NS"
 
 
 class DataFetcher:
@@ -1079,14 +1032,24 @@ class DataFetcher:
 
     def get_nse_bhav_copy(self, symbol: str) -> Optional[Dict]:
         """
-        NSE Bhav Copy (end-of-day CSV from NSE India).
-        Free, official, no auth needed. Useful for exact EOD prices.
-        URL: https://nsearchives.nseindia.com/products/content/sec_bhavdata_full.csv
-        Only available after ~6 PM IST on trading days.
+        NSE Bhav Copy (via nse_eq).
         Returns: {'close': X, 'volume': Y, 'delivery_pct': Z}
         """
-        # Intentionally not implemented in PAPER mode to avoid hitting NSE servers
-        # in a loop. Enable manually when needed.
+        if not NSE_PYTHON_OK: return None
+        try:
+            # nse_eq returns nested securityWiseDP for delivery %
+            info = nse_eq(symbol)
+            if info and 'securityWiseDP' in info:
+                dp = info['securityWiseDP']
+                return {
+                    'symbol':       symbol,
+                    'delivery_qty': int(dp.get('deliveryQuantity', 0)),
+                    'delivery_pct': float(dp.get('deliveryToTradedQuantity', 0)),
+                    'traded_qty':   int(dp.get('quantityTraded', 0)),
+                    'source':       'nse_eq'
+                }
+        except Exception as e:
+            logger.debug(f"Bhavcopy fetch failed for {symbol}: {e}")
         return None
 
     

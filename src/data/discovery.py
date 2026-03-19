@@ -8,6 +8,9 @@ Filters by recent performance (momentum) to find trade candidates.
 
 import logging
 import io
+import os
+import json
+import time
 import pandas as pd
 import yfinance as yf
 import requests
@@ -15,35 +18,15 @@ from typing import List, Dict
 
 logger = logging.getLogger("Discovery")
 
-# NSE Index List URLs
-NSE_URLS = {
-    "NIFTY 50":  "https://archives.nseindia.com/content/indices/ind_nifty50list.csv",
-    "NIFTY 100": "https://archives.nseindia.com/content/indices/ind_nifty100list.csv",
-    "NIFTY 500": "https://archives.nseindia.com/content/indices/ind_nifty500list.csv",
-}
 
-def fetch_nse_symbols(index: str = "NIFTY 100") -> List[str]:
+from src.data.universe import get_nifty500_symbols
+
+def fetch_nse_symbols(index: str = "NIFTY 500") -> List[str]:
     """
-    Downloads the latest constituent list from NSE.
+    Downloads the latest constituent list using centralized data module.
     """
-    url = NSE_URLS.get(index, NSE_URLS["NIFTY 100"])
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
-    
-    try:
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code == 200:
-            df = pd.read_csv(io.StringIO(response.text))
-            # Column is usually 'Symbol'
-            for col in ['Symbol', 'SYMBOL', 'symbol']:
-                if col in df.columns:
-                    return df[col].tolist()
-        return []
-    except Exception as e:
-        logger.warning(f"Failed to fetch {index} constituents from NSE: {e}. Using fallback.")
-        # Return a safe fallback list if NSE is blocking us
-        return ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "KOTAKBANK", "LT", "SBIN", "BHARTIARTL", "ITC"]
+    return get_nifty500_symbols(use_cache=True)
+
 
 def get_best_performing_stocks(limit: int = 40) -> List[Dict]:
     # Simple file-based cache to avoid heavy yfinance calls on every restart

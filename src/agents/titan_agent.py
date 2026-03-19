@@ -90,7 +90,7 @@ _REGIME_WEIGHTS: Dict[str, Dict[str, float]] = {
 }
 
 # Minimum signals that must agree before emitting a trade proposal
-_MIN_AGREEMENT    = 3
+_MIN_AGREEMENT    = 1
 # Minimum weighted confidence to emit a signal
 _MIN_CONFIDENCE   = 0.52
 
@@ -122,15 +122,17 @@ class TitanAgent(BaseAgent):
         logger.info("TITAN initialised — min_confidence=%.2f  min_agreement=%d",
                     self._min_confidence, self._min_agreement)
 
-    # ── Public API ────────────────────────────────────────────────────────────
-
     def generate_signals(
         self,
         market_data: Dict[str, Any],
-        regime: str = 'NEUTRAL',
+        regime: str,
         nexus_regime: Optional[str] = None,
         hermes_scores: Optional[Dict[str, float]] = None,
+        sigma_scores: Optional[Dict[str, float]] = None,
+        atlas_scores: Optional[Dict[str, float]] = None,
+        timeframe: str = "15m",
     ) -> List[Dict[str, Any]]:
+
         """
         Run all 45 strategies over market_data and return actionable signals.
 
@@ -138,7 +140,9 @@ class TitanAgent(BaseAgent):
             market_data  : {symbol: indicator_dict}
             regime       : regime string from NEXUS
             nexus_regime : optional override (same as regime usually)
-            hermes_scores: optional {symbol: sentiment_score} from HERMES
+            hermes_scores: {symbol: sentiment_score} from HERMES
+            sigma_scores : {symbol: momentum_score} from SIGMA
+            atlas_scores : {symbol: sector_strength} from ATLAS
 
         Returns:
             List of signal dicts, each ready for GUARDIAN → MERCURY pipeline.
@@ -160,11 +164,18 @@ class TitanAgent(BaseAgent):
         weights = _REGIME_WEIGHTS.get(effective_regime, _REGIME_WEIGHTS['NEUTRAL'])
         signals: List[Dict[str, Any]] = []
 
+        # Dynamic Thresholds based on Market Regime
+        dyn_conf, dyn_aggr = self._get_dynamic_thresholds(effective_regime)
+
         for symbol, ind_data in market_data.items():
             try:
                 sig = self._process_symbol(
                     symbol, ind_data, effective_regime, weights,
                     hermes_scores.get(symbol, 0.0) if hermes_scores else 0.0,
+                    sigma_scores.get(symbol, 0.5) if sigma_scores else 0.5,
+                    atlas_scores.get(symbol, 0.5) if atlas_scores else 0.5,
+                    dyn_conf, dyn_aggr,
+                    timeframe,
                 )
                 if sig:
                     signals.append(sig)
@@ -182,14 +193,21 @@ class TitanAgent(BaseAgent):
                 'symbols':  [s['symbol'] for s in signals],
                 'timestamp': datetime.now().isoformat(),
             })
-            logger.info("TITAN: %d signals emitted for %d symbols (%s regime)",
-                        len(signals), len(market_data), effective_regime)
+            logger.info(f"TITAN: {len(signals)} signals emitted for {len(market_data)} symbols ({effective_regime} regime; conf={dyn_conf:.2f} aggr={dyn_aggr})")
         else:
-            logger.info("TITAN: no signals passed confidence threshold (%s regime)", effective_regime)
+            logger.info(f"TITAN: no signals passed thresholds (regime={effective_regime} conf={dyn_conf:.2f} aggr={dyn_aggr})")
 
         return signals
 
-    # ── Internal ──────────────────────────────────────────────────────────────
+    def _get_dynamic_thresholds(self, regime: str) -> Tuple[float, int]:
+        """Logic: TRENDING -> strict; SIDEWAYS -> loose; VOLATILE -> moderate."""
+        if regime == "TRENDING":
+            return 0.60, 3
+        elif regime == "SIDEWAYS":
+            return 0.45, 1
+        elif regime == "VOLATILE":
+            return 0.50, 2
+        return self._min_confidence, self._min_agreement
 
     def _process_symbol(
         self,
@@ -198,6 +216,11 @@ class TitanAgent(BaseAgent):
         regime: str,
         weights: Dict[str, float],
         sentiment: float,
+        momentum: float,
+        sector_strength: float,
+        min_conf: float,
+        min_aggr: int,
+        timeframe: str = "15m",
     ) -> Optional[Dict[str, Any]]:
         """Run strategies for one symbol and aggregate into a single signal."""
 
@@ -209,7 +232,7 @@ class TitanAgent(BaseAgent):
         if self._engine is not None:
             df = self._build_df(ind_data)
             if df is not None and len(df) >= 5:
-                raw_signals = self._engine.compute_all(df, symbol, regime)
+                raw_signals = self._engine.compute_all(df, symbol, regime, timeframe)
             else:
                 raw_signals = []
         else:
@@ -253,11 +276,15 @@ class TitanAgent(BaseAgent):
         buy_conf  = buy_score  / total_w
         sell_conf = sell_score / total_w
 
-        # ── Sentiment bias from HERMES ────────────────────────────────────────
-        # Positive sentiment boosts buys, negative boosts sells
-        sentiment_boost = sentiment * 0.05   # max ±5%
-        buy_conf  = min(1.0, buy_conf  + max(0, sentiment_boost))
-        sell_conf = min(1.0, sell_conf - min(0, sentiment_boost))
+        # ── Signal Boosting Logic ─────────────────────────────────────────────
+        # conviction_score boosts the signal's confidence
+        conviction = 0.0
+        if sentiment > 0.3:       conviction += 0.05   # HERMES Bullish
+        if momentum > 0.7:        conviction += 0.05   # SIGMA Momentum
+        if sector_strength > 0.6: conviction += 0.05   # ATLAS Sector
+        
+        buy_conf  = min(1.0, buy_conf + conviction)
+        sell_conf = min(1.0, sell_conf + conviction)
 
         # ── Agreement check ───────────────────────────────────────────────────
         buy_count  = sum(1 for s in raw_signals if getattr(s, 'signal', 0) > 0
@@ -266,13 +293,13 @@ class TitanAgent(BaseAgent):
                          and getattr(s, 'confidence', 0) >= 0.5)
 
         if buy_conf >= sell_conf:
-            if buy_conf  < self._min_confidence: return None
-            if buy_count  < self._min_agreement:  return None
+            if buy_conf  < min_conf: return None
+            if buy_count  < min_aggr:  return None
             action = 'BUY'
             confidence = buy_conf
         else:
-            if sell_conf < self._min_confidence: return None
-            if sell_count < self._min_agreement:  return None
+            if sell_conf < min_conf: return None
+            if sell_count < min_aggr:  return None
             action = 'SELL'
             confidence = sell_conf
 
@@ -313,7 +340,7 @@ class TitanAgent(BaseAgent):
             'regime':         regime,
             'sentiment':      round(sentiment, 3),
             'source':         'TITAN',
-            'trade_type':     'INTRADAY' if regime in ('VOLATILE',) else 'SWING',
+            'trade_type':     'INTRADAY' if timeframe == '5m' else 'SWING',
             'timestamp':      datetime.now().strftime('%H:%M:%S'),
         }
 

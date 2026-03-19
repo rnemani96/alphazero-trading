@@ -162,106 +162,19 @@ FEATURE_NAMES = [
     "rolling_vol_5d", "rolling_vol_10d",
     "sector_rot_strength", "spx_prev_ret",
     "usdinr_change", "news_sentiment", "event_flag",
+    "pc_ratio", "max_pain_diff", "uoa_flag",
 ]
 
-# Sector assignment by keyword (for sector_disp feature)
-_SECTOR_KW: Dict[str, List[str]] = {
-    "BANKING":  ["BANK","HDFC","ICICI","AXIS","KOTAK","INDUSIND","FEDERAL",
-                 "IDFC","BANDHAN","PNB","CANARA","BARODA","UNION"],
-    "IT":       ["TCS","INFY","WIPRO","HCLT","TECHM","LTIM","MPHASIS",
-                 "COFORGE","OFSS","KPIT","TATAELX","PERSISTENT"],
-    "PHARMA":   ["PHARMA","CIPLA","DRREDDY","DIVISLAB","SUNPHARMA","APOLLOHOSP",
-                 "BIOCON","ALKEM","IPCALAB","TORNTPHARM","AUROPHARMA"],
-    "AUTO":     ["MARUTI","TATAMOTORS","M&M","BAJAJ","EICHER","HERO",
-                 "TVS","ASHOK","ESCORTS"],
-    "ENERGY":   ["NTPC","POWER","TATAPOWER","ADANIGREEN","ONGC","IOC",
-                 "BPCL","GAIL","PFC","REC","OIL"],
-    "METALS":   ["TATASTEEL","HINDALCO","JSWSTEEL","VEDL","HINDZINC",
-                 "NATIONALUM","NMDC","SAIL"],
-    "FMCG":     ["HINDUNILVR","ITC","NESTLEIND","BRITANNIA","DABUR",
-                 "MARICO","GODREJCP","COLPAL","TATACONSUM"],
-    "FINANCE":  ["BAJFINANCE","BAJAJFINSV","CHOLAFIN","MUTHOOTFIN",
-                 "LICSGFIN","MANAPPURAM","CANFINHOME"],
-    "INFRA":    ["LT","SIEMENS","ABB","BHEL","CUMMINSIND","THERMAX",
-                 "VOLTAS","HAVELLS","POLYCAB"],
-}
-
-
-def _sector(sym: str) -> str:
-    su = sym.upper()
-    for sec, keywords in _SECTOR_KW.items():
-        if any(k in su for k in keywords):
-            return sec
-    return "OTHER"
-
-
 # ===========================================================================
-# 1. FETCH NIFTY 500 UNIVERSE (dynamic, live from NSE)
+# 1. FETCH NIFTY 500 UNIVERSE (dynamic, centralized)
 # ===========================================================================
+
+from src.data.universe import get_nifty500_symbols, get_sector
 
 def fetch_universe() -> List[str]:
-    """
-    Download live NIFTY 500 constituents from NSE CSV.
-    Falls back to cached JSON, then to a curated 120-stock list.
-    """
-    try:
-        import requests
-        url = "https://archives.nseindia.com/content/indices/ind_nifty500list.csv"
-        r   = requests.get(url, timeout=20,
-                           headers={"User-Agent": "Mozilla/5.0 AlphaZero/4.0",
-                                    "Referer": "https://www.nseindia.com"})
-        if r.status_code == 200:
-            import io, csv
-            reader  = csv.DictReader(io.StringIO(r.text))
-            symbols = [
-                (row.get("Symbol") or row.get("SYMBOL") or "").strip()
-                for row in reader
-            ]
-            symbols = [s for s in symbols if s]
-            if len(symbols) >= 100:
-                logger.info("NSE NIFTY500 universe: %d symbols", len(symbols))
-                with open(UNIVERSE_F, "w") as f:
-                    json.dump(symbols, f)
-                return symbols
-    except Exception as exc:
-        logger.warning("NSE universe fetch failed: %s", exc)
+    """Download live NIFTY 500 constituents using centralized data module."""
+    return get_nifty500_symbols(use_cache=True)
 
-    # Try cached
-    if os.path.exists(UNIVERSE_F):
-        with open(UNIVERSE_F) as f:
-            syms = json.load(f)
-        if len(syms) >= 50:
-            logger.info("Using cached universe: %d symbols", len(syms))
-            return syms
-
-    # Hardcoded fallback (120 most liquid NSE stocks)
-    fallback = [
-        "HDFCBANK","ICICIBANK","SBIN","AXISBANK","KOTAKBANK","INDUSINDBK",
-        "FEDERALBNK","IDFCFIRSTB","BANDHANBNK","PNB","BANKBARODA","CANBK",
-        "TCS","INFY","WIPRO","HCLTECH","TECHM","LTIM","MPHASIS","COFORGE",
-        "PERSISTENT","OFSS","KPITTECH","TATAELXSI",
-        "RELIANCE","ONGC","IOC","BPCL","GAIL","OIL","MGL","IGL",
-        "MARUTI","TATAMOTORS","M&M","BAJAJ-AUTO","EICHERMOT","HEROMOTOCO",
-        "TVSMOTOR","ASHOKLEY","ESCORTS",
-        "SUNPHARMA","DRREDDY","CIPLA","DIVISLAB","APOLLOHOSP","AUROPHARMA",
-        "TORNTPHARM","BIOCON","ALKEM","IPCALAB",
-        "HINDUNILVR","ITC","NESTLEIND","BRITANNIA","DABUR","MARICO","GODREJCP",
-        "COLPAL","TATACONSUM","VBL",
-        "BAJFINANCE","BAJAJFINSV","CHOLAFIN","MUTHOOTFIN","LICSGFIN","PNBHOUSING",
-        "MANAPPURAM","CANFINHOME","AAVAS","M&MFIN",
-        "TATASTEEL","HINDALCO","JSWSTEEL","VEDL","HINDZINC","NATIONALUM",
-        "NMDC","SAIL",
-        "LT","SIEMENS","ABB","BHEL","CUMMINSIND","THERMAX","VOLTAS",
-        "HAVELLS","POLYCAB","KEI",
-        "ULTRACEMCO","GRASIM","AMBUJACEM","ACC","SHREECEM","DALMIACEMENTB",
-        "NTPC","POWERGRID","TATAPOWER","ADANIGREEN","TORNTPOWER","CESC","PFC","REC",
-        "BHARTIARTL","IDEA","INDUSTOWER",
-        "TITAN","DMART","ZOMATO","NYKAA","INDHOTEL","JUBLFOOD",
-        "DLF","GODREJPROP","OBEROIRLTY","PHOENIXLTD",
-        "MAXHEALTH","FORTIS","ASTER","METROPOLIS","LALPATHLAB",
-    ]
-    logger.warning("Using fallback universe: %d symbols", len(fallback))
-    return fallback
 
 
 # ===========================================================================
@@ -562,7 +475,7 @@ def build_causal_features(prices: "pd.DataFrame",
     adv_decl = (daily_ret > 0).sum(axis=1) / (daily_ret < 0).sum(axis=1).clip(lower=1)
     
     # Sector Variance (Day level)
-    sector_map = {sym: _sector(sym) for sym in prices.columns.levels[0]}
+    sector_map = {sym: get_sector(sym) for sym in prices.columns.levels[0]}
     
     # 2. Stock-level Features
     opens = prices.xs("open", axis=1, level=1)
@@ -634,6 +547,9 @@ def build_causal_features(prices: "pd.DataFrame",
                 "usdinr_change":  float(usd_chg.get(dt, 0)),
                 "news_sentiment": float(sentiment_base.get(dt, 0)),
                 "event_flag":     int(event_s.get(dt, 0)),
+                "pc_ratio":       1.0,  # Placeholder for history
+                "max_pain_diff":  0.0,
+                "uoa_flag":       0,
             }
             
             # Sector Rotation Strength for the day

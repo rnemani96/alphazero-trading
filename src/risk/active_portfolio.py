@@ -169,7 +169,8 @@ class ActivePortfolio:
         if trade_type == "INTRADAY":
             return True, "Intraday always allowed"
         with self._lock:
-            if symbol in self.open_positions:
+            key = f"{symbol}:{trade_type}"
+            if key in self.open_positions:
                 pos    = self.open_positions[symbol]
                 target = pos.get("target", 0)
                 curr   = pos.get("current_price", pos.get("entry_price", 0))
@@ -232,7 +233,8 @@ class ActivePortfolio:
                 "confidence":    round(confidence, 3),
                 "invested_amount": round(entry_price * quantity, 2),
             }
-            self._state["positions"][symbol] = pos
+            key = f"{symbol}:{trade_type}"
+            self._state["positions"][key] = pos
             self._save()
             logger.info(
                 "[ActivePortfolio] OPENED %s × %d @ ₹%.2f | Target ₹%.2f | SL ₹%.2f | %s",
@@ -249,7 +251,8 @@ class ActivePortfolio:
         """
         closed_this_tick: List[Dict] = []
         with self._lock:
-            for sym, pos in list(self.positions.items()):
+            for key, pos in list(self.positions.items()):
+                sym = pos.get("symbol")
                 if pos.get("status") != PositionStatus.OPEN:
                     continue
                 price = price_map.get(sym)
@@ -269,14 +272,28 @@ class ActivePortfolio:
                 pos["unrealised_pnl"] = round(pnl, 2)
                 pos["pnl_pct"]        = round(pnl_pct, 2)
 
-                # Update trailing high
-                if price > pos.get("highest_price", price):
+                # Dynamic Trailing Logic (P1 #5)
+                highest = pos.get("highest_price", price)
+                if price > highest:
                     pos["highest_price"] = round(price, 2)
-                    # Trailing stop: 3% below highest
-                    trail_sl = round(price * 0.97, 2)
-                    if trail_sl > pos["trailing_stop"]:
-                        pos["trailing_stop"] = trail_sl
-                        logger.debug("[ActivePortfolio] %s trailing stop raised to ₹%.2f", sym, trail_sl)
+                    highest = price
+
+                # Rule A: Break-even / Profit Lock (Move SL to +1% if price hits +2%)
+                if pnl_pct >= 2.0:
+                    lock_in_sl = ep * 1.01
+                    if lock_in_sl > pos["stop_loss"]:
+                        pos["stop_loss"] = round(lock_in_sl, 2)
+                        logger.info("[ActivePortfolio] %s SL moved to lock 1%% profit (₹%.2f)", sym, lock_in_sl)
+
+                # Rule B: ATR-based trailing from highest price
+                atr = pos.get("atr", ep * 0.02)
+                # Wider trailer for volatile stocks (2.5x ATR), floor at 3%
+                trail_buffer = max(ep * 0.03, 2.5 * atr)
+                trail_sl = round(highest - trail_buffer, 2)
+
+                if trail_sl > pos.get("trailing_stop", 0):
+                    pos["trailing_stop"] = trail_sl
+                    logger.debug("[ActivePortfolio] %s trailing stop raised to ₹%.2f", sym, trail_sl)
 
                 # Update days open
                 try:
@@ -309,7 +326,7 @@ class ActivePortfolio:
                     closed_this_tick.append(pos.copy())
                     # Move to history
                     self._state["history"].append(pos.copy())
-                    logger.info("[ActivePortfolio] CLOSED %s — %s | %s", sym, close_status, reason)
+                    logger.info("[ActivePortfolio] CLOSED %s (%s) — %s | %s", sym, pos.get('trade_type'), close_status, reason)
 
             self._save()
         return closed_this_tick
@@ -317,7 +334,9 @@ class ActivePortfolio:
     def force_close(self, symbol: str, current_price: float, reason: str = "Manual override") -> Optional[Dict]:
         """Force-close a position (manual override / risk kill-switch)."""
         with self._lock:
-            pos = self.positions.get(symbol)
+            # Try to find exactly matched trade_type if possible, or any open for that symbol
+            key = next((k for k, p in self.open_positions.items() if p['symbol'] == symbol), None)
+            pos = self.positions.get(key)
             if not pos or pos.get("status") != PositionStatus.OPEN:
                 logger.warning("[ActivePortfolio] %s not found in open positions.", symbol)
                 return None
@@ -337,10 +356,11 @@ class ActivePortfolio:
             logger.info("[ActivePortfolio] FORCE CLOSED %s @ ₹%.2f — %s", symbol, current_price, reason)
             return pos
 
-    def adjust_target(self, symbol: str, new_target: float):
+    def adjust_target(self, symbol: str, new_target: float, trade_type: str = "SWING"):
         """Manually adjust target price for an open position."""
         with self._lock:
-            pos = self.positions.get(symbol)
+            key = f"{symbol}:{trade_type}"
+            pos = self.positions.get(key)
             if pos and pos.get("status") == PositionStatus.OPEN:
                 old = pos["target"]
                 pos["target"]     = round(new_target, 2)
@@ -348,10 +368,11 @@ class ActivePortfolio:
                 self._save()
                 logger.info("[ActivePortfolio] %s target adjusted: ₹%.2f → ₹%.2f", symbol, old, new_target)
 
-    def adjust_stop_loss(self, symbol: str, new_sl: float):
+    def adjust_stop_loss(self, symbol: str, new_sl: float, trade_type: str = "SWING"):
         """Manually adjust stop-loss for an open position."""
         with self._lock:
-            pos = self.positions.get(symbol)
+            key = f"{symbol}:{trade_type}"
+            pos = self.positions.get(key)
             if pos and pos.get("status") == PositionStatus.OPEN:
                 old = pos["stop_loss"]
                 pos["stop_loss"] = round(new_sl, 2)
@@ -402,16 +423,16 @@ class ActivePortfolio:
                 "near_sl":          [p["symbol"] for p in near_sl],
                 "history":          hist[-20:],          # last 20 for dashboard
                 "last_updated":     self._state.get("last_updated", ""),
-                "blocked_symbols":  list(self.open_positions.keys()),
+                "blocked_symbols":  [p["symbol"] for p in open_pos if p.get("trade_type") != "INTRADAY"],
             }
 
-    def get_position(self, symbol: str) -> Optional[Dict]:
-        """Get current position data for a specific symbol."""
-        return self.positions.get(symbol)
+    def get_position(self, symbol: str, trade_type: str = "SWING") -> Optional[Dict]:
+        """Get current position data for a specific symbol and type."""
+        return self.positions.get(f"{symbol}:{trade_type}")
 
-    def is_invested(self, symbol: str) -> bool:
-        """Quick check if a symbol has an active open position."""
-        return symbol in self.open_positions
+    def is_invested(self, symbol: str, trade_type: str = "SWING") -> bool:
+        """Quick check if a symbol has an active open position of specified type."""
+        return f"{symbol}:{trade_type}" in self.open_positions
 
     def get_progress(self, symbol: str) -> Optional[Dict]:
         """

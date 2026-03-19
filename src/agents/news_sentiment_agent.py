@@ -78,50 +78,95 @@ RSS_SOURCES = [
 def _mean(vals): return sum(vals)/len(vals) if vals else 0.0
 
 
+from src.data.sentiment.ingestor import NewsIngestor
+from src.data.sentiment.processor import SentimentProcessor
+from src.data.sentiment.storage import SentimentStorage, SentimentAggregator
+
 class NewsSentimentAgent(BaseAgent):
 
     def __init__(self, event_bus, config: Dict):
         super().__init__(event_bus=event_bus, config=config, name="HERMES")
         self._lock  = threading.Lock()
+        
+        # Initialise Pipeline Components
+        self.ingestor = NewsIngestor()
+        self.processor = SentimentProcessor(batch_size=config.get('FINBERT_BATCH_SIZE', 32))
+        self.storage = SentimentStorage()
+        self.aggregator = SentimentAggregator(self.storage)
+        
         self._cache: Optional[Dict] = None
         self._cache_ts: Optional[datetime] = None
         self._ttl   = config.get('HERMES_CACHE_TTL', 900)
+        
         self._headlines_processed = 0
-        self._api_calls = 0
-        logger.info(f"HERMES Agent initialised — {'FinBERT' if _FINBERT else 'Keyword'} scoring, {'yfinance' if _YF else 'RSS only'}")
+        logger.info(f"HERMES Agent initialised with Production Sentiment Pipeline.")
 
     def get_sentiment(self, symbols: List[str]) -> Dict[str, Any]:
+        """
+        Main entry point for sentiment analysis.
+        Ingests, processes, stores, and aggregates news signals.
+        """
         with self._lock:
             if self._cache and self._cache_ts:
                 if (datetime.now() - self._cache_ts).total_seconds() < self._ttl:
                     return dict(self._cache)
 
-        headlines = self._fetch_headlines(symbols)
-        scored    = self._score_headlines(headlines, symbols)
+        try:
+            # 1. Ingest News
+            raw_news = self.ingestor.ingest_all(symbols)
+            
+            # 2. Process with FinBERT (Batch)
+            processed_news = self.processor.process_batch(raw_news)
+            
+            # 3. Store for persistence and aggregation
+            self.storage.save_headlines(processed_news)
+            
+            # 4. Aggregate Metrics
+            metrics = self.aggregator.compute_daily_metrics()
+            
+            # 5. Extract per-symbol scores for backward compatibility
+            sym_scores = {s: 0.0 for s in symbols}
+            for n in processed_news:
+                s = n.get('symbol')
+                if s in sym_scores and 'sentiment_score' in n:
+                    # Very simple average for symbols in this current batch
+                    sym_scores[s] = (sym_scores[s] + n['sentiment_score']) / 2
+            
+            overall = 'POSITIVE' if metrics.get('sentiment_score', 0.0) >= 0.15 else 'NEGATIVE' if metrics.get('sentiment_score', 0.0) <= -0.15 else 'NEUTRAL'
+            
+            result = {
+                'overall':       overall,
+                'overall_score': metrics.get('sentiment_score', 0.0),
+                'score':         metrics.get('sentiment_score', 0.0), # deprecated alias
+                'momentum':      metrics.get('sentiment_momentum', 0.0),
+                'volatility':    metrics.get('sentiment_volatility', 0.0),
+                'volume':        metrics.get('news_volume', 0),
+                'extreme_flag':  metrics.get('extreme_sentiment_flag', 0),
+                'scores':        sym_scores,
+                'metrics':       metrics,
+                'timestamp':     datetime.now().isoformat(),
+            }
 
-        sym_scores = {s: [] for s in symbols}
-        for h in scored:
-            sym = h.get('symbol', '')
-            if sym in sym_scores:
-                sym_scores[sym].append(h['score'])
-        per_sym = {s: (_mean(v) if v else 0.0) for s, v in sym_scores.items()}
-        overall_score = _mean(list(per_sym.values()))
+            
+            with self._lock:
+                self._cache = result
+                self._cache_ts = datetime.now()
+                self._headlines_processed += len(processed_news)
 
-        overall = 'POSITIVE' if overall_score >= 0.15 else 'NEGATIVE' if overall_score <= -0.15 else 'NEUTRAL'
+            logger.info(f"HERMES → score={result['overall_score']:+.3f} | mom={result['momentum']:+.3f} | vol={result['volume']} | regime_hint={metrics.get('regime_hint', 'NEUTRAL')}")
+            return result
 
-        result = {
-            'overall':   overall, 'score': round(overall_score, 3),
-            'scores':    {s: round(v, 3) for s, v in per_sym.items()},
-            'headlines': scored[:30],
-            'timestamp': datetime.now().isoformat(),
-        }
-        with self._lock:
-            self._cache = result; self._cache_ts = datetime.now()
-
-        pos = len([h for h in scored if h.get('score',0) > 0])
-        neg = len([h for h in scored if h.get('score',0) < 0])
-        logger.info(f"HERMES → overall={overall} (score={overall_score:+.3f}) | {len(scored)} headlines | {pos} pos / {neg} neg")
-        return result
+        except Exception as e:
+            logger.error(f"HERMES full pipeline error: {e}")
+            return {
+                'overall': 'NEUTRAL',
+                'overall_score': 0.0,
+                'score': 0.0,
+                'momentum': 0.0,
+                'volume': 0,
+                'scores': {s: 0.0 for s in symbols},
+                'error': str(e)
+            }
 
     def get_symbol_sentiment(self, symbol: str) -> float:
         with self._lock:
@@ -129,91 +174,16 @@ class NewsSentimentAgent(BaseAgent):
                 return self._cache.get('scores', {}).get(symbol, 0.0)
         return 0.0
 
-    def _fetch_headlines(self, symbols: List[str]) -> List[Dict]:
-        all_headlines = []
-
-        # yfinance news — per symbol (best quality, actual stock-specific news)
-        if _YF:
-            for sym in symbols[:15]:
-                try:
-                    ticker = yf.Ticker(f"{sym}.NS")
-                    # Support both old (.news) and new (.get_news()) yfinance API
-                    try:
-                        news = ticker.get_news() or []
-                    except AttributeError:
-                        news = getattr(ticker, 'news', []) or []
-                    self._api_calls += 1
-                    for item in news[:6]:
-                        # Handle both old and new yfinance news schema
-                        title = (item.get('title') or
-                                 item.get('content', {}).get('title') or '')
-                        publisher = (item.get('publisher') or
-                                     item.get('source', {}).get('name') or 'yfinance')
-                        if title:
-                            all_headlines.append({'title': title, 'source': publisher, 'symbol': sym})
-                except Exception:
-                    pass
-
-        # RSS feeds — market-wide news
-        for url, source, limit in RSS_SOURCES:
-            all_headlines.extend(self._fetch_rss(url, source, limit))
-
-        self._headlines_processed += len(all_headlines)
-        return all_headlines
-
-    def _fetch_rss(self, url: str, source: str, limit: int = 10) -> List[Dict]:
-        if not _REQ:
-            return []
-        try:
-            r = requests.get(url, timeout=6, headers={'User-Agent': 'Mozilla/5.0 AlphaZero/1.0'})
-            if r.status_code != 200:
-                return []
-            self._api_calls += 1
-            titles = re.findall(r'<title><!\[CDATA\[(.*?)\]\]></title>', r.text, re.DOTALL)
-            if not titles:
-                titles = re.findall(r'<title>(.*?)</title>', r.text)
-            results = []
-            for t in titles[1:limit+1]:
-                t = re.sub(r'<[^>]+>', '', t).strip()
-                if t and len(t) > 10:
-                    results.append({'title': t, 'source': source, 'symbol': ''})
-            return results
-        except Exception:
-            return []
-
-    def _score_headlines(self, headlines: List[Dict], symbols: List[str]) -> List[Dict]:
-        sym_upper = {s.upper(): s for s in symbols}
-        scored = []
-        for h in headlines:
-            title = h.get('title', '')
-            if not title:
-                continue
-            sym = h.get('symbol', '')
-            if not sym:
-                tu = title.upper()
-                for su, so in sym_upper.items():
-                    if su in tu:
-                        sym = so; break
-            score = self._finbert_score(title) if (_FINBERT and _FINBERT_PIPELINE) else self._keyword_score(title)
-            scored.append({**h, 'symbol': sym, 'score': score})
-        return scored
-
-    def _finbert_score(self, text: str) -> float:
-        try:
-            r = _FINBERT_PIPELINE(text)[0]
-            c = r['score']
-            return c if r['label'].lower()=='positive' else (-c if r['label'].lower()=='negative' else 0.0)
-        except Exception:
-            return self._keyword_score(text)
-
-    def _keyword_score(self, text: str) -> float:
-        tl = text.lower()
-        s  = sum(w for k, w in _POS.items() if k in tl)
-        s += sum(w for k, w in _NEG.items() if k in tl)
-        return max(-1.0, min(1.0, s / 5.0))
-
     def get_stats(self) -> Dict[str, Any]:
         with self._lock:
-            overall = self._cache.get('overall','NEUTRAL') if self._cache else 'NEUTRAL'
-        return {'name':'HERMES','active':self.is_active,'overall':overall,
-                'headlines_processed':self._headlines_processed,'finbert_active':_FINBERT}
+            score = self._cache.get('score', 0.0) if self._cache else 0.0
+            vol = self._cache.get('volume', 0) if self._cache else 0
+        return {
+            'name': 'HERMES',
+            'active': self.is_active,
+            'current_score': score,
+            'headlines_total': self._headlines_processed,
+            'last_volume': vol
+        }
+
+

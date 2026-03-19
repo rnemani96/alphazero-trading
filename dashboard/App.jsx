@@ -203,32 +203,10 @@ function titanSignals(candles, regime) {
 }
 
 // ─── NSE Universe ────────────────────────────────────────────────────────────
-const NSE_UNIVERSE=[
-  {s:"RELIANCE",n:"Reliance Industries",sec:"Energy",base:2847},
-  {s:"TCS",n:"Tata Consultancy",sec:"IT",base:3642},
-  {s:"HDFCBANK",n:"HDFC Bank",sec:"Banking",base:1678},
-  {s:"INFY",n:"Infosys",sec:"IT",base:1482},
-  {s:"ICICIBANK",n:"ICICI Bank",sec:"Banking",base:1124},
-  {s:"SBIN",n:"State Bank",sec:"Banking",base:789},
-  {s:"WIPRO",n:"Wipro",sec:"IT",base:472},
-  {s:"TATAMOTORS",n:"Tata Motors",sec:"Auto",base:942},
-  {s:"SUNPHARMA",n:"Sun Pharma",sec:"Pharma",base:1584},
-  {s:"MARUTI",n:"Maruti Suzuki",sec:"Auto",base:11240},
-  {s:"BAJFINANCE",n:"Bajaj Finance",sec:"Finance",base:6842},
-  {s:"AXISBANK",n:"Axis Bank",sec:"Banking",base:1156},
-  {s:"KOTAKBANK",n:"Kotak Mahindra",sec:"Banking",base:1842},
-  {s:"HINDUNILVR",n:"Hindustan Unilever",sec:"FMCG",base:2432},
-  {s:"ASIANPAINT",n:"Asian Paints",sec:"Consumer",base:2742},
-  {s:"TITAN",n:"Titan Company",sec:"Consumer",base:3284},
-  {s:"NTPC",n:"NTPC",sec:"Energy",base:368},
-  {s:"POWERGRID",n:"Power Grid",sec:"Energy",base:302},
-  {s:"LTIM",n:"LTIMindtree",sec:"IT",base:5284},
-  {s:"ULTRACEMCO",n:"UltraTech Cement",sec:"Cement",base:10842},
-  {s:"ONGC",n:"ONGC",sec:"Energy",base:267},
-  {s:"BHARTIARTL",n:"Bharti Airtel",sec:"Telecom",base:1642},
-  {s:"HCLTECH",n:"HCL Technologies",sec:"IT",base:1372},
-  {s:"JSWSTEEL",n:"JSW Steel",sec:"Metal",base:842},
-  {s:"TATASTEEL",n:"Tata Steel",sec:"Metal",base:164},
+// Demo fallback universe — only used if backend API fails
+const DEMO_UNIVERSE=[
+  {s:"BHARTIHEXA",n:"Bharti Hexacom",sec:"Telecom",base:1100},
+  {s:"ACMESOLAR",n:"ACME Solar",sec:"Energy",base:250},
 ];
 
 // ─── Demo news generator ──────────────────────────────────────────────────
@@ -394,7 +372,11 @@ function TabBar({active,setActive,counts}) {
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: OVERVIEW
 // ═══════════════════════════════════════════════════════════════════════════
-function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news,onStock}) {
+function OverviewTab({picks:rawPicks,positions:rawPositions,allSigs:rawSigs,evalStats,indices,candleCache,news,onStock}) {
+  const positions = Array.isArray(rawPositions) ? rawPositions : Object.values(rawPositions || {});
+  const picks = Array.isArray(rawPicks) ? rawPicks : Object.values(rawPicks || {});
+  const allSigs = Array.isArray(rawSigs) ? rawSigs : Object.values(rawSigs || {});
+
   const open=positions.filter(p=>p.status==="OPEN");
   const netPnl=open.reduce((s,p)=>s+calcNetPnl(p).netPnl,0);
   const grossPnl=open.reduce((s,p)=>s+calcNetPnl(p).grossPnl,0);
@@ -518,10 +500,11 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: POSITIONS — with inner sub-tabs (Open · Progress · History)
 // ═══════════════════════════════════════════════════════════════════════════
-function PositionsTab({positions,mode,apData={}}) {
+function PositionsTab({positions:rawPositions,mode,apData={}}) {
   const [showCharges,setShowCharges]=useState(null);
   const [innerTab,setInnerTab]=useState("open");
 
+  const positions = Array.isArray(rawPositions) ? rawPositions : Object.values(rawPositions || {});
   const open=positions.filter(p=>p.status==="OPEN");
   const closed=positions.filter(p=>p.status==="CLOSED").slice(-10);
 
@@ -1153,7 +1136,7 @@ function EvaluationTab({evalStats,evalHistory,agentScores}) {
           <div style={{padding:"12px 18px",borderBottom:`1px solid ${G.border}`}}>
             <span style={{color:G.text,fontSize:13,fontWeight:600}}>Agent Leaderboard</span>
           </div>
-          {agentScores.length===0
+          {Array.isArray(agentScores) && agentScores.length===0
             ?<Empty icon="🏆" title="No agent scores yet" sub="Scores appear after 5+ evaluated signals."/>
             :<table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead><tr style={{background:G.bg}}>
@@ -1656,6 +1639,7 @@ export default function App() {
   const [news,setNews]             = useState([]);
   const [events,setEvents]         = useState([]);
   const [selectedStock,setSelected]= useState(null);
+  const [ NSE_UNIVERSE, setNseUniverse ] = useState([]);
   const [systemState,setSysState]  = useState({status:"RUNNING",mode:"PAPER",iteration:0,uptime_s:0});
 
   // ── NEW: Active Portfolio state ──────────────────────────────────────────
@@ -1769,7 +1753,7 @@ export default function App() {
         }
       }catch{}
     }
-    const st=NSE_UNIVERSE.find(x=>x.s===symbol);
+    const st=NSE_UNIVERSE.find(x=>x.s===symbol) || DEMO_UNIVERSE.find(x=>x.s===symbol);
     const base=st?.base??1000;
     const syn=[];
     let px=base*(1+(Math.random()-.5)*.05);
@@ -1781,12 +1765,13 @@ export default function App() {
     }
     setCaches(p=>({...p,[symbol]:syn}));
     return syn;
-  },[]);
+  },[NSE_UNIVERSE]);
 
   // ── APEX stock selection ───────────────────────────────────────────────
   const runSelect=useCallback(async()=>{
+    if(connRef.current==="live") return;
     const cr=rRef.current;
-    const results=await Promise.all(NSE_UNIVERSE.map(async(st)=>{
+    const results=await Promise.all(DEMO_UNIVERSE.map(async(st)=>{
       const cdl=await getCandles(st.s);
       const ind=cdl.length>=15?indicators(cdl):null;
       const Li=ind?ind.n-1:-1;
@@ -1824,7 +1809,7 @@ export default function App() {
       return cdl?titanSignals(cdl,cr).map(s=>({...s,symbol:st.s,regime:cr,ts:new Date().toLocaleTimeString("en-IN",{hour12:false})})):[];
     });
     setAllSigs(sigs);
-  },[getCandles]);
+  },[getCandles, NSE_UNIVERSE]);
 
   useEffect(()=>{
     runSelect();
@@ -1871,6 +1856,21 @@ export default function App() {
     };
     f();const t=setInterval(f,30000);return()=>clearInterval(t);
   },[connStatus]);
+
+  // ── Fetch NSE_UNIVERSE from backend ────────────────────────────────────
+  useEffect(()=>{
+    const loadUniverse=async()=>{
+      try{
+        const r=await fetch(`${BACKEND}/api/universe`);
+        const d=await r.json();
+        if(Array.isArray(d)&&d.length>0) setNseUniverse(d);
+        else throw new Error("Invalid universe format");
+      }catch(e){
+        console.warn("Using local universe fallback:",e);
+      }
+    };
+    loadUniverse();
+  },[]);
 
   // ── Net P&L ───────────────────────────────────────────────────────────
   const openPositions=positions.filter(p=>p.status==="OPEN");
@@ -1924,7 +1924,7 @@ export default function App() {
         </div>
         <div style={{display:"flex",gap:14,alignItems:"center"}}>
           <span style={{color:G.textMut,fontSize:10,fontFamily:"monospace"}}>
-            {NSE_UNIVERSE.length} stocks · {AGENT_LIST.length} agents · NSE/BSE
+            {(connStatus==="live"?picks.length:DEMO_UNIVERSE.length)} stocks · {AGENT_LIST.length} agents · NSE/BSE
           </span>
           <div style={{width:1,height:12,background:G.border}}/>
           <span style={{color:G.textMut,fontSize:10}}>

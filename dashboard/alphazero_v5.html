@@ -372,32 +372,10 @@ function titanSignals(candles, regime) {
 }
 
 // ─── NSE Universe ────────────────────────────────────────────────────────────
-const NSE_UNIVERSE=[
-  {s:"RELIANCE",n:"Reliance Industries",sec:"Energy",base:2847},
-  {s:"TCS",n:"Tata Consultancy",sec:"IT",base:3642},
-  {s:"HDFCBANK",n:"HDFC Bank",sec:"Banking",base:1678},
-  {s:"INFY",n:"Infosys",sec:"IT",base:1482},
-  {s:"ICICIBANK",n:"ICICI Bank",sec:"Banking",base:1124},
-  {s:"SBIN",n:"State Bank",sec:"Banking",base:789},
-  {s:"WIPRO",n:"Wipro",sec:"IT",base:472},
-  {s:"TATAMOTORS",n:"Tata Motors",sec:"Auto",base:942},
-  {s:"SUNPHARMA",n:"Sun Pharma",sec:"Pharma",base:1584},
-  {s:"MARUTI",n:"Maruti Suzuki",sec:"Auto",base:11240},
-  {s:"BAJFINANCE",n:"Bajaj Finance",sec:"Finance",base:6842},
-  {s:"AXISBANK",n:"Axis Bank",sec:"Banking",base:1156},
-  {s:"KOTAKBANK",n:"Kotak Mahindra",sec:"Banking",base:1842},
-  {s:"HINDUNILVR",n:"Hindustan Unilever",sec:"FMCG",base:2432},
-  {s:"ASIANPAINT",n:"Asian Paints",sec:"Consumer",base:2742},
-  {s:"TITAN",n:"Titan Company",sec:"Consumer",base:3284},
-  {s:"NTPC",n:"NTPC",sec:"Energy",base:368},
-  {s:"POWERGRID",n:"Power Grid",sec:"Energy",base:302},
-  {s:"LTIM",n:"LTIMindtree",sec:"IT",base:5284},
-  {s:"ULTRACEMCO",n:"UltraTech Cement",sec:"Cement",base:10842},
-  {s:"ONGC",n:"ONGC",sec:"Energy",base:267},
-  {s:"BHARTIARTL",n:"Bharti Airtel",sec:"Telecom",base:1642},
-  {s:"HCLTECH",n:"HCL Technologies",sec:"IT",base:1372},
-  {s:"JSWSTEEL",n:"JSW Steel",sec:"Metal",base:842},
-  {s:"TATASTEEL",n:"Tata Steel",sec:"Metal",base:164},
+// Demo fallback universe — only used if backend API fails
+const DEMO_UNIVERSE=[
+  {s:"BHARTIHEXA",n:"Bharti Hexacom",sec:"Telecom",base:1100},
+  {s:"ACMESOLAR",n:"ACME Solar",sec:"Energy",base:250},
 ];
 
 // ─── Demo news generator ──────────────────────────────────────────────────
@@ -564,7 +542,11 @@ function TabBar({active,setActive,counts}) {
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: OVERVIEW
 // ═══════════════════════════════════════════════════════════════════════════
-function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news,onStock,candidates}) {
+function OverviewTab({picks:rawPicks,positions:rawPositions,allSigs:rawSigs,evalStats,indices,candleCache,news,onStock,candidates}) {
+  const positions = Array.isArray(rawPositions) ? rawPositions : Object.values(rawPositions || {});
+  const picks = Array.isArray(rawPicks) ? rawPicks : Object.values(rawPicks || {});
+  const allSigs = Array.isArray(rawSigs) ? rawSigs : Object.values(rawSigs || {});
+  
   const open=positions.filter(p=>p.status==="OPEN");
   const netPnl=open.reduce((s,p)=>s+calcNetPnl(p).netPnl,0);
   const grossPnl=open.reduce((s,p)=>s+calcNetPnl(p).grossPnl,0);
@@ -692,10 +674,11 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: POSITIONS — with inner sub-tabs (Open · Progress · History)
 // ═══════════════════════════════════════════════════════════════════════════
-function PositionsTab({positions,mode,apData={}}) {
+function PositionsTab({positions:rawPositions,mode,apData={}}) {
   const [showCharges,setShowCharges]=useState(null);
   const [innerTab,setInnerTab]=useState("open");
 
+  const positions = Array.isArray(rawPositions) ? rawPositions : Object.values(rawPositions || {});
   const open=positions.filter(p=>p.status==="OPEN");
   const closed=positions.filter(p=>p.status==="CLOSED").slice(-10);
 
@@ -1221,7 +1204,8 @@ function NewsTab({news,picks}) {
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: PERFORMANCE
 // ═══════════════════════════════════════════════════════════════════════════
-function PerformanceTab({evalStats,positions,agentKpi,systemState}) {
+function PerformanceTab({evalStats,positions:rawPositions,agentKpi,systemState}) {
+  const positions = Array.isArray(rawPositions) ? rawPositions : Object.values(rawPositions || {});
   const closed=positions.filter(p=>p.status==="CLOSED");
   const open=positions.filter(p=>p.status==="OPEN");
   const wins=closed.filter(p=>calcNetPnl({...p,cp:p.exitPrice??p.cp??p.entryPrice}).netPnl>0);
@@ -1919,6 +1903,7 @@ function App() {
   const [events,setEvents]=useState([]);
   const [selectedStock,setSelected]=useState(null);
   const [ NSE_UNIVERSE, setNseUniverse ] = useState([]);
+  const [systemState,setSysState] = useState({status:"RUNNING",mode:"PAPER",iteration:0,uptime_s:0,agents:{}});
 
   // ── NEW: Active Portfolio state ──────────────────────────────────────────
   const [apData,setApData]=useState({
@@ -2032,7 +2017,7 @@ function App() {
         }
       }catch{}
     }
-    const st=NSE_UNIVERSE.find(x=>x.s===symbol);
+    const st=NSE_UNIVERSE.find(x=>x.s===symbol) || DEMO_UNIVERSE.find(x=>x.s===symbol);
     const base=st?.base??1000;
     const syn=[];
     let px=base*(1+(Math.random()-.5)*.05);
@@ -2048,6 +2033,7 @@ function App() {
 
   // ── APEX stock selection ───────────────────────────────────────────────
   const runSelect=useCallback(async()=>{
+    if(connRef.current==="live") return;
     const cr=rRef.current;
     const results=await Promise.all(NSE_UNIVERSE.map(async(st)=>{
       const cdl=await getCandles(st.s);
@@ -2131,14 +2117,6 @@ function App() {
         else throw new Error("Invalid universe format");
       }catch(e){
         console.warn("Using local universe fallback:",e);
-        // Minimal fallback list if backend fails
-        setNseUniverse([
-          {s:"RELIANCE",n:"Reliance Industries",sec:"Energy",base:2847},
-          {s:"TCS",n:"Tata Consultancy",sec:"IT",base:3642},
-          {s:"HDFCBANK",n:"HDFC Bank",sec:"Banking",base:1678},
-          {s:"INFY",n:"Infosys",sec:"IT",base:1482},
-          {s:"ICICIBANK",n:"ICICI Bank",sec:"Banking",base:1124}
-        ]);
       }
     };
     loadUniverse();

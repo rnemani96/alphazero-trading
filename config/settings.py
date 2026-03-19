@@ -98,6 +98,8 @@ class Settings:
     # ── Data Cache ─────────────────────────────────────────────────────────
     DATA_CACHE_TTL: int           = int(os.getenv('DATA_CACHE_TTL',        '15'))   # seconds for quotes
     CANDLE_CACHE_TTL: int         = int(os.getenv('CANDLE_CACHE_TTL',      '300'))  # seconds for candles
+    MIN_HOLDING_TIME_M: int       = int(os.getenv('MIN_HOLDING_TIME_M',    '10'))   # minutes before evaluation
+    TITAN_MIN_AGREEMENT: int      = int(os.getenv('TITAN_MIN_AGREEMENT',   '1'))    # strategy agreement for TITAN
 
     # ── Training ───────────────────────────────────────────────────────────
     TRAINING_ENABLED: bool        = os.getenv('TRAINING_ENABLED', 'true').lower() == 'true'

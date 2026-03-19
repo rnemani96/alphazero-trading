@@ -149,6 +149,26 @@ def _to_yf(sym: str) -> str:
 def _to_fh(sym: str) -> str:
     return sym   # Finnhub accepts plain NSE symbols when exchange=NSE is specified
 
+import functools
+def retry_on_failure(retries=3, delay=1.0):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            last_err = None
+            for attempt in range(retries):
+                try:
+                    res = func(*args, **kwargs)
+                    if res: return res
+                except Exception as e:
+                    last_err = e
+                if attempt < retries - 1:
+                    time.sleep(delay)
+            if last_err:
+                logger.debug(f"[{func.__name__}] failed after {retries} attempts: {last_err}")
+            return None
+        return wrapper
+    return decorator
+
 
 @dataclass
 class CandleBar:
@@ -321,6 +341,68 @@ class MultiSourceData:
                 self._ccache[key] = (time.time(), candles)
         return candles or []
 
+    def get_bulk_candles(
+        self,
+        symbols: List[str],
+        period: str = "60d",
+        interval: str = "1d"
+    ) -> Dict[str, List[CandleBar]]:
+        """Fetch candles for multiple symbols efficiently."""
+        result: Dict[str, List[CandleBar]] = {}
+        
+        # 1. Try yfinance multi-download (Most efficient for free tier)
+        if YF_OK:
+            yf_result = self._yf_bulk_candles(symbols, period, interval)
+            if yf_result:
+                result.update(yf_result)
+
+        # 2. Fill missing via individual calls (Upstox/OpenAlgo prioritized inside get_candles)
+        still_missing = [s for s in symbols if s not in result]
+        if still_missing:
+            # For remaining, we use a thread pool to avoid sequential blocking
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=min(len(still_missing), 10)) as executor:
+                futures = {executor.submit(self.get_candles, s, period, interval): s for s in still_missing}
+                for future in futures:
+                    sym = futures[future]
+                    try:
+                        candles = future.result()
+                        if candles:
+                            result[sym] = candles
+                    except Exception as e:
+                        logger.debug("[BulkCandles] Error for %s: %s", sym, e)
+
+        return result
+
+    def _yf_bulk_candles(self, symbols: List[str], period: str, interval: str) -> Dict[str, List[CandleBar]]:
+        """Internal helper for yfinance multi-download."""
+        if not YF_OK: return {}
+        try:
+            yf_syms = [_to_yf(s) for s in symbols]
+            yfi = {"1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m", "1h": "1h", "1d": "1d"}.get(interval, "1d")
+            
+            # yfinance.download handles bulk fetching in one request
+            data = yf.download(yf_syms, period=period, interval=yfi, group_by='ticker', threads=True, progress=False)
+            
+            result = {}
+            for sym, yfsym in zip(symbols, yf_syms):
+                try:
+                    df = data[yfsym] if len(symbols) > 1 else data
+                    if df.empty: continue
+                    bars = []
+                    for ts, row in df.iterrows():
+                        if pd.isna(row['Close']): continue
+                        tz_ts = ts.to_pydatetime().replace(tzinfo=IST)
+                        bars.append(CandleBar(tz_ts, float(row["Open"]), float(row["High"]), float(row["Low"]), float(row["Close"]), int(row["Volume"])))
+                    if bars:
+                        result[sym] = bars
+                except Exception:
+                    continue
+            return result
+        except Exception as e:
+            logger.debug("[yfinance] bulk candles error: %s", e)
+            return {}
+
     # ── Public: News ──────────────────────────────────────────────────────────
 
     def get_news(self, symbol: str, days: int = 3) -> List[NewsItem]:
@@ -374,6 +456,7 @@ class MultiSourceData:
     # SOURCE 1 — UPSTOX NATIVE API
     # ══════════════════════════════════════════════════════════════════════════
 
+    @retry_on_failure(retries=2, delay=0.5)
     def _upstox_quote(self, symbol: str) -> Optional[Dict]:
         if not UPSTOX_OK or not REQUESTS_OK or not self._upstox_token:
             return None
@@ -411,6 +494,7 @@ class MultiSourceData:
             logger.debug("[Upstox] quote error for %s: %s", symbol, e)
             return None
 
+    @retry_on_failure(retries=2, delay=1.0)
     def _upstox_bulk_quote(self, symbols: List[str]) -> Dict[str, Dict]:
         """Upstox supports comma-separated instrument keys."""
         if not UPSTOX_OK or not REQUESTS_OK or not self._upstox_token:
@@ -444,6 +528,7 @@ class MultiSourceData:
             logger.debug("[Upstox] bulk quote error: %s", e)
             return {}
 
+    @retry_on_failure(retries=2, delay=1.0)
     def _upstox_candles(self, symbol: str, period: str, interval: str) -> Optional[List[CandleBar]]:
         """Upstox historical candles API."""
         if not UPSTOX_OK or not REQUESTS_OK or not self._upstox_token:
@@ -484,6 +569,7 @@ class MultiSourceData:
     # SOURCE 2 — OPENALGO (Broker Bridge)
     # ══════════════════════════════════════════════════════════════════════════
 
+    @retry_on_failure(retries=2, delay=0.5)
     def _openalgo_quote(self, symbol: str) -> Optional[Dict]:
         if not OA_OK or not REQUESTS_OK:
             return None
@@ -509,6 +595,7 @@ class MultiSourceData:
             logger.debug("[OpenAlgo] quote error for %s: %s", symbol, e)
         return None
 
+    @retry_on_failure(retries=2, delay=1.0)
     def _openalgo_candles(self, symbol: str, period: str, interval: str) -> Optional[List[CandleBar]]:
         if not OA_OK or not REQUESTS_OK:
             return None

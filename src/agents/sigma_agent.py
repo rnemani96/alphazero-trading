@@ -41,7 +41,7 @@ class SigmaAgent(BaseAgent):
         'news_sentiment':   0.10,
         'volume_confirm':   0.10,
         'low_volatility':   0.10,   # inverted volatility
-        'fii_interest':     0.05,
+        'delivery_pct':     0.05,
     }
 
     # Regime-adjusted weight overrides
@@ -54,7 +54,7 @@ class SigmaAgent(BaseAgent):
             'news_sentiment': 0.05,
             'volume_confirm': 0.10,
             'low_volatility': 0.03,
-            'fii_interest': 0.02,
+            'delivery_pct': 0.02,
         },
         'SIDEWAYS': {
             'momentum': 0.10,
@@ -64,7 +64,7 @@ class SigmaAgent(BaseAgent):
             'news_sentiment': 0.15,
             'volume_confirm': 0.10,
             'low_volatility': 0.15,
-            'fii_interest': 0.05,
+            'delivery_pct': 0.05,
         },
         'VOLATILE': {
             'momentum': 0.15,
@@ -74,7 +74,7 @@ class SigmaAgent(BaseAgent):
             'news_sentiment': 0.10,
             'volume_confirm': 0.10,
             'low_volatility': 0.25,   # prioritise low-vol stocks in turbulence
-            'fii_interest': 0.05,
+            'delivery_pct': 0.05,
         },
     }
 
@@ -166,7 +166,7 @@ class SigmaAgent(BaseAgent):
         vol = stock.get('volatility', 0.5)
         score += (1.0 - min(vol, 1.0)) * weights.get('low_volatility', 0)
 
-        score += stock.get('fii_interest', 0.0) * weights.get('fii_interest', 0)
+        score += stock.get('delivery_pct', 0.0) * weights.get('delivery_pct', 0)
 
         return round(score, 4)
 

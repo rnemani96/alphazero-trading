@@ -28,6 +28,7 @@ import threading
 import time
 import webbrowser
 from datetime import datetime, timedelta
+from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
 
@@ -37,21 +38,39 @@ load_dotenv()
 
 IST = ZoneInfo("Asia/Kolkata")
 
+from logging.handlers import RotatingFileHandler
+
 # ── Logging setup ─────────────────────────────────────────────────────────────
 os.makedirs("logs", exist_ok=True)
 os.makedirs("models", exist_ok=True)
 os.makedirs("data", exist_ok=True)
 os.makedirs("data/cache", exist_ok=True)
 
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        log_record = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            log_record["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_record)
+
 LOG_FMT = "%(asctime)s │ %(name)-10s │ %(levelname)-5s │ %(message)s"
+stdout_handler = logging.StreamHandler(sys.stdout)
+stdout_handler.setFormatter(logging.Formatter(LOG_FMT, datefmt="%H:%M:%S"))
+
+file_handler = RotatingFileHandler("logs/alphazero_v4.log", maxBytes=10*1024*1024, backupCount=5, encoding="utf-8")
+file_handler.setFormatter(logging.Formatter(LOG_FMT, datefmt="%H:%M:%S"))
+
+json_handler = RotatingFileHandler("logs/alphazero.json", maxBytes=10*1024*1024, backupCount=5, encoding="utf-8")
+json_handler.setFormatter(JsonFormatter(datefmt="%Y-%m-%dT%H:%M:%S%z"))
+
 logging.basicConfig(
     level=logging.INFO,
-    format=LOG_FMT,
-    datefmt="%H:%M:%S",
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler("logs/alphazero_v4.log", encoding="utf-8"),
-    ],
+    handlers=[stdout_handler, file_handler, json_handler]
 )
 logger = logging.getLogger("Main")
 
@@ -63,6 +82,15 @@ except ImportError:
     sys.exit(1)
 
 _cfg = vars(settings)
+
+# ── Startup Sanity Check ──────────────────────────────────────────────────────
+try:
+    from src.infra.sanity_check import StartupSanityCheck
+    if not StartupSanityCheck().run():
+        logger.error("Startup sanity check failed. Fix errors and restart.")
+        sys.exit(1)
+except ImportError as e:
+    logger.warning("SanityCheck module not found: %s", e)
 
 # ── Multi-source data engine ──────────────────────────────────────────────────
 MSD = None
@@ -102,7 +130,7 @@ _sizer = PositionSizer(
 # ── Event Bus ─────────────────────────────────────────────────────────────────
 eb = None
 try:
-    from src.event_bus.event_bus import EventBus
+    from src.event_bus.event_bus import EventBus, EventType
     eb = EventBus()
     eb.start()
 except ImportError as e:
@@ -259,9 +287,10 @@ def _write_state():
             "sentiment":   _state.get("sentiment", 0.0),
             "pnl":         _state.get("net_pnl", 0.0),
             "iteration":   _state.get("iteration", 0),
-            "positions":   _state.get("portfolio", {}),
+            "positions":   list(_state.get("portfolio", {}).values()) if isinstance(_state.get("portfolio"), dict) else _state.get("portfolio", []),
             "signals":     _state.get("latest_signals", [])[:10],
             "sgx_signal":  _state.get("sgx_signal", {}),
+            "macro":       _state.get("macro", {}),
             "mc_result":   _state.get("last_mc_result", {}),
             "nexus_model": os.path.exists(_nexus_model_path),
             "audit_active":_audit is not None,
@@ -271,6 +300,14 @@ def _write_state():
             json.dump(status, f, indent=2, default=str)
         with open("logs/signals.json", "w") as f:
             json.dump(_state.get("latest_signals", []), f, indent=2, default=str)
+        
+        # Notify Dashboard
+        if eb:
+            eb.publish(EventType.STATE_UPDATED, {
+                "status": status,
+                "signals": _state.get("latest_signals", []),
+                "agents": {k: {"alive": v.is_active, "status": getattr(v, "status", "running"), "activity": v.last_activity} for k, v in active_agents.items()}
+            })
     except Exception as exc:
         logger.warning("State write: %s", exc)
 
@@ -295,6 +332,26 @@ def _is_sunday_night() -> bool:
     now = datetime.now(IST)
     return now.weekday() == 6 and now.hour == 19
 
+
+# ── Dynamic Loop Throttling ──────────────────────────────────────────────────
+
+def _get_dynamic_sleep(market_hours: bool, vix: float, regime: str) -> int:
+    """Logic based on market state."""
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
+    
+    # Pre-market or High Volatility
+    if (8 * 60 + 30 <= now.hour * 60 + now.minute < 9 * 60 + 15) or vix > 25:
+        return 30
+    
+    # Market Open
+    if market_hours:
+        # Sideways & Low activity
+        if regime == "SIDEWAYS" and vix < 12:
+            return 180
+        return 60
+    
+    # Fallback / Off-hours
+    return 600
 
 # ── Data helpers ──────────────────────────────────────────────────────────────
 
@@ -372,15 +429,22 @@ def _aggregate_signals(
       NEXUS     weight = 0.30  (via regime compatibility check)
       HERMES    weight = 0.25  (via sentiment score)
 
-    A signal is approved when weighted_confidence >= 0.55 AND
-    all three layers do not strongly disagree.
+    RELAXED CONSTRAINTS:
+      min_confidence = 0.45 (was 0.55)
+      min_agreement  = 1    (was 2+)
     """
     TITAN_W  = 0.45
     NEXUS_W  = 0.30
     HERMES_W = 0.25
-    MIN_AGG_CONF = 0.55
+    MIN_AGG_CONF = 0.45  # Relaxed from 0.55
+    MIN_AGREEMENT = 1     # Relaxed
 
+    logger.info("AGGREGATE: processing %d candidate signals from TITAN", len(titan_signals))
+    
+    # Stats for logging
+    rejections = {"low_confidence": 0, "regime_incompat": 0, "nexus_veto": 0}
     approved = []
+    
     for sig in titan_signals:
         sym   = sig.get('symbol', '')
         tc    = float(sig.get('confidence', 0.5))
@@ -400,7 +464,6 @@ def _aggregate_signals(
         # Apply SGX pre-open bias to sentiment confidence (before market open)
         sgx_b = _state.get('sgx_signal', {}).get('bias', 0.0)
         if sgx_b != 0 and not _is_market_hours():
-            # Boost hermes_conf when SGX aligns with signal direction
             if (act == 'BUY' and sgx_b > 0) or (act == 'SELL' and sgx_b < 0):
                 hermes_conf = min(0.95, hermes_conf + abs(sgx_b) * 0.15)
             else:
@@ -409,14 +472,27 @@ def _aggregate_signals(
         # Weighted aggregate
         agg_conf = TITAN_W * tc + NEXUS_W * nexus_conf + HERMES_W * hermes_conf
 
-        # Hard veto: if NEXUS strongly disagrees (e.g. RISK_OFF and BUY signal)
+        # Logic for 'agreement': signals from 3 agents are always present here,
+        # but we check how many are > 0.5 (positive bias)
+        agreement_count = sum([1 for c in [tc, nexus_conf, hermes_conf] if c >= 0.5])
+
+        # Hard rejections
         if regime == 'RISK_OFF':
+            rejections["regime_incompat"] += 1
             continue
+            
         if not regime_compat and nexus_conf < 0.35:
+            rejections["nexus_veto"] += 1
             logger.debug("AGGREGATE: %s vetoed by NEXUS (regime=%s act=%s)", sym, regime, act)
             continue
+            
         if agg_conf < MIN_AGG_CONF:
+            rejections["low_confidence"] += 1
             logger.debug("AGGREGATE: %s confidence %.2f < %.2f", sym, agg_conf, MIN_AGG_CONF)
+            continue
+            
+        if agreement_count < MIN_AGREEMENT:
+            logger.debug("AGGREGATE: %s agreement %d < %d", sym, agreement_count, MIN_AGREEMENT)
             continue
 
         sig = dict(sig)  # copy
@@ -425,10 +501,18 @@ def _aggregate_signals(
         sig['nexus_confidence'] = round(nexus_conf, 3)
         sig['hermes_confidence']= round(hermes_conf, 3)
         sig['regime_compat']    = regime_compat
+        sig['agreement']        = agreement_count
         approved.append(sig)
 
-    logger.info("AGGREGATE: %d / %d signals passed multi-agent gate",
-                len(approved), len(titan_signals))
+    # Force debug mode print
+    if approved:
+        sorted_sigs = sorted(approved, key=lambda x: x['confidence'], reverse=True)
+        logger.info("DEBUG: Top 5 approved signals:")
+        for s in sorted_sigs[:5]:
+            logger.info(f"  → {s['symbol']} | conf: {s['confidence']:.2f} | T:{s['titan_confidence']:.2f} N:{s['nexus_confidence']:.2f} H:{s['hermes_confidence']:.2f} | Agree: {s['agreement']}")
+
+    logger.info("AGGREGATE: %d / %d signals passed (Rejections: %s)",
+                len(approved), len(titan_signals), rejections)
     return approved
 
 
@@ -451,8 +535,7 @@ def _register_trade(sig: Dict, fill_price: float):
     """Register a new position with ActivePortfolio and KARMA."""
     if AP:
         trade_type = sig.get('trade_type', 'SWING').upper()
-        if trade_type != 'INTRADAY':
-            AP.open_position(
+        AP.open_position(
                 symbol     = sig.get('symbol', ''),
                 entry_price= fill_price,
                 quantity   = sig.get('quantity', 1),
@@ -469,6 +552,17 @@ def _register_trade(sig: Dict, fill_price: float):
     if agents.get('GUARDIAN'):
         strat = sig.get('top_strategy', 'general')
         agents['GUARDIAN'].record_strategy_outcome(strat, 0)  # 0 = not closed yet
+
+    # Publish trade execution event for LENS and KARMA
+    if eb:
+        eb.publish(EventType.TRADE_EXECUTED, {
+            'symbol':     sig.get('symbol'),
+            'price':      fill_price,
+            'quantity':   sig.get('quantity'),
+            'signal_id':  sig.get('id'),
+            'strategy':   sig.get('top_strategy', sig.get('source', '')),
+            'timestamp':  datetime.now().isoformat()
+        })
 
 
 def _update_positions(prices: Dict[str, float]):
@@ -526,15 +620,21 @@ def _build_universe() -> List[str]:
         stocks = get_best_performing_stocks(limit=40)
         syms = list({s.get('symbol') for s in stocks if s.get('symbol')})
     except Exception:
-        syms = [
-            'RELIANCE', 'TCS', 'HDFCBANK', 'INFY', 'ICICIBANK',
-            'KOTAKBANK', 'SBIN', 'BHARTIARTL', 'LT', 'ITC',
-            'AXISBANK', 'HINDUNILVR', 'BAJFINANCE', 'SUNPHARMA', 'MARUTI',
-        ]
+        syms = []
+
+    # If discovery returned too few, supplement with top NIFTY 500
+    if len(syms) < 10:
+        try:
+            from src.data.universe import get_nifty500_symbols
+            syms += get_nifty500_symbols()[:40]
+        except Exception:
+            pass
+
     # Always include open positions
     if AP:
         syms += list(AP.open_positions.keys())
     return list(dict.fromkeys(syms))  # deduplicate, preserve order
+
 
 
 # ── Post-market tasks ─────────────────────────────────────────────────────────
@@ -666,19 +766,44 @@ def _run_iteration():
     raw_quotes = _fetch_market_data(universe)
     prices     = raw_quotes.get('prices', {})
 
-    mdata: Dict[str, Any] = {}
-    for sym in universe:
-        candles = _fetch_candles(sym, bars=250)
-        if not candles:
-            continue
-        # Inject live price into last candle
-        if prices.get(sym, 0) > 0:
-            candles[-1]['close'] = prices[sym]
-        ind = _enrich_with_indicators(sym, candles)
-        if ind:
-            ind['candles'] = candles   # store for KARMA offline training
-            mdata[sym] = ind
+    from concurrent.futures import ThreadPoolExecutor
+    
+    # Batch fetch all candles at once
+    all_c15 = MSD.get_bulk_candles(universe, interval="15m", period="60d")
+    all_c5  = MSD.get_bulk_candles(universe, interval="5m", period="60d")
 
+    mdata_15m: Dict[str, Any] = {}
+    mdata_5m:  Dict[str, Any] = {}
+
+    def process_sym_data(sym):
+        res_15 = None
+        res_5 = None
+        
+        # Process 15m
+        c15 = all_c15.get(sym)
+        if c15:
+            c15_list = [asdict(b) for b in c15]
+            if prices.get(sym, 0) > 0: c15_list[-1]['close'] = prices[sym]
+            res_15 = _enrich_with_indicators(sym, c15_list)
+            
+        # Process 5m
+        c5 = all_c5.get(sym)
+        if c5:
+            c5_list = [asdict(b) for b in c5]
+            if prices.get(sym, 0) > 0: c5_list[-1]['close'] = prices[sym]
+            res_5 = _enrich_with_indicators(sym, c5_list)
+            
+        return sym, res_15, res_5
+
+    # Parallel enrichment
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        results = list(executor.map(process_sym_data, universe))
+        
+    for sym, res_15, res_5 in results:
+        if res_15: mdata_15m[sym] = res_15
+        if res_5:  mdata_5m[sym] = res_5
+
+    mdata = mdata_15m # fallback for legacy code
     _state['market_data'] = {s: {'ltp': prices.get(s, 0)} for s in universe}
 
     # Update positions with latest prices
@@ -718,41 +843,48 @@ def _run_iteration():
             except Exception as _e:
                 logger.debug("SGX signal error: %s", _e)
 
-    # ── Step 4: Regime detection (NEXUS) ─────────────────────────────────────
-    regime = _state.get('regime', 'TRENDING')
-    if agents.get('NEXUS') and hasattr(agents['NEXUS'], 'detect_regime'):
+    # ── Step 4: Sentiment (HERMES) ────────────────────────────────────────────
+    # Throttled: Run every 3 cycles or if iteration is 1
+    sentiment_scores: Dict[str, float] = _state.get('sentiment_scores', {})
+    overall_sentiment = _state.get('sentiment', 0.0)
+    
+    # Check if we should run heavy math agents
+    should_run_heavy = (it % 3 == 0) or (it == 1)
+    
+    if should_run_heavy and agents.get('HERMES') and hasattr(agents['HERMES'], 'get_sentiment'):
         try:
-            raw_regime = agents['NEXUS'].detect_regime({
-                'data':      mdata,
-                'symbols':   list(mdata.keys()),
-                'india_vix': vix,
-            })
-            regime = raw_regime if isinstance(raw_regime, str) else regime
-            _state['regime'] = regime
-        except Exception as exc:
-            logger.debug("NEXUS: %s", exc)
-
-    # ── Step 5: Sentiment (HERMES) ────────────────────────────────────────────
-    sentiment_scores: Dict[str, float] = {}
-    overall_sentiment = 0.0
-    if agents.get('HERMES') and hasattr(agents['HERMES'], 'get_sentiment'):
-        try:
-            sent_result = agents['HERMES'].get_sentiment(list(mdata.keys())[:15])
+            sent_result = agents['HERMES'].get_sentiment(list(mdata.keys())[:20])
             sentiment_scores = sent_result.get('scores', {})
-            overall_sentiment = float(sent_result.get('score', 0.0))
+            overall_sentiment = float(sent_result.get('overall_score', sent_result.get('score', 0.0)))
             _state['sentiment'] = overall_sentiment
             _state['sentiment_scores'] = sentiment_scores
         except Exception as exc:
             logger.debug("HERMES: %s", exc)
 
-    # ── Step 6: Stock scoring (SIGMA → APEX) ──────────────────────────────────
-    selected_stocks = _state.get('selected_stocks', [])
-    slots_available = True
-    if AP and settings.HOLD_UNTIL_TARGET:
-        summ = AP.get_summary()
-        slots_available = summ['slots_available'] > 0
+    # ── Step 5: Regime detection (NEXUS) ─────────────────────────────────────
+    regime = _state.get('regime', 'TRENDING')
+    if agents.get('NEXUS') and hasattr(agents['NEXUS'], 'detect_regime'):
+        try:
+            # Prepare all 14 causal features from macro and sentiment
+            nexus_input = {
+                'data':           mdata,
+                'india_vix':      vix,
+                'spx_prev_ret':   macro.get('spx_prev_ret', 0.0) if 'macro' in locals() else 0.0,
+                'usdinr_change':  macro.get('usdinr_change', 0.0) if 'macro' in locals() else 0.0,
+                'news_sentiment': overall_sentiment,
+                'event_flag':     macro.get('event_flag', 0.0) if 'macro' in locals() else 0.0,
+            }
+            raw_regime = agents['NEXUS'].detect_regime(nexus_input)
+            regime = raw_regime if isinstance(raw_regime, str) else regime
+            _state['regime'] = regime
+        except Exception as exc:
+            logger.debug("NEXUS: %s", exc)
 
-    if slots_available and agents.get('SIGMA') and hasattr(agents['SIGMA'], 'score_stocks'):
+    # ── Step 6: Stock scoring (SIGMA & ATLAS) ─────────────────────────────────
+    sigma_scores: Dict[str, float] = _state.get('sigma_scores', {})
+    atlas_scores: Dict[str, float] = _state.get('atlas_scores', {})
+    
+    if should_run_heavy and agents.get('SIGMA') and hasattr(agents['SIGMA'], 'score_stocks'):
         try:
             candidates = [
                 {
@@ -765,39 +897,54 @@ def _run_iteration():
                     'volume_confirm':   min(1.0, max(0, (float(d.get('volume_zscore', 0)) + 3) / 6)),
                     'volatility':       min(1.0, float(d.get('atr', 0)) / max(float(d.get('close', 1)), 1) * 20),
                     'fii_interest':     0.5,
-                    'sector':           'AUTO',
-                    'price':            float(d.get('close', 0)),
                 }
                 for sym, d in mdata.items()
             ]
-            scored = agents['SIGMA'].score_stocks(candidates, regime)
+            
+            # SIGMA scoring
+            scored_sigma = agents['SIGMA'].score_stocks(candidates, regime)
+            sigma_scores = {s['symbol']: s['sigma_score'] for s in scored_sigma}
+            _state['sigma_scores'] = sigma_scores
+            
+            # ATLAS scoring
+            if agents.get('ATLAS'):
+                scored_atlas = agents['ATLAS'].score_stocks(candidates)
+                atlas_scores = {s['symbol']: s['atlas_score'] for s in scored_atlas}
+                _state['atlas_scores'] = atlas_scores
 
-            if agents.get('APEX') and hasattr(agents['APEX'], 'select_portfolio') and scored:
+            if agents.get('APEX') and hasattr(agents['APEX'], 'select_portfolio') and scored_sigma:
                 blocked = set(AP.open_positions.keys()) if AP else set()
-                scored  = [s for s in scored if s.get('symbol') not in blocked]
-                selected = agents['APEX'].select_portfolio(scored, {}, regime)
-                selected_stocks = selected
+                top_candidates = [s for s in scored_sigma if s.get('symbol') not in blocked]
+                selected = agents['APEX'].select_portfolio(top_candidates, {}, regime)
                 _state['selected_stocks'] = selected
         except Exception as exc:
-            logger.debug("SIGMA/APEX: %s", exc)
+            logger.debug("SIGMA/ATLAS: %s", exc)
+    else:
+        sigma_scores = _state.get('sigma_scores', {})
+        atlas_scores = _state.get('atlas_scores', {})
 
     # ── Step 7: TITAN signals ─────────────────────────────────────────────────
     signals: List[Dict] = []
-    if market_hours and agents.get('TITAN') and mdata:
+    if market_hours and agents.get('TITAN'):
         try:
-            # Filter mdata to selected symbols + open positions
-            sel_syms = {s.get('symbol') for s in selected_stocks} | (
-                set(AP.open_positions.keys()) if AP else set()
-            )
-            scan_data = {s: d for s, d in mdata.items() if s in sel_syms} if sel_syms else mdata
-            if not scan_data:
-                scan_data = mdata  # fallback: scan everything
-
-            raw_signals = agents['TITAN'].generate_signals(
-                scan_data, regime=regime,
+            # Pass multi-agent scores to TITAN for internal boosting
+            raw_15m = agents['TITAN'].generate_signals(
+                mdata_15m, regime, 
                 hermes_scores=sentiment_scores,
+                sigma_scores=sigma_scores,
+                atlas_scores=atlas_scores,
+                timeframe="15m"
             )
-            # Multi-agent aggregation (replaces old simple pass-through)
+            raw_5m  = agents['TITAN'].generate_signals(
+                mdata_5m,  regime, 
+                hermes_scores=sentiment_scores,
+                sigma_scores=sigma_scores,
+                atlas_scores=atlas_scores,
+                timeframe="5m"
+            )
+
+            raw_signals = raw_15m + raw_5m
+            # Multi-agent aggregation
             signals = _aggregate_signals(raw_signals, regime, sentiment_scores, vix)
             _state['latest_signals'] = signals
             logger.info("Signals: %d raw → %d aggregated", len(raw_signals), len(signals))
@@ -824,18 +971,28 @@ def _run_iteration():
             sig['qty']      = qty
 
             # GUARDIAN hard check
-            result = agents['GUARDIAN'].check_trade(sig, current_capital, open_positions)
-            if result['approved']:
-                sig['quantity']     = result.get('quantity', qty)
-                sig['qty']          = sig['quantity']
-                sig['stop_loss']    = result.get('stop_loss', sig.get('stop_loss', 0))
-                sig['target']       = result.get('target',    sig.get('target', 0))
-                sig['position_size']= result.get('position_size', 0)
-                approved.append(sig)
+            if agents.get('GUARDIAN'):
+                result = agents['GUARDIAN'].check_trade(sig, current_capital, open_positions)
+                if result.get('approved'):
+                    sig['quantity']     = result.get('quantity', qty)
+                    sig['qty']          = sig['quantity']
+                    sig['stop_loss']    = result.get('stop_loss', sig.get('stop_loss', 0))
+                    sig['target']       = result.get('target',    sig.get('target', 0))
+                    sig['position_size']= result.get('position_size', 0)
+                    approved.append(sig)
+                else:
+                    logger.info("🛡️ REJECTED: %-10s | reason: %s", sym, result.get('reason', 'Unknown risk'))
+            else:
+                # Fallback: if GUARDIAN not loaded, allow trade with original quantity (risky but better than crash)
+                # Alternatively: skip trade. Let's skip to be safe.
+                logger.warning("GUARDIAN offline — skipping trade for %s", sym)
+
         except Exception as exc:
             logger.debug("GUARDIAN check %s: %s", sig.get('symbol'), exc)
 
     logger.info("Risk gate: %d / %d signals approved", len(approved), len(signals))
+    if signals and not approved:
+        logger.info("ℹ️ Note: Check GUARDIAN logs above for rejection reasons. PAPERS mode usually requires relaxing thresholds in .env")
 
     # ── Step 9: Portfolio guard ───────────────────────────────────────────────
     final_signals: List[Dict] = []
@@ -927,22 +1084,31 @@ def _start_dashboard():
     try:
         from dashboard.backend import run_dashboard
         port = settings.BACKEND_PORT
+        
+        # Start server in daemon thread
         t = threading.Thread(
             target=run_dashboard,
-            args=(port, agents, MSD),
+            args=(port, agents, MSD, eb),
             daemon=True,
             name="DashboardServer",
         )
         t.start()
         logger.info("Dashboard server started on http://localhost:%d", port)
 
-        # Wait briefly for server to bind, then open browser
-        time.sleep(2.5)
-        url = f"http://localhost:{port}"
-        logger.info("Opening browser → %s", url)
-        webbrowser.open(url)
+        # Open browser in a separate thread to avoid blocking main iteration
+        def open_browser():
+            time.sleep(3.0) # Wait for server to be fully ready
+            url = f"http://localhost:{port}"
+            logger.info("Opening browser → %s", url)
+            try:
+                webbrowser.open(url)
+            except Exception as e:
+                logger.debug("Failed to open browser: %s", e)
+
+        threading.Thread(target=open_browser, daemon=True, name="BrowserLauncher").start()
     except Exception as exc:
         logger.warning("Dashboard not available: %s", exc)
+
 
 
 # ── Shutdown handler ──────────────────────────────────────────────────────────
@@ -995,7 +1161,15 @@ def main():
             _run_iteration()
         except Exception as exc:
             logger.exception("Iteration error: %s", exc)
-        time.sleep(settings.ITERATION_SLEEP_SEC)
+        
+        # Dynamic sleep based on market regime and VIX
+        sleep_sec = _get_dynamic_sleep(
+            market_hours = _is_market_hours(),
+            vix          = _state.get('macro', {}).get('vix', 15.0),
+            regime       = _state.get('regime', 'TRENDING')
+        )
+        logger.info("Sleeping %ds...", sleep_sec)
+        time.sleep(sleep_sec)
 
 
 if __name__ == "__main__":

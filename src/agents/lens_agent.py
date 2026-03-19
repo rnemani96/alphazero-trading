@@ -36,6 +36,7 @@ class LensAgent(BaseAgent):
         self.total_pnl = 0.0
         self.winning_trades = 0
         self.losing_trades = 0
+        self.filled_ids: set[str] = set()
 
         # Evaluation Engine (Signal paper tracking)
         self.evaluator = EvaluationEngine()
@@ -43,8 +44,21 @@ class LensAgent(BaseAgent):
 
         # Subscriptions
         self.subscribe(EventType.SIGNAL_GENERATED, self._on_signal_generated)
+        self.subscribe(EventType.TRADE_EXECUTED,   self._on_trade_executed)
 
         logger.info("LENS Agent initialized - Evaluation & Performance tracking ready")
+
+    def _on_trade_executed(self, event):
+        """Mark a signal as 'filled' so LENS logs its evaluation publicly."""
+        p = event.payload
+        sig_id = p.get('signal_id')
+        if sig_id:
+            self.filled_ids.add(sig_id)
+            # Update evaluator with actual fill price for accurate P&L tracking
+            fill_price = p.get('price')
+            if fill_price:
+                self.evaluator.update_fill_price(sig_id, fill_price)
+            logger.debug(f"LENS: marked signal {sig_id} as FILLED at ₹{fill_price}")
 
     def _on_signal_generated(self, event):
         """Log every generated signal for evaluation."""
@@ -120,13 +134,19 @@ class LensAgent(BaseAgent):
         if not self._current_prices:
             return
 
-        evaluated = self.evaluator.evaluate_pending(self._current_prices)
+        # Enforce minimum holding time from config (e.g., 10 mins)
+        min_h = self.config.get('MIN_HOLDING_TIME_M', 10)
+        evaluated = self.evaluator.evaluate_pending(self._current_prices, min_holding_time_m=min_h)
+        
         for rec in evaluated:
-            # Map outcome to KARMA feedback event
-            # KARMA expects: learn_from_outcome(signal, actual_outcome)
-            # signal = {strategy, symbol, regime, source}
-            # actual_outcome = {pnl, event, symbol}
+            # Only count as official winner/loser if it was actually FILLED
+            is_filled = rec.id in self.filled_ids
             
+            if not is_filled:
+                # Log as PENDING (observed but not traded)
+                logger.info(f"🔍 LENS Signal Observation: {rec.symbol} {rec.outcome} | (NOT EXECUTED -> SIGNAL ONLY)")
+                continue
+
             signal_data = {
                 'strategy': rec.strategy_id,
                 'symbol': rec.symbol,
@@ -135,7 +155,7 @@ class LensAgent(BaseAgent):
                 'confidence': rec.confidence
             }
             outcome_data = {
-                'pnl': rec.actual_pnl_pct or 0.0, # Using % PnL for scaling consistency
+                'pnl': rec.actual_pnl_pct or 0.0,
                 'event': f"eval_{rec.outcome.lower()}",
                 'symbol': rec.symbol,
                 'points': rec.points_awarded,
@@ -151,6 +171,9 @@ class LensAgent(BaseAgent):
                     'record': asdict(rec) if hasattr(rec, 'asdict') else rec.__dict__
                 }
             )
+            
+            # Log to terminal (only for executed trades now)
+            logger.info(f"🎯 LENS Evaluation: {rec.symbol} {rec.outcome} | P&L: {rec.actual_pnl_pct:+.2f}% | Pts: {rec.points_awarded:+.1f}")
 
     def generate_daily_report(self) -> Dict[str, Any]:
         """Generate daily performance report."""

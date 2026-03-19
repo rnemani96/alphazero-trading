@@ -161,9 +161,22 @@ class EvaluationEngine:
         self._conn.commit()
         logger.debug("LENS: logged signal %s for %s", signal.strategy_id, signal.symbol)
 
+    def update_fill_price(self, signal_id: str, fill_price: float):
+        """
+        Updates the entry price of a pending signal to match the actual execution price.
+        Ensures LENS evaluation P&L matches real-world execution P&L.
+        """
+        with self._lock:
+            if signal_id in self._pending:
+                self._pending[signal_id].entry_price = fill_price
+                
+        self._conn.execute("UPDATE signals SET entry_price=? WHERE id=?", (fill_price, signal_id))
+        self._conn.commit()
+        logger.debug("LENS: updated fill price for signal %s to %.2f", signal_id, fill_price)
+
     # ── Evaluation ────────────────────────────────────────────────────────
 
-    def evaluate_pending(self, live_prices: dict[str, float]):
+    def evaluate_pending(self, live_prices: dict[str, float], min_holding_time_m: int = 10):
         """
         Check all pending signals against current prices.
         Call this every time new prices arrive.
@@ -175,7 +188,18 @@ class EvaluationEngine:
 
         for sig_id, rec in pending_copy.items():
             price = live_prices.get(rec.symbol)
-            if price is None:
+            if price is None or price <= 0:
+                continue
+                
+            # Requirement: entry_price must be valid
+            if rec.entry_price <= 0:
+                continue
+
+            # Requirement: Minimum holding time (e.g., 10 mins)
+            emitted = datetime.fromisoformat(rec.emitted_at)
+            held_m = (datetime.now() - emitted).total_seconds() / 60
+            if held_m < min_holding_time_m:
+                # Still PENDING
                 continue
 
             outcome = self._check_outcome(rec, price)

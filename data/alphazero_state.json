@@ -1,17 +1,414 @@
 {
-  "iteration": 0,
-  "regime": "TRENDING",
-  "sentiment": 0.0,
-  "sentiment_scores": {},
-  "selected_stocks": [],
+  "iteration": 1,
+  "regime": "SIDEWAYS",
+  "sentiment": -0.2616,
+  "sentiment_scores": {
+    "ITI": 0.0,
+    "PTCIL": 0.0,
+    "IRB": 0.0,
+    "CASTROLIND": 0.71714462890625,
+    "BHARTIHEXA": 0.713975,
+    "APOLLOTYRE": 0.24988046875,
+    "ONESOURCE": 0.4757,
+    "AEGISLOG": 0.716275,
+    "NTPCGREEN": 0.23295,
+    "GILLETTE": 0.655025,
+    "CAMPUS": -0.3134125,
+    "HSCL": 0.47575,
+    "ATHERENERG": -0.09696601562500001,
+    "BALRAMCHIN": 0.8009,
+    "KPIL": 0.47805,
+    "JPPOWER": 0.0,
+    "GODIGIT": 0.714575,
+    "OIL": 0.310379296875,
+    "ATGL": -0.61172265625,
+    "SHYAMMETL": 0.0
+  },
+  "selected_stocks": [
+    {
+      "symbol": "HSCL",
+      "momentum": 0.6457171922796152,
+      "trend_strength": 0.7928089597002803,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.9055673284218254,
+      "news_sentiment": 0.97575,
+      "volume_confirm": 0.8418118855026538,
+      "volatility": 0.13986779413300449,
+      "fii_interest": 0.5,
+      "sigma_score": 0.7246,
+      "capital_weight": 0.1014,
+      "capital_amount": 101400.0
+    },
+    {
+      "symbol": "APOLLOTYRE",
+      "momentum": 0.583632019115889,
+      "trend_strength": 1.0,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.6285717451800323,
+      "news_sentiment": 0.74988046875,
+      "volume_confirm": 1.0,
+      "volatility": 0.11964669664115027,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6722,
+      "capital_weight": 0.1004,
+      "capital_amount": 100400.0
+    },
+    {
+      "symbol": "BALRAMCHIN",
+      "momentum": 0.5580067893548719,
+      "trend_strength": 0.4438833905446698,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.6505194324390078,
+      "news_sentiment": 1.0,
+      "volume_confirm": 0.7768178594627013,
+      "volatility": 0.10639645912836032,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6623,
+      "capital_weight": 0.1002,
+      "capital_amount": 100200.0
+    },
+    {
+      "symbol": "PRAJIND",
+      "momentum": 0.7106969205834686,
+      "trend_strength": 0.7940432485276163,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.7672424670041829,
+      "news_sentiment": 0.5,
+      "volume_confirm": 1.0,
+      "volatility": 0.14475961631488699,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6541,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "GILLETTE",
+      "momentum": 0.4806249999999997,
+      "trend_strength": 0.7623759992773432,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.5906432748296228,
+      "news_sentiment": 1.0,
+      "volume_confirm": 0.7468576536040645,
+      "volatility": 0.15364775637790357,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6514,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "CASTROLIND",
+      "momentum": 0.47646246189179964,
+      "trend_strength": 0.5118627255376504,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.3815263729896805,
+      "news_sentiment": 1.0,
+      "volume_confirm": 1.0,
+      "volatility": 0.033227051705212514,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6505,
+      "capital_weight": 0.0999,
+      "capital_amount": 99900.0
+    },
+    {
+      "symbol": "GODIGIT",
+      "momentum": 0.4757432437059112,
+      "trend_strength": 0.5224116625571582,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.3272666723989097,
+      "news_sentiment": 1.0,
+      "volume_confirm": 0.9981615501918103,
+      "volatility": 0.06676036579835261,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6376,
+      "capital_weight": 0.0997,
+      "capital_amount": 99700.0
+    },
+    {
+      "symbol": "KPIL",
+      "momentum": 0.5450201561428432,
+      "trend_strength": 0.4511393047066196,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.5641651639975676,
+      "news_sentiment": 0.97805,
+      "volume_confirm": 0.6788080534999664,
+      "volatility": 0.11557557077354158,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6339,
+      "capital_weight": 0.0996,
+      "capital_amount": 99600.0
+    },
+    {
+      "symbol": "SUNDRMFAST",
+      "momentum": 0.49938680333390284,
+      "trend_strength": 1.0,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.6384367016849624,
+      "news_sentiment": 0.5,
+      "volume_confirm": 0.8963449820389936,
+      "volatility": 0.06277131654411157,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6259,
+      "capital_weight": 0.0995,
+      "capital_amount": 99500.0
+    },
+    {
+      "symbol": "3MINDIA",
+      "momentum": 0.49393939393939396,
+      "trend_strength": 0.8000512758902238,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.7708333333183449,
+      "news_sentiment": 0.5,
+      "volume_confirm": 0.8316289342706789,
+      "volatility": 0.10009382300811775,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6232,
+      "capital_weight": 0.0994,
+      "capital_amount": 99400.0
+    }
+  ],
   "latest_signals": [],
   "capital_alloc": {},
   "portfolio": {},
-  "market_data": {},
+  "market_data": {
+    "ITI": {
+      "ltp": 0
+    },
+    "PTCIL": {
+      "ltp": 0
+    },
+    "IRB": {
+      "ltp": 0
+    },
+    "CASTROLIND": {
+      "ltp": 0
+    },
+    "BHARTIHEXA": {
+      "ltp": 0
+    },
+    "APOLLOTYRE": {
+      "ltp": 0
+    },
+    "ONESOURCE": {
+      "ltp": 0
+    },
+    "AEGISLOG": {
+      "ltp": 0
+    },
+    "NTPCGREEN": {
+      "ltp": 0
+    },
+    "GILLETTE": {
+      "ltp": 0
+    },
+    "CAMPUS": {
+      "ltp": 0
+    },
+    "HSCL": {
+      "ltp": 0
+    },
+    "ATHERENERG": {
+      "ltp": 0
+    },
+    "BALRAMCHIN": {
+      "ltp": 0
+    },
+    "KPIL": {
+      "ltp": 0
+    },
+    "JPPOWER": {
+      "ltp": 0
+    },
+    "GODIGIT": {
+      "ltp": 0
+    },
+    "OIL": {
+      "ltp": 0
+    },
+    "ATGL": {
+      "ltp": 0
+    },
+    "SHYAMMETL": {
+      "ltp": 0
+    },
+    "GESHIP": {
+      "ltp": 0
+    },
+    "MGL": {
+      "ltp": 0
+    },
+    "ACMESOLAR": {
+      "ltp": 0
+    },
+    "SCHNEIDER": {
+      "ltp": 0
+    },
+    "PRAJIND": {
+      "ltp": 0
+    },
+    "IPCALAB": {
+      "ltp": 0
+    },
+    "ONGC": {
+      "ltp": 0
+    },
+    "TATAPOWER": {
+      "ltp": 0
+    },
+    "BSOFT": {
+      "ltp": 0
+    },
+    "3MINDIA": {
+      "ltp": 0
+    },
+    "CHENNPETRO": {
+      "ltp": 0
+    },
+    "COALINDIA": {
+      "ltp": 0
+    },
+    "TRIVENI": {
+      "ltp": 0
+    },
+    "IGIL": {
+      "ltp": 0
+    },
+    "FLUOROCHEM": {
+      "ltp": 0
+    },
+    "SUNTV": {
+      "ltp": 0
+    },
+    "ABBOTINDIA": {
+      "ltp": 0
+    },
+    "SUNDRMFAST": {
+      "ltp": 0
+    },
+    "APARINDS": {
+      "ltp": 0
+    },
+    "BAYERCROP": {
+      "ltp": 0
+    }
+  },
   "net_pnl": 0.0,
   "daily_trades": 0,
   "running": false,
   "last_backtest_date": null,
   "last_training_date": null,
-  "last_wf_date": null
+  "last_wf_date": null,
+  "macro": {
+    "macro_bias": "BULLISH",
+    "risk_level": "MEDIUM",
+    "size_mult": 0.9,
+    "regime_hint": "TRENDING",
+    "vix": 15.0,
+    "fii_flow_cr": 0.0,
+    "usdinr": 83.3,
+    "spx_ret_pct": -0.683956364180982,
+    "crude_ret_pct": -2.644809471533327,
+    "timestamp": "2026-03-20T00:25:59.347379"
+  },
+  "sigma_scores": {
+    "HSCL": 0.7246,
+    "APOLLOTYRE": 0.6722,
+    "BALRAMCHIN": 0.6623,
+    "PRAJIND": 0.6541,
+    "GILLETTE": 0.6514,
+    "CASTROLIND": 0.6505,
+    "GODIGIT": 0.6376,
+    "KPIL": 0.6339,
+    "SUNDRMFAST": 0.6259,
+    "3MINDIA": 0.6232,
+    "ONESOURCE": 0.6208,
+    "GESHIP": 0.6201,
+    "ABBOTINDIA": 0.61,
+    "SCHNEIDER": 0.607,
+    "PTCIL": 0.6069,
+    "AEGISLOG": 0.6053,
+    "CAMPUS": 0.6006,
+    "BHARTIHEXA": 0.5899,
+    "APARINDS": 0.5764,
+    "OIL": 0.5757,
+    "BAYERCROP": 0.5736,
+    "BSOFT": 0.5725,
+    "IRB": 0.5716,
+    "ACMESOLAR": 0.5671,
+    "MGL": 0.5658,
+    "COALINDIA": 0.5658,
+    "NTPCGREEN": 0.5588,
+    "TRIVENI": 0.5555,
+    "IGIL": 0.5529,
+    "ONGC": 0.5516,
+    "JPPOWER": 0.5477,
+    "CHENNPETRO": 0.5453,
+    "TATAPOWER": 0.5421,
+    "SHYAMMETL": 0.5409,
+    "IPCALAB": 0.5141,
+    "SUNTV": 0.5043,
+    "FLUOROCHEM": 0.5042,
+    "ITI": 0.5011,
+    "ATGL": 0.4947,
+    "ATHERENERG": 0.4579
+  },
+  "atlas_scores": {
+    "HSCL": 0.7517,
+    "APOLLOTYRE": 0.724,
+    "PRAJIND": 0.7119,
+    "SUNDRMFAST": 0.679,
+    "ABBOTINDIA": 0.676,
+    "CAMPUS": 0.6728,
+    "GILLETTE": 0.6584,
+    "3MINDIA": 0.6576,
+    "SCHNEIDER": 0.6486,
+    "PTCIL": 0.6477,
+    "BALRAMCHIN": 0.6428,
+    "AEGISLOG": 0.6332,
+    "JPPOWER": 0.6313,
+    "GESHIP": 0.6276,
+    "CASTROLIND": 0.626,
+    "GODIGIT": 0.6157,
+    "KPIL": 0.6154,
+    "ONESOURCE": 0.607,
+    "BHARTIHEXA": 0.6003,
+    "ACMESOLAR": 0.593,
+    "APARINDS": 0.5889,
+    "BAYERCROP": 0.5853,
+    "IGIL": 0.5825,
+    "COALINDIA": 0.5824,
+    "IRB": 0.5785,
+    "BSOFT": 0.5782,
+    "MGL": 0.5772,
+    "NTPCGREEN": 0.5766,
+    "ATGL": 0.5636,
+    "TRIVENI": 0.5617,
+    "CHENNPETRO": 0.5605,
+    "SHYAMMETL": 0.5522,
+    "ONGC": 0.5509,
+    "OIL": 0.5489,
+    "TATAPOWER": 0.5415,
+    "IPCALAB": 0.5265,
+    "FLUOROCHEM": 0.5241,
+    "ITI": 0.5144,
+    "SUNTV": 0.5136,
+    "ATHERENERG": 0.4507
+  },
+  "active_portfolio": {
+    "open_positions": [],
+    "total_open": 0,
+    "max_positions": 10,
+    "slots_available": 10,
+    "total_invested": 0,
+    "total_unrealised_pnl": 0,
+    "total_realised_pnl": 0,
+    "win_rate_pct": 0.0,
+    "total_trades": 0,
+    "winning_trades": 0,
+    "losing_trades": 0,
+    "near_target": [],
+    "near_sl": [],
+    "history": [],
+    "last_updated": "2026-03-20T00:25:58.970479+05:30",
+    "blocked_symbols": []
+  }
 }

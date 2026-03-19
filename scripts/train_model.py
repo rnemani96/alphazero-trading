@@ -24,12 +24,10 @@ from src.data.indicators import add_all_indicators
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("TrainML")
 
-# Top NIFTY stocks to train on
-TRAIN_SYMBOLS = [
-    "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "INFY.NS", "ICICIBANK.NS", 
-    "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "HINDUNILVR.NS", "LT.NS",
-    "BAJFINANCE.NS", "AXISBANK.NS", "KOTAKBANK.NS", "ASIANPAINT.NS", "MARUTI.NS"
-]
+# Fetch top liquid stocks from dynamic universe
+from src.data.universe import get_nifty500_symbols
+TRAIN_SYMBOLS = get_nifty500_symbols()[:30] # Top 30 for training efficiency
+
 
 def fetch_historical_data(symbols, months=8):
     """Fetch 'months' of daily historical data using yfinance."""

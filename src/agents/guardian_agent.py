@@ -181,9 +181,18 @@ class GuardianAgent(BaseAgent):
 
             # ── Sector exposure ────────────────────────────────────────────────
             sector = _SYM_TO_SECTOR.get(sym, 'OTHER')
+            
+            same_sector_positions = [
+                p for p in positions if _SYM_TO_SECTOR.get(p.get('symbol', ''), 'X') == sector
+            ]
+            
+            # Correlation Guard: Prevent >= 5 positions in the same sector
+            if len(same_sector_positions) >= 4:
+                return self._reject(f'CORRELATION_GUARD (Too many in {sector})')
+
             sector_used = sum(
                 float(p.get('entry_price', 0)) * float(p.get('quantity', p.get('qty', 0)))
-                for p in positions if _SYM_TO_SECTOR.get(p.get('symbol', ''), 'X') == sector
+                for p in same_sector_positions
             )
             if sector_used + pos_size > current_capital * self.max_sector_pct:
                 return self._reject(f'SECTOR_LIMIT ({sector})')

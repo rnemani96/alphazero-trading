@@ -120,6 +120,7 @@ class IntradayRegimeAgent(BaseAgent):
                                        'rsi': ..., 'ema20': ..., 'ema50': ...}, ... },
             'symbols': [...],
             'india_vix': float,    # optional — from ORACLE
+            'fii_flow':  float,    # optional — from ORACLE
           }
 
         Returns one of: 'TRENDING' | 'SIDEWAYS' | 'VOLATILE' | 'RISK_OFF'
@@ -200,43 +201,75 @@ class IntradayRegimeAgent(BaseAgent):
 
     def _extract_features(self, market_data: Dict) -> Dict[str, float]:
         """
-        Aggregate indicator features across all symbols in market_data.
-        Returns a single feature dict representing 'the market'.
+        Extract exact 14 causal features required by trained XGBoost model.
+        Order: adx, rsi, vix, atr_norm, cev, gainer_pct, loser_pct,
+               avg_top50_ret, avg_bot50_ret, sector_disp,
+               spx_prev_ret, usdinr_change, news_sentiment, event_flag
         """
         symbol_data = market_data.get('data', {})
         vix         = float(market_data.get('india_vix', 0) or 0)
-
-        adx_vals, atr_vals, rsi_vals = [], [], []
-        ema_above = 0   # count of symbols where ema20 > ema50 (breadth proxy)
-        close_vs_ema = []
-
+        
+        # 1. Base technicals (Aggregated across active symbols)
+        adx_vals, rsi_vals, atr_vals, cev_vals = [], [], [], []
+        returns = []
+        
         for sym_data in symbol_data.values():
-            if not isinstance(sym_data, dict):
-                continue
+            if not isinstance(sym_data, dict): continue
             adx = _safe(sym_data.get('adx'))
-            atr = _safe(sym_data.get('atr'))
             rsi = _safe(sym_data.get('rsi'))
-            ema20 = _safe(sym_data.get('ema20'))
-            ema50 = _safe(sym_data.get('ema50'))
-            close = _safe(sym_data.get('close'))
-
+            atr = _safe(sym_data.get('atr_norm') or sym_data.get('atr'))
+            cev = _safe(sym_data.get('cev') or sym_data.get('close_vs_ema'))
+            ret = _safe(sym_data.get('price_change_pct'))
+            
             if adx > 0: adx_vals.append(adx)
-            if atr > 0: atr_vals.append(atr)
             if rsi > 0: rsi_vals.append(rsi)
-            if ema20 > 0 and ema50 > 0:
-                if ema20 > ema50:
-                    ema_above += 1
-                if close > 0 and ema20 > 0:
-                    close_vs_ema.append((close - ema20) / ema20 * 100)
+            if atr > 0: atr_vals.append(atr)
+            if cev != 0: cev_vals.append(cev)
+            if ret != 0: returns.append(ret)
 
-        n = max(len(symbol_data), 1)
+        # 2. Extreme Movers (Causal breadth)
+        returns = sorted(returns)
+        n_ret = len(returns) or 1
+        gainer_pct = len([r for r in returns if r > 2.0]) / n_ret
+        loser_pct  = len([r for r in returns if r < -2.0]) / n_ret
+        avg_top50  = _mean(returns[-50:]) if n_ret >= 50 else _mean(returns)
+        avg_bot50  = _mean(returns[:50]) if n_ret >= 50 else _mean(returns)
+
+        # 3. Sector Dispersion
+        sector_disp = 0.0
+        try:
+            from src.data.universe import get_sector_map
+            smap = get_sector_map()
+            s_rets = {}
+            for sym, d in symbol_data.items():
+                r = _safe(d.get('price_change_pct'))
+                if r == 0: continue
+                sec = smap.get(sym, 'OTHER')
+                if sec not in s_rets: s_rets[sec] = []
+                s_rets[sec].append(r)
+            
+            if _NP:
+                medians = [np.median(rs) for rs in s_rets.values() if rs]
+                sector_disp = float(np.std(medians)) if len(medians) > 1 else 0.0
+        except Exception:
+            pass
+
+        # 4. Macro & News (from main.py / market_data)
         return {
-            'adx':          _mean(adx_vals) or 20.0,
-            'atr_norm':     _mean(atr_vals) or 0.0,   # raw, normalise in rule_detect
-            'rsi':          _mean(rsi_vals) or 50.0,
-            'vix':          vix if vix > 0 else float(market_data.get('vix', 15.0) or 15.0),
-            'breadth':      ema_above / n,              # 0–1: fraction above ema20>ema50
-            'close_vs_ema': _mean(close_vs_ema) or 0.0,  # % above/below ema20
+            'adx':            _mean(adx_vals) or 25.0,
+            'rsi':            _mean(rsi_vals) or 50.0,
+            'vix':            vix if vix > 0 else 15.0,
+            'atr_norm':       _mean(atr_vals) or 0.5,
+            'cev':            _mean(cev_vals) or 0.0,
+            'gainer_pct':     gainer_pct,
+            'loser_pct':      loser_pct,
+            'avg_top50_ret':  avg_top50,
+            'avg_bot50_ret':  avg_bot50,
+            'sector_disp':    sector_disp,
+            'spx_prev_ret':   float(market_data.get('spx_prev_ret', 0.0)),
+            'usdinr_change':  float(market_data.get('usdinr_change', 0.0)),
+            'news_sentiment': float(market_data.get('news_sentiment', 0.0)),
+            'event_flag':     float(market_data.get('event_flag', 0.0)),
         }
 
     # ── Rule-based detection (always available) ───────────────────────────────
@@ -251,7 +284,8 @@ class IntradayRegimeAgent(BaseAgent):
         rsi    = f['rsi']
         vix    = f['vix']
         breadth = f['breadth']   # 0–1
-        cev    = f['close_vs_ema']  # % price deviation from ema20
+        cev     = f['close_vs_ema']  # % price deviation from ema20
+        fii     = f['fii_flow']
 
         th = self._cfg
 
@@ -262,6 +296,16 @@ class IntradayRegimeAgent(BaseAgent):
             votes["RISK_OFF"] += 3          # hard override weight
         elif vix >= th["NEXUS_VIX_VOLATILE"]:
             votes["VOLATILE"] += 2
+
+        # ── FII votes (Institutional Flow) ────────────────────────────────────
+        if fii >= 1000:
+            votes["TRENDING"] += 2          # Strong institutional buy
+        elif fii <= -1000:
+            votes["RISK_OFF"] += 2          # Strong institutional sell
+        elif fii >= 500:
+            votes["TRENDING"] += 1
+        elif fii <= -500:
+            votes["VOLATILE"] += 1
 
         # ── ADX votes ──────────────────────────────────────────────────────────
         if adx >= th["NEXUS_ADX_TRENDING"]:
@@ -304,16 +348,25 @@ class IntradayRegimeAgent(BaseAgent):
 
     def _xgb_detect(self, f: Dict[str, float]) -> str:
         """
-        Run XGBoost classifier.  Returns regime string.
-        Falls back to rule_detect if model call fails.
+        Run XGBoost classifier with strict 14-feature alignment.
         """
         if not _NP or not _XGB or self._xgb_model is None:
             return self._rule_detect(f)
         try:
-            feat = np.array([[
-                f['adx'], f['rsi'], f['vix'],
-                f['breadth'], f['close_vs_ema'], f['atr_norm'],
-            ]], dtype=np.float32)
+            # Ensure exact order as metadata: adx, rsi, vix, atr_norm, cev...
+            feat_list = [
+                f['adx'], f['rsi'], f['vix'], f['atr_norm'], f['cev'],
+                f['gainer_pct'], f['loser_pct'],
+                f['avg_top50_ret'], f['avg_bot50_ret'],
+                f['sector_disp'], f['spx_prev_ret'],
+                f['usdinr_change'], f['news_sentiment'], f['event_flag']
+            ]
+            
+            if len(feat_list) != 14:
+                logger.warning(f"NEXUS Feature mismatch: expected 14, got {len(feat_list)}")
+                return self._rule_detect(f)
+                
+            feat = np.array([feat_list], dtype=np.float32)
             pred = self._xgb_model.predict(feat)[0]
             regime_idx = int(pred)
             if 0 <= regime_idx < len(self.REGIMES):
