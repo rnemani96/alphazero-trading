@@ -1693,7 +1693,9 @@ export default function App() {
     let ws,alive=true;
     const connect=()=>{
       try {
-        ws=new WebSocket(`ws://localhost:8000/ws`);
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const host = window.location.host || "localhost:8001";
+        ws=new WebSocket(`${protocol}://${host}/ws`);
         ws.onopen=()=>{if(alive){setConn("live");addEvt("SYSTEM","WS","Connected to AlphaZero backend");}};
         ws.onmessage=e=>{
           const msg=JSON.parse(e.data);

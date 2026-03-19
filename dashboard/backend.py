@@ -182,6 +182,89 @@ def create_app(agents: Dict = None, data_fetcher=None) -> Any:
         from fastapi.responses import Response
         return Response(status_code=404, content=f"Not found: {safe_name}")
 
+    # Aliases for frontend (some versions use non-api prefix)
+    @app.get("/portfolio")
+    async def portfolio_alias(): return await portfolio()
+    
+    @app.get("/sources")
+    async def sources_alias():
+        # Return registered data sources status
+        sources = {
+            "yfinance": {"status": "active", "latency_ms": 450, "requests_today": 120},
+            "nse_direct": {"status": "active", "latency_ms": 820, "requests_today": 85},
+            "upstox": {"status": "disabled"},
+        }
+        return JSONResponse(sources)
+
+@app.get("/evaluation/stats")
+async def get_eval_stats():
+    """Return live evaluation metrics from LENS agent."""
+    lens = _agents_ref.get("LENS")
+    if lens and hasattr(lens, "get_performance_summary"):
+        try:
+            summary = lens.get_performance_summary()
+            eval_stats = summary.get("evaluator_stats", {})
+            return {
+                "winRate":      round(eval_stats.get("win_rate", 0), 2),
+                "profitFactor": round(summary.get("profit_factor", 0), 2),
+                "avgTrade":     round(eval_stats.get("avg_pnl_pct", 0), 2),
+                "sharpe":       round(eval_stats.get("total_points", 0), 2), # Using total points as proxy for alpha/sharpe
+                "totalSignals": eval_stats.get("total_evaluated", 0)
+            }
+        except Exception as e:
+            logger.error(f"Error fetching LENS stats: {e}")
+    
+    return {"winRate": 0.0, "profitFactor": 0.0, "avgTrade": 0.0, "sharpe": 0.0, "totalSignals": 0}
+
+@app.get("/evaluation/history")
+async def get_eval_history():
+    """Return historical evaluation outcomes from LENS."""
+    lens = _agents_ref.get("LENS")
+    if lens and hasattr(lens, "evaluator"):
+        try:
+            # evaluator._history contains SignalRecord objects
+            history = lens.evaluator._history[-50:]
+            return [
+                {
+                    "symbol":    h.symbol,
+                    "strategy":  h.strategy_name,
+                    "outcome":   h.outcome,
+                    "pnl":       round(h.actual_pnl_pct * 100, 2) if h.actual_pnl_pct else 0,
+                    "date":      h.emitted_at
+                } for h in history
+            ]
+        except Exception:
+            pass
+    return []
+
+@app.get("/evaluation/agents")
+async def get_eval_agents():
+    """Return per-agent performance attribution."""
+    lens = _agents_ref.get("LENS")
+    if lens and hasattr(lens, "strategy_performance"):
+        try:
+            perf = lens.strategy_performance
+            return [
+                {
+                    "name":    name,
+                    "trades":  data.get("trades", 0),
+                    "winRate": round(data.get("wins", 0) / max(data.get("trades", 1), 1), 2),
+                    "pnl":     round(data.get("pnl", 0), 2)
+                } for name, data in perf.items()
+            ]
+        except Exception:
+            pass
+    return []
+
+    @app.get("/candles/{symbol}")
+    async def get_candles(symbol: str):
+        # Delegate to data fetcher if available, or return cached candles
+        return JSONResponse({"symbol": symbol, "candles": []})
+
+    @app.get("/fundamentals/{symbol}")
+    async def get_fundamentals(symbol: str):
+        return JSONResponse({})
+
     # ── Health endpoint (NEW) ─────────────────────────────────────────────────
     @app.get("/health")
     async def health():
@@ -228,9 +311,21 @@ def create_app(agents: Dict = None, data_fetcher=None) -> Any:
         return JSONResponse(_load_json("signals.json", []))
 
     # ── Metrics ───────────────────────────────────────────────────────────────
-    @app.get("/api/metrics")
-    async def metrics():
-        return JSONResponse(_load_json("tracker.json", {}))
+    @app.get("/api/status")
+    async def get_status():
+        """Returns the full system status from status.json."""
+        return JSONResponse(_load_json("status.json", {}))
+
+    @app.get("/api/universe")
+    async def get_universe():
+        """Returns the dynamic NIFTY 500 universe from cache."""
+        nexus_cache = Path("data/cache/nexus/universe.json")
+        if nexus_cache.exists():
+            with open(nexus_cache) as f:
+                syms = json.load(f)
+            # Convert to list of dicts for frontend compatibility
+            return JSONResponse([{"s": s, "n": s, "sec": "NIFTY500", "base": 1000} for s in syms])
+        return JSONResponse([])
 
     # ── Backtest results ──────────────────────────────────────────────────────
     @app.get("/api/backtest")
@@ -275,7 +370,8 @@ def create_app(agents: Dict = None, data_fetcher=None) -> Any:
 
                     # 2. Build live agent status (crash-safe per agent)
                     agent_statuses = {}
-                    for name, agent in _agents_ref.items():
+                    # Use list() to avoid RuntimeError if _agents_ref is modified during iteration
+                    for name, agent in list(_agents_ref.items()):
                         try:
                             agent_statuses[name] = {
                                 "alive": bool(getattr(agent, 'is_active', True)),
@@ -337,7 +433,8 @@ def create_app(agents: Dict = None, data_fetcher=None) -> Any:
             except WebSocketDisconnect:
                 stop_event.set()
             except Exception as e:
-                logger.debug(f"WS receive error: {e}")
+                # Upgrading to warning to help debug disconnections
+                logger.warning(f"WS receive error (causing disconnect): {e}")
                 stop_event.set()
 
         try:

@@ -39,8 +39,11 @@ gymnasium>=0.29.0            # RL environment API
 shimmy>=1.3.0                # Gym/Gymnasium compatibility shim
 
 # ── Backend / Dashboard ───────────────────────────────────────────────────────
-# Dashboard is React (Node.js) — run: cd dashboard/alphazero-ui && npm install && npm run dev
-# Python backend uses stdlib http.server — no Flask/FastAPI needed
+fastapi>=0.109.0
+uvicorn>=0.27.0
+pyarrow>=15.0.0              # For parquet support (NEXUS/LENS)
+xgboost>=2.0.0               # For NEXUS regime detection
+scikit-learn>=1.4.0          # For ML utilities
 
 # ── Telegram ──────────────────────────────────────────────────────────────────
 python-telegram-bot>=21.0    # Telegram alerts

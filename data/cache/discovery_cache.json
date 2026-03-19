@@ -1,0 +1,25 @@
+{
+  "timestamp": 1710850000.0,
+  "stocks": [
+    {"symbol": "RELIANCE", "change": 1.2, "sector": "ENERGY"},
+    {"symbol": "TCS", "change": 0.8, "sector": "IT"},
+    {"symbol": "HDFCBANK", "change": 0.5, "sector": "FINANCE"},
+    {"symbol": "INFY", "change": 0.3, "sector": "IT"},
+    {"symbol": "ICICIBANK", "change": 1.1, "sector": "FINANCE"},
+    {"symbol": "KOTAKBANK", "change": -0.2, "sector": "FINANCE"},
+    {"symbol": "SBIN", "change": 1.5, "sector": "FINANCE"},
+    {"symbol": "BHARTIARTL", "change": 0.9, "sector": "TELECOM"},
+    {"symbol": "LT", "change": 1.4, "sector": "CAPITAL_GOODS"},
+    {"symbol": "ITC", "change": 0.2, "sector": "FMCG"},
+    {"symbol": "AXISBANK", "change": 0.7, "sector": "FINANCE"},
+    {"symbol": "HINDUNILVR", "change": -0.1, "sector": "FMCG"},
+    {"symbol": "BAJFINANCE", "change": 1.3, "sector": "FINANCE"},
+    {"symbol": "SUNPHARMA", "change": 2.1, "sector": "PHARMA"},
+    {"symbol": "MARUTI", "change": 0.4, "sector": "AUTO"},
+    {"symbol": "TITAN", "change": 0.6, "sector": "CONSUMER"},
+    {"symbol": "ADANIENT", "change": 3.2, "sector": "METALS"},
+    {"symbol": "ULTRACEMCO", "change": 0.5, "sector": "CEMENT"},
+    {"symbol": "JSWSTEEL", "change": 1.8, "sector": "METALS"},
+    {"symbol": "HCLTECH", "change": 0.4, "sector": "IT"}
+  ]
+}

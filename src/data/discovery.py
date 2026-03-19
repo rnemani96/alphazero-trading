@@ -45,13 +45,23 @@ def fetch_nse_symbols(index: str = "NIFTY 100") -> List[str]:
         # Return a safe fallback list if NSE is blocking us
         return ["RELIANCE", "TCS", "HDFCBANK", "INFY", "ICICIBANK", "KOTAKBANK", "LT", "SBIN", "BHARTIARTL", "ITC"]
 
-def get_best_performing_stocks(limit: int = 30) -> List[Dict]:
-    """
-    Discovers best performers from the live NIFTY 100 universe.
-    """
-    logger.info("Discovering best performing stocks from NIFTY 100...")
+def get_best_performing_stocks(limit: int = 40) -> List[Dict]:
+    # Simple file-based cache to avoid heavy yfinance calls on every restart
+    cache_file = "data/cache/discovery_cache.json"
+    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
     
-    symbols = fetch_nse_symbols("NIFTY 100")
+    if os.path.exists(cache_file):
+        try:
+            with open(cache_file, "r") as f:
+                cached = json.load(f)
+            # Cache duration: 1 hour (3600s)
+            if time.time() - cached.get("timestamp", 0) < 3600:
+                logger.info("Using cached best performers (fresh)")
+                return cached.get("stocks", [])[:limit]
+        except Exception:
+            pass
+
+    symbols = fetch_nse_symbols("NIFTY 500")
     if not symbols:
         return []
         
@@ -60,6 +70,7 @@ def get_best_performing_stocks(limit: int = 30) -> List[Dict]:
     symbols = [str(s).strip() for s in symbols if s]
     yf_symbols = [f"{s}.NS" for s in symbols]
     
+    logger.info(f"Downloading data for {len(yf_symbols)} stocks via yfinance...")
     try:
         # Fetch 5 days to compute change relative to yesterday
         # progress=False to keep logs clean
@@ -96,6 +107,13 @@ def get_best_performing_stocks(limit: int = 30) -> List[Dict]:
         perf_data.sort(key=lambda x: x['change'], reverse=True)
         top_stocks = perf_data[:limit]
         
+        # Save to cache
+        try:
+            with open(cache_file, "w") as f:
+                json.dump({"timestamp": time.time(), "stocks": perf_data}, f, indent=2)
+        except Exception as e:
+            logger.debug(f"Failed to write discovery cache: {e}")
+
         logger.info(f"Top performers found: {[s['symbol'] for s in top_stocks[:5]]}")
         return top_stocks
 

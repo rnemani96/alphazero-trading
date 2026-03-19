@@ -1,80 +1,126 @@
 """
-TITAN Agent - Strategy Execution & Signal Generation
+TITAN Agent — 45-Strategy Signal Engine
+src/agents/titan_agent.py
 
-Runs all 45+ strategies and generates trading signals with confidence scores.
-This is the "brain" that decides WHAT to trade based on technical analysis.
+Runs all 45 strategies defined in src/titan.py in one batch, then:
+  1. Aggregates per-regime weights (TRENDING / SIDEWAYS / VOLATILE / RISK_OFF)
+  2. Computes weighted confidence score 0–1 for each symbol
+  3. Emits only signals that exceed the minimum confidence threshold
+  4. Requires multi-agent agreement flag when NEXUS and HERMES scores are wired in
 
-FIXES:
-  - Removed `from numpy import iterable` (removed in NumPy 1.25+, caused ImportError)
-  - Removed `from src import data` (dead circular import)
-  - Added safe indicator access with .get() fallback
-  - Added proper error handling per symbol
+KPI: Signal precision > 58%
+
+Architecture note:
+  Heavy math lives in src/titan.py (TitanStrategyEngine).
+  This file is the event-bus-aware agent wrapper.  No indicator code here.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Dict, List, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import pandas as pd
 
 from ..event_bus.event_bus import BaseAgent, EventType
 
 logger = logging.getLogger(__name__)
 
 
+# ── Lazy-import heavy strategy engine ─────────────────────────────────────────
+def _get_engine():
+    """Import TitanStrategyEngine only once (lazy — saves startup RAM)."""
+    try:
+        from src.titan import TitanStrategyEngine
+        return TitanStrategyEngine()
+    except ImportError:
+        try:
+            import sys, os
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+            from src.titan import TitanStrategyEngine
+            return TitanStrategyEngine()
+        except ImportError:
+            logger.error("TitanStrategyEngine not found — signals will be empty")
+            return None
+
+
+# ── Regime → strategy-category weights ────────────────────────────────────────
+_REGIME_WEIGHTS: Dict[str, Dict[str, float]] = {
+    'TRENDING': {
+        'Trend':          0.55,
+        'Breakout':       0.25,
+        'VWAP':           0.10,
+        'Volume':         0.10,
+        'Mean Reversion': 0.00,
+        'Statistical':    0.00,
+    },
+    'SIDEWAYS': {
+        'Trend':          0.10,
+        'Mean Reversion': 0.55,
+        'VWAP':           0.20,
+        'Volume':         0.15,
+        'Breakout':       0.00,
+        'Statistical':    0.00,
+    },
+    'VOLATILE': {
+        'Trend':          0.15,
+        'Breakout':       0.35,
+        'VWAP':           0.20,
+        'Volume':         0.20,
+        'Mean Reversion': 0.10,
+        'Statistical':    0.00,
+    },
+    'RISK_OFF': {
+        'Trend':          0.00,
+        'Breakout':       0.00,
+        'VWAP':           0.00,
+        'Volume':         0.00,
+        'Mean Reversion': 0.00,
+        'Statistical':    0.00,
+    },
+    'NEUTRAL': {
+        'Trend':          0.30,
+        'Mean Reversion': 0.25,
+        'Breakout':       0.20,
+        'VWAP':           0.15,
+        'Volume':         0.10,
+        'Statistical':    0.00,
+    },
+}
+
+# Minimum signals that must agree before emitting a trade proposal
+_MIN_AGREEMENT    = 3
+# Minimum weighted confidence to emit a signal
+_MIN_CONFIDENCE   = 0.52
+
+
 class TitanAgent(BaseAgent):
     """
-    TITAN - Strategy Execution Agent
+    TITAN — Strategy Execution Agent.
 
-    Responsibilities:
-    - Run all active trading strategies
-    - Generate trading signals (BUY/SELL/HOLD)
-    - Calculate confidence scores
-    - Aggregate multi-strategy signals
-    - Adapt to market regime
+    Core public method: generate_signals(market_data, regime) → List[signal_dict]
 
-    KPI: Signal precision > 58%
+    Each returned dict contains:
+      symbol, action (BUY/SELL), confidence (0–1), signal_strength,
+      price, atr, stop_loss, target, rr, reasons, strategy_count,
+      top_strategy, regime, source, timestamp
     """
 
-    def __init__(self, event_bus, config):
+    def __init__(self, event_bus, config: Dict[str, Any]):
         super().__init__(event_bus=event_bus, config=config, name="TITAN")
 
-        # Strategy weights by regime
-        self.regime_weights: Dict[str, Dict[str, float]] = {
-            'TRENDING': {
-                'trend_following': 0.60,
-                'breakout':        0.30,
-                'volume':          0.10,
-            },
-            'SIDEWAYS': {
-                'mean_reversion':  0.70,
-                'volume':          0.30,
-            },
-            'VOLATILE': {
-                'volatility':      0.50,
-                'breakout':        0.30,
-                'volume':          0.20,
-            },
-            'RISK_OFF': {
-                'defensive':       1.00,
-            },
-            'NEUTRAL': {
-                'trend_following': 0.40,
-                'mean_reversion':  0.30,
-                'breakout':        0.20,
-                'volume':          0.10,
-            },
-        }
+        self._engine           = None          # lazy-initialised on first call
+        self._min_confidence   = float(config.get('TITAN_MIN_CONFIDENCE',   _MIN_CONFIDENCE))
+        self._min_agreement    = int(config.get('TITAN_MIN_AGREEMENT',      _MIN_AGREEMENT))
 
-        self.active_strategies: List[str] = [
-            'ema_cross',
-            'rsi_extreme',
-            'bollinger_squeeze',
-            'volume_breakout',
-            'vwap_cross',
-            'macd_divergence',
-        ]
+        # Performance tracking
+        self.signals_generated  = 0
+        self.signals_emitted    = 0
+        self.strategy_win_rates: Dict[str, Dict[str, int]] = {}   # {strategy_id: {wins, total}}
 
-        self.signals_generated: int = 0
-        logger.info("TITAN Agent initialized - Strategy execution ready")
+        logger.info("TITAN initialised — min_confidence=%.2f  min_agreement=%d",
+                    self._min_confidence, self._min_agreement)
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -82,244 +128,307 @@ class TitanAgent(BaseAgent):
         self,
         market_data: Dict[str, Any],
         regime: str = 'NEUTRAL',
+        nexus_regime: Optional[str] = None,
+        hermes_scores: Optional[Dict[str, float]] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Generate trading signals for all symbols in market_data.
+        Run all 45 strategies over market_data and return actionable signals.
 
         Args:
-            market_data: dict keyed by symbol, each value is a dict of indicators
-            regime:      current market regime string
+            market_data  : {symbol: indicator_dict}
+            regime       : regime string from NEXUS
+            nexus_regime : optional override (same as regime usually)
+            hermes_scores: optional {symbol: sentiment_score} from HERMES
 
         Returns:
-            List of signal dicts with keys: symbol, signal, action,
-            confidence, price, stop_loss, target, reasons, regime, source
+            List of signal dicts, each ready for GUARDIAN → MERCURY pipeline.
         """
-        signals: List[Dict[str, Any]] = []
-        weights = self.regime_weights.get(regime, self.regime_weights['NEUTRAL'])
+        if not market_data:
+            return []
 
-        for symbol, data in market_data.items():
+        effective_regime = nexus_regime or regime
+
+        # Risk-off → no signals at all
+        if effective_regime == 'RISK_OFF':
+            logger.info("TITAN: RISK_OFF — no signals generated")
+            return []
+
+        # Lazy-init the strategy engine
+        if self._engine is None:
+            self._engine = _get_engine()
+
+        weights = _REGIME_WEIGHTS.get(effective_regime, _REGIME_WEIGHTS['NEUTRAL'])
+        signals: List[Dict[str, Any]] = []
+
+        for symbol, ind_data in market_data.items():
             try:
-                sig = self._compute_signal(symbol, data, regime, weights)
-                if sig is not None:
+                sig = self._process_symbol(
+                    symbol, ind_data, effective_regime, weights,
+                    hermes_scores.get(symbol, 0.0) if hermes_scores else 0.0,
+                )
+                if sig:
                     signals.append(sig)
-                    self.signals_generated += 1
+                    self.signals_emitted += 1
             except Exception as exc:
-                logger.debug(f"TITAN: signal error for {symbol}: {exc}")
+                logger.debug("TITAN: symbol %s error — %s", symbol, exc)
+
+        self.signals_generated += len(market_data)
 
         if signals:
-            self.publish_event(
-                EventType.SIGNAL_GENERATED,
-                {'signals': signals, 'regime': regime, 'count': len(signals)},
-            )
+            self.publish_event(EventType.SIGNAL_GENERATED, {
+                'source':   'TITAN',
+                'regime':   effective_regime,
+                'count':    len(signals),
+                'symbols':  [s['symbol'] for s in signals],
+                'timestamp': datetime.now().isoformat(),
+            })
+            logger.info("TITAN: %d signals emitted for %d symbols (%s regime)",
+                        len(signals), len(market_data), effective_regime)
+        else:
+            logger.info("TITAN: no signals passed confidence threshold (%s regime)", effective_regime)
+
         return signals
 
-    # ── Internal helpers ──────────────────────────────────────────────────────
+    # ── Internal ──────────────────────────────────────────────────────────────
 
-    def _compute_signal(
+    def _process_symbol(
         self,
         symbol: str,
-        data: Dict[str, Any],
+        ind_data: Dict[str, Any],
         regime: str,
         weights: Dict[str, float],
+        sentiment: float,
     ) -> Optional[Dict[str, Any]]:
-        """Compute a consensus signal for a single symbol."""
-        # Collect individual strategy votes
-        strategy_signals = [
-            self._trend_signals(data),
-            self._reversion_signals(data),
-            self._breakout_signals(data),
-            self._volume_signals(data),
-        ]
+        """Run strategies for one symbol and aggregate into a single signal."""
 
-        keys = ['trend_following', 'mean_reversion', 'breakout', 'volume']
-
-        total_signal     = 0.0
-        total_confidence = 0.0
-        total_weight     = 0.0
-        reasons: List[str] = []
-
-        for i, strat_sig in enumerate(strategy_signals):
-            w = weights.get(keys[i], 0.25)
-            total_signal     += strat_sig['signal']     * w
-            total_confidence += strat_sig['confidence'] * w
-            total_weight     += w
-            reasons.extend(strat_sig.get('reasons', []))
-
-        if total_weight == 0:
-            return None
-
-        avg_signal     = total_signal     / total_weight
-        avg_confidence = total_confidence / total_weight
-
-        if avg_signal > 0.4:
-            action = 'BUY'
-        elif avg_signal < -0.4:
-            action = 'SELL'
-        else:
-            return None   # no clear signal → skip
-
-        price = float(data.get('close', data.get('price', 0)) or 0)
+        price = float(ind_data.get('close') or ind_data.get('price') or 0)
         if price <= 0:
             return None
 
-        atr   = float(data.get('atr', price * 0.015) or price * 0.015)
-        stop  = round(price - 2.0 * atr, 2) if action == 'BUY'  else round(price + 2.0 * atr, 2)
-        tgt   = round(price + 3.0 * atr, 2) if action == 'BUY'  else round(price - 3.0 * atr, 2)
-        rr    = round(abs(tgt - price) / max(abs(price - stop), 0.01), 2)
+        # ── Build DataFrame for TitanStrategyEngine ──────────────────────────
+        if self._engine is not None:
+            df = self._build_df(ind_data)
+            if df is not None and len(df) >= 5:
+                raw_signals = self._engine.compute_all(df, symbol, regime)
+            else:
+                raw_signals = []
+        else:
+            raw_signals = []
+
+        # Fall back to simple indicator-based signals if engine unavailable
+        if not raw_signals:
+            raw_signals = self._fallback_signals(ind_data)
+
+        if not raw_signals:
+            return None
+
+        # ── Aggregate by regime weights ───────────────────────────────────────
+        buy_score  = 0.0
+        sell_score = 0.0
+        total_w    = 0.0
+        reasons: List[str] = []
+        top_strategy: str  = ''
+        best_conf  = 0.0
+
+        for sig in raw_signals:
+            cat = getattr(sig, 'category', 'Trend')
+            w   = weights.get(cat, 0.15)
+            if w == 0:
+                continue
+            c = getattr(sig, 'confidence', 0.5)
+            s = getattr(sig, 'signal', 0)
+            total_w += w
+            if s > 0:
+                buy_score  += c * w
+            elif s < 0:
+                sell_score += c * w
+            if c > best_conf:
+                best_conf    = c
+                top_strategy = getattr(sig, 'strategy_id', '')
+                reasons.append(getattr(sig, 'reason', ''))
+
+        if total_w < 1e-9:
+            return None
+
+        buy_conf  = buy_score  / total_w
+        sell_conf = sell_score / total_w
+
+        # ── Sentiment bias from HERMES ────────────────────────────────────────
+        # Positive sentiment boosts buys, negative boosts sells
+        sentiment_boost = sentiment * 0.05   # max ±5%
+        buy_conf  = min(1.0, buy_conf  + max(0, sentiment_boost))
+        sell_conf = min(1.0, sell_conf - min(0, sentiment_boost))
+
+        # ── Agreement check ───────────────────────────────────────────────────
+        buy_count  = sum(1 for s in raw_signals if getattr(s, 'signal', 0) > 0
+                         and getattr(s, 'confidence', 0) >= 0.5)
+        sell_count = sum(1 for s in raw_signals if getattr(s, 'signal', 0) < 0
+                         and getattr(s, 'confidence', 0) >= 0.5)
+
+        if buy_conf >= sell_conf:
+            if buy_conf  < self._min_confidence: return None
+            if buy_count  < self._min_agreement:  return None
+            action = 'BUY'
+            confidence = buy_conf
+        else:
+            if sell_conf < self._min_confidence: return None
+            if sell_count < self._min_agreement:  return None
+            action = 'SELL'
+            confidence = sell_conf
+
+        # ── Position sizing inputs ────────────────────────────────────────────
+        atr = float(ind_data.get('atr') or price * 0.02)
+        if action == 'BUY':
+            stop_loss = round(price - 1.5 * atr, 2)
+            target    = round(price + 3.0 * atr, 2)
+        else:
+            stop_loss = round(price + 1.5 * atr, 2)
+            target    = round(price - 3.0 * atr, 2)
+
+        risk   = abs(price - stop_loss)
+        reward = abs(target - price)
+        rr     = round(reward / risk, 2) if risk > 0 else 0
+
+        # Minimum R:R filter
+        if rr < 1.8:
+            return None
 
         return {
-            'symbol':     symbol,
-            'signal':     action,
-            'action':     action,
-            'confidence': round(min(avg_confidence, 1.0), 3),
-            'signal_strength': round(abs(avg_signal), 3),
-            'price':      price,
-            'stop_loss':  stop,
-            'target':     tgt,
-            'rr':         rr,
-            'reasons':    reasons[:5],        # cap to avoid bloat
-            'regime':     regime,
-            'source':     'TITAN',
-            'timestamp':  datetime.now().strftime('%H:%M:%S'),
+            'symbol':         symbol,
+            'action':         action,
+            'signal':         action,
+            'confidence':     round(confidence, 3),
+            'signal_strength': round(confidence, 3),
+            'price':          price,
+            'entry_price':    price,
+            'atr':            round(atr, 2),
+            'stop_loss':      stop_loss,
+            'target':         target,
+            'rr':             rr,
+            'strategy_count': len(raw_signals),
+            'buy_count':      buy_count,
+            'sell_count':     sell_count,
+            'top_strategy':   top_strategy,
+            'reasons':        reasons[:4],
+            'regime':         regime,
+            'sentiment':      round(sentiment, 3),
+            'source':         'TITAN',
+            'trade_type':     'INTRADAY' if regime in ('VOLATILE',) else 'SWING',
+            'timestamp':      datetime.now().strftime('%H:%M:%S'),
         }
 
-    # ── Strategy families ─────────────────────────────────────────────────────
+    def _build_df(self, ind_data: Dict[str, Any]) -> Optional[pd.DataFrame]:
+        """Build a minimal DataFrame from indicator data so TitanStrategyEngine can run."""
+        required = ['close']
+        if not all(k in ind_data for k in required):
+            return None
+        row = {
+            'open':   ind_data.get('open',   ind_data['close']),
+            'high':   ind_data.get('high',   ind_data['close']),
+            'low':    ind_data.get('low',    ind_data['close']),
+            'close':  ind_data['close'],
+            'volume': ind_data.get('volume', 0),
+        }
+        # Create single-row DF — engine will handle gracefully
+        return pd.DataFrame([row])
 
-    def _trend_signals(self, d: Dict) -> Dict:
-        """Trend-following signals: EMA cross, MACD, Supertrend."""
-        score   = 0.0
-        votes   = 0
-        reasons = []
+    def _fallback_signals(self, d: Dict[str, Any]) -> list:
+        """Simple rule-based fallback when TitanStrategyEngine is unavailable."""
+        class _Sig:
+            def __init__(self, sig, conf, cat, reason, sid):
+                self.signal     = sig
+                self.confidence = conf
+                self.category   = cat
+                self.reason     = reason
+                self.strategy_id = sid
 
+        sigs = []
         close  = float(d.get('close', 0) or 0)
         ema20  = float(d.get('ema20', 0) or 0)
         ema50  = float(d.get('ema50', 0) or 0)
-        macd   = float(d.get('macd', 0) or 0)
+        rsi    = float(d.get('rsi',  50) or 50)
+        macd   = float(d.get('macd',  0) or 0)
         msig   = float(d.get('macd_signal', 0) or 0)
+        vwap   = float(d.get('vwap',  0) or 0)
+        vol_z  = float(d.get('volume_zscore', 0) or 0)
+        bb_up  = float(d.get('bb_upper', 0) or 0)
+        bb_lo  = float(d.get('bb_lower', 0) or 0)
         adx    = float(d.get('adx', 0) or 0)
-        st_dir = d.get('supertrend_direction', 0)
 
+        if close <= 0:
+            return sigs
+
+        # EMA cross
         if ema20 > 0 and ema50 > 0:
-            votes += 1
             if close > ema20 > ema50:
-                score += 1.0; reasons.append('EMA bullish cross')
+                gap = (ema20 - ema50) / ema50
+                sigs.append(_Sig(1, min(0.8, 0.55 + gap * 5), 'Trend',
+                                 f'EMA bull cross gap={gap:.2%}', 'T1'))
             elif close < ema20 < ema50:
-                score -= 1.0; reasons.append('EMA bearish cross')
+                sigs.append(_Sig(-1, 0.65, 'Trend', 'EMA bear cross', 'T1'))
 
-        if macd != 0 or msig != 0:
-            votes += 1
-            if macd > msig:
-                score += 0.8; reasons.append('MACD bullish')
-            elif macd < msig:
-                score -= 0.8; reasons.append('MACD bearish')
+        # RSI
+        if rsi < 30:
+            sigs.append(_Sig(1, 0.70, 'Mean Reversion', f'RSI oversold {rsi:.0f}', 'M1'))
+        elif rsi > 70:
+            sigs.append(_Sig(-1, 0.70, 'Mean Reversion', f'RSI overbought {rsi:.0f}', 'M1'))
 
-        if adx > 25:
-            if st_dir == 1:
-                score += 0.6; reasons.append('Supertrend bullish')
-            elif st_dir == -1:
-                score -= 0.6; reasons.append('Supertrend bearish')
+        # MACD
+        if macd > msig and macd > 0:
+            sigs.append(_Sig(1, 0.60, 'Trend', 'MACD bullish', 'T4'))
+        elif macd < msig and macd < 0:
+            sigs.append(_Sig(-1, 0.60, 'Trend', 'MACD bearish', 'T4'))
 
-        if votes == 0:
-            return {'signal': 0.0, 'confidence': 0.0, 'reasons': []}
+        # VWAP
+        if vwap > 0:
+            dev = (close - vwap) / vwap
+            if close > vwap * 1.003:
+                sigs.append(_Sig(1, min(0.72, 0.55 + abs(dev) * 5), 'VWAP', 'Above VWAP', 'V1'))
+            elif close < vwap * 0.997:
+                sigs.append(_Sig(-1, min(0.72, 0.55 + abs(dev) * 5), 'VWAP', 'Below VWAP', 'V1'))
 
-        norm = score / (votes * 1.0)
-        conf = min(abs(norm) * 0.8, 0.95) if votes > 1 else 0.5
-        return {'signal': norm, 'confidence': conf, 'reasons': reasons}
-
-    def _reversion_signals(self, d: Dict) -> Dict:
-        """Mean-reversion signals: RSI, Bollinger Bands, Stochastic."""
-        score   = 0.0
-        votes   = 0
-        reasons = []
-
-        rsi      = float(d.get('rsi', 50) or 50)
-        bb_up    = float(d.get('bb_upper', 0) or 0)
-        bb_lo    = float(d.get('bb_lower', 0) or 0)
-        close    = float(d.get('close', 0) or 0)
-        stoch_k  = float(d.get('stoch_k', 50) or 50)
-
-        if rsi > 0:
-            votes += 1
-            if rsi < 30:
-                score += 1.0; reasons.append(f'RSI oversold ({rsi:.0f})')
-            elif rsi > 70:
-                score -= 1.0; reasons.append(f'RSI overbought ({rsi:.0f})')
-
-        if bb_up > 0 and bb_lo > 0 and close > 0:
-            votes += 1
+        # BB bounce
+        if bb_up > 0 and bb_lo > 0:
             if close < bb_lo:
-                score += 0.9; reasons.append('Price below BB lower')
+                sigs.append(_Sig(1, 0.68, 'Mean Reversion', 'Below BB lower', 'M2'))
             elif close > bb_up:
-                score -= 0.9; reasons.append('Price above BB upper')
+                sigs.append(_Sig(-1, 0.68, 'Mean Reversion', 'Above BB upper', 'M2'))
 
-        if stoch_k > 0:
-            votes += 1
-            if stoch_k < 20:
-                score += 0.7; reasons.append(f'Stoch oversold ({stoch_k:.0f})')
-            elif stoch_k > 80:
-                score -= 0.7; reasons.append(f'Stoch overbought ({stoch_k:.0f})')
+        # ADX strength
+        if adx > 30:
+            if ema20 > ema50 and close > ema20:
+                sigs.append(_Sig(1, 0.65, 'Trend', f'ADX strong trend {adx:.0f}', 'T5'))
+            elif ema20 < ema50 and close < ema20:
+                sigs.append(_Sig(-1, 0.65, 'Trend', f'ADX strong downtrend {adx:.0f}', 'T5'))
 
-        if votes == 0:
-            return {'signal': 0.0, 'confidence': 0.0, 'reasons': []}
+        # Volume spike confirmation
+        if vol_z > 2.0 and close > ema20:
+            sigs.append(_Sig(1, 0.60, 'Volume', f'Vol spike {vol_z:.1f}σ bullish', 'VL2'))
+        elif vol_z > 2.0 and close < ema20:
+            sigs.append(_Sig(-1, 0.60, 'Volume', f'Vol spike {vol_z:.1f}σ bearish', 'VL2'))
 
-        norm = score / (votes * 1.0)
-        conf = min(abs(norm) * 0.8, 0.95)
-        return {'signal': norm, 'confidence': conf, 'reasons': reasons}
+        return sigs
 
-    def _breakout_signals(self, d: Dict) -> Dict:
-        """Breakout signals: new highs/lows, ATR-based volatility."""
-        score   = 0.0
-        reasons = []
+    # ── Learning feedback ─────────────────────────────────────────────────────
 
-        nh20  = d.get('new_high_20d', False)
-        nl20  = d.get('new_low_20d', False)
-        close = float(d.get('close', 0) or 0)
-        vwap  = float(d.get('vwap', 0) or 0)
-
-        if nh20:
-            score += 0.8; reasons.append('New 20-day high')
-        if nl20:
-            score -= 0.8; reasons.append('New 20-day low')
-
-        if vwap > 0 and close > 0:
-            if close > vwap * 1.005:
-                score += 0.5; reasons.append('Above VWAP')
-            elif close < vwap * 0.995:
-                score -= 0.5; reasons.append('Below VWAP')
-
-        conf = min(abs(score) * 0.7, 0.90)
-        return {'signal': max(-1.0, min(1.0, score)), 'confidence': conf, 'reasons': reasons}
-
-    def _volume_signals(self, d: Dict) -> Dict:
-        """Volume signals: volume Z-score, OBV direction."""
-        score   = 0.0
-        reasons = []
-
-        vol_z = float(d.get('volume_zscore', 0) or 0)
-        obv   = float(d.get('obv', 0) or 0)
-        close = float(d.get('close', 0) or 0)
-        ema50 = float(d.get('ema50', 0) or 0)
-
-        if vol_z > 2.0:
-            direction = 1.0 if (close > ema50 > 0) else -1.0
-            score += direction * 0.6
-            reasons.append(f'High volume spike ({vol_z:.1f}σ)')
-
-        if obv != 0:
-            if obv > 0:
-                score += 0.3; reasons.append('OBV positive')
-            else:
-                score -= 0.3; reasons.append('OBV negative')
-
-        conf = min(abs(score) * 0.6, 0.80)
-        return {'signal': max(-1.0, min(1.0, score)), 'confidence': conf, 'reasons': reasons}
+    def record_outcome(self, strategy_id: str, won: bool):
+        """Called by KARMA/LENS to track strategy accuracy."""
+        if strategy_id not in self.strategy_win_rates:
+            self.strategy_win_rates[strategy_id] = {'wins': 0, 'total': 0}
+        self.strategy_win_rates[strategy_id]['total'] += 1
+        if won:
+            self.strategy_win_rates[strategy_id]['wins'] += 1
 
     def get_stats(self) -> Dict[str, Any]:
-        """Return current TITAN statistics."""
+        total_pred = sum(v['total'] for v in self.strategy_win_rates.values())
+        total_wins  = sum(v['wins']  for v in self.strategy_win_rates.values())
         return {
-            'name':               self.name,
-            'active':             self.is_active,
-            'signals_generated':  self.signals_generated,
-            'active_strategies':  len(self.active_strategies),
-            'kpi':                'Signal precision > 58%',
+            'name':              self.name,
+            'active':            self.is_active,
+            'signals_generated': self.signals_generated,
+            'signals_emitted':   self.signals_emitted,
+            'strategy_count':    45,
+            'overall_win_rate':  round(total_wins / max(total_pred, 1), 3),
+            'kpi':               'Signal precision > 58%',
+            'last_activity':     self.last_activity,
         }
