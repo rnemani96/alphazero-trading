@@ -129,7 +129,8 @@ class GuardianAgent(BaseAgent):
                 self._alert(f"Daily loss limit {loss_pct:.1%} hit — shutdown")
                 return self._reject(f'DAILY_LOSS_LIMIT ({loss_pct:.1%})')
 
-            if self._current_vix >= self.vix_halt_threshold:
+            is_hedge = "Hedge" in str(strat) or "PE" in str(sym) or "Hedge" in str(sym)
+            if self._current_vix >= self.vix_halt_threshold and not is_hedge:
                 return self._reject(f'VIX_HALT ({self._current_vix:.1f} ≥ {self.vix_halt_threshold})')
 
             if len(positions) >= self.max_positions:
@@ -167,8 +168,8 @@ class GuardianAgent(BaseAgent):
                 current_capital, price, atr, sl, conf, strat
             )
 
-            # VIX size reduction
-            if self._current_vix >= self.vix_reduce_threshold:
+            # VIX size reduction (do not reduce protective hedges)
+            if self._current_vix >= self.vix_reduce_threshold and not is_hedge:
                 pos_size *= 0.5
                 logger.info("GUARDIAN: VIX=%.1f → position halved", self._current_vix)
 

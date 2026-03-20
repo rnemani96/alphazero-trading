@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -193,9 +193,11 @@ class TitanAgent(BaseAgent):
                 'symbols':  [s['symbol'] for s in signals],
                 'timestamp': datetime.now().isoformat(),
             })
-            logger.info(f"TITAN: {len(signals)} signals emitted for {len(market_data)} symbols ({effective_regime} regime; conf={dyn_conf:.2f} aggr={dyn_aggr})")
+            msg = f"TITAN: {len(signals)} signals emitted for {len(market_data)} symbols (regime={effective_regime} conf={dyn_conf:.2f})"
+            logger.info(msg)
         else:
-            logger.info(f"TITAN: no signals passed thresholds (regime={effective_regime} conf={dyn_conf:.2f} aggr={dyn_aggr})")
+            msg = f"TITAN: no signals passed thresholds (regime={effective_regime} conf={dyn_conf:.2f})"
+            logger.info(msg)
 
         return signals
 
@@ -204,9 +206,10 @@ class TitanAgent(BaseAgent):
         if regime == "TRENDING":
             return 0.60, 3
         elif regime == "SIDEWAYS":
-            return 0.45, 1
+            # Loose for PAPER mode to allow monitoring newly unlocked strategies
+            return 0.35, 1
         elif regime == "VOLATILE":
-            return 0.50, 2
+            return 0.48, 2
         return self._min_confidence, self._min_agreement
 
     def _process_symbol(
@@ -224,7 +227,13 @@ class TitanAgent(BaseAgent):
     ) -> Optional[Dict[str, Any]]:
         """Run strategies for one symbol and aggregate into a single signal."""
 
-        price = float(ind_data.get('close') or ind_data.get('price') or 0)
+        # Handle both dict (legacy) and DataFrame (modern) inputs
+        if isinstance(ind_data, pd.DataFrame):
+            if ind_data.empty: return None
+            price = float(ind_data['close'].iloc[-1])
+        else:
+            price = float(ind_data.get('close') or ind_data.get('price') or 0)
+
         if price <= 0:
             return None
 

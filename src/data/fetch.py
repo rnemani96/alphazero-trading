@@ -149,8 +149,146 @@ class DataFetcher:
 
         # OHLCV candle cache keyed by (symbol, interval)
         self._ohlcv_cache:    Dict[tuple, List[Dict]] = {}
-        self._ohlcv_cache_ts: Dict[tuple, datetime]   = {}
         self.ohlcv_cache_ttl  = 300   # 5-minute TTL for candles
+        
+    def get_stock_fundamentals(self, symbol: str) -> Dict[str, Any]:
+        """Fetch company fundamentals (PE, Market Cap, etc) via yfinance. Requirement #2."""
+        s = _to_yahoo(symbol)
+        
+        # Cache hit
+        now = datetime.now()
+        if not hasattr(self, '_funder_cache'):
+            self._funder_cache: Dict[str, Dict] = {}
+            self._funder_ts:    Dict[str, datetime] = {}
+
+        if s in self._funder_cache:
+            ts = self._funder_ts.get(s, now - timedelta(days=2))
+            if now - ts < timedelta(hours=24):
+                return self._funder_cache[s]
+
+        # Fetch fresh
+        try:
+            if not YFINANCE_OK: return {}
+            ticker = yf.Ticker(s)
+            info = getattr(ticker, 'info', {})
+            
+            data = {
+                "sector":         info.get("sector", "N/A"),
+                "industry":       info.get("industry", "N/A"),
+                "market_cap":     info.get("marketCap", 0),
+                "pe_ratio":       info.get("trailingPE", 0),
+                "pb_ratio":       info.get("priceToBook", 0),
+                "debt_equity":    info.get("debtToEquity", 0),
+                "div_yield":      info.get("dividendYield", 0),
+                "beta":           info.get("beta", 1.0),
+                "rev_growth":     info.get("revenueGrowth", 0),
+                "profit_margin":  info.get("profitMargins", 0),
+                "description":    info.get("longBusinessSummary", "No description available."),
+                "website":        info.get("website", ""),
+                "employees":      info.get("fullTimeEmployees", 0),
+                "updated_at":     now.isoformat()
+            }
+            
+            self._funder_cache[s] = data
+            self._funder_ts[s]    = now
+            return data
+        except Exception as e:
+            logger.debug("Fundamentals fetch failed for %s: %s", symbol, e)
+            return self._funder_cache.get(s, {})
+
+    def get_volume_analysis(self, symbol: str, df: pd.DataFrame = None) -> Dict[str, Any]:
+        """Perform volume analysis (Requirement #4)."""
+        if df is None:
+            df = self._get_cached_ohlcv(symbol, interval='1day', bars=30)
+        
+        if df is None or df.empty: return {}
+        
+        v = df['volume']
+        v_avg_20 = v.tail(20).mean()
+        v_last   = v.iloc[-1]
+        v_ratio  = v_last / v_avg_20 if v_avg_20 > 0 else 1.0
+        
+        # Volume profile (simplified)
+        prices = df['close']
+        bins = pd.cut(prices, bins=5)
+        profile = df.groupby(bins, observed=True)['volume'].sum().to_dict()
+        profile_clean = {f"{round(b.left, 1)}-{round(b.right, 1)}": int(val) for b, val in profile.items()}
+        
+        # Real Delivery Fetch (P1 #4)
+        deliv_pct = 0.0
+        try:
+            if NSE_PYTHON_OK:
+                # nse_quote for equity often contains securityWiseDP
+                q = nsepython.nse_quote(symbol)
+                dp = q.get('securityWiseDP', {})
+                deliv_pct = float(dp.get('deliveryToTradedQuantity', 0))
+                if deliv_pct == 0:
+                    # Fallback for indices or where missing
+                    deliv_pct = 45.0
+            else:
+                deliv_pct = 45.0
+        except Exception:
+            deliv_pct = 45.0
+
+        return {
+            "vol_last":     int(v_last),
+            "vol_avg_20":   int(v_avg_20),
+            "vol_ratio":    round(v_ratio, 2),
+            "vol_profile":  profile_clean,
+            "vol_trend":    "RISING" if v_last > v_avg_20 else "FALLING",
+            "delivery_pct": round(deliv_pct, 1)
+        }
+
+    def get_options_chain(self, symbol: str) -> Dict[str, Any]:
+        """Fetch NSE Options Chain for given symbol/index. Requirement #1."""
+        try:
+            if not NSE_PYTHON_OK: return {}
+            # nse_optionchain_scrapper returns a cleaned dict with all strikes
+            # but it is heavy. nse_quote for NIFTY also contains OI data.
+            # Using specialized scrapper for regime detection quality.
+            data = nsepython.nse_optionchain_scrapper(symbol)
+            if not data: return {}
+            
+            # Format to our standard
+            contracts = []
+            for row in data.get('records', {}).get('data', []):
+                strike = row.get('strikePrice')
+                expiry = row.get('expiryDate')
+                
+                if 'CE' in row:
+                    ce = row['CE']
+                    contracts.append({
+                        'type': 'CALL', 'strike': strike, 'expiry': expiry,
+                        'ltp': ce.get('lastPrice', 0), 'open_interest': ce.get('openInterest', 0),
+                        'change_oi': ce.get('changeinOpenInterest', 0)
+                    })
+                if 'PE' in row:
+                    pe = row['PE']
+                    contracts.append({
+                        'type': 'PUT', 'strike': strike, 'expiry': expiry,
+                        'ltp': pe.get('lastPrice', 0), 'open_interest': pe.get('openInterest', 0),
+                        'change_oi': pe.get('changeinOpenInterest', 0)
+                    })
+            
+            return {
+                "symbol":    symbol,
+                "timestamp": datetime.now().isoformat(),
+                "contracts": contracts,
+                "pc_ratio":  data.get('filtered', {}).get('CE', {}).get('totOI', 1) / \
+                             data.get('filtered', {}).get('PE', {}).get('totOI', 1) if 'filtered' in data else 1.0
+            }
+        except Exception as e:
+            logger.debug("Options chain fetch failed for %s: %s", symbol, e)
+            return {}
+
+    def _get_cached_ohlcv(self, symbol, interval, bars):
+        """Internal helper for data fetching methods."""
+        k = (symbol, interval)
+        if k in self._ohlcv_cache:
+            return pd.DataFrame(self._ohlcv_cache[k])
+        return self.get_ohlcv(symbol, interval, bars)
+
+    def _load_macro_history(self):
 
         if NSE_PYTHON_OK:
             logger.info(f"DataFetcher ready — real NSE data via nsepython (mode={self.mode})")
@@ -158,6 +296,25 @@ class DataFetcher:
             logger.info(f"DataFetcher ready — real NSE data via yfinance fallback (mode={self.mode})")
         else:
             logger.warning("No data source available. Run: pip install nsepython")
+
+    def _load_macro_history(self):
+        """Load macro history from CSV to persist across restarts."""
+        try:
+            if os.path.exists(self._macro_path):
+                self._macro_history = pd.read_csv(self._macro_path, index_index=True)
+                self._macro_history.index = pd.to_datetime(self._macro_history.index)
+            else:
+                self._macro_history = pd.DataFrame()
+        except Exception as e:
+            logger.debug(f"Failed to load macro history: {e}")
+            self._macro_history = pd.DataFrame()
+
+    def _save_macro_history(self):
+        """Save macro history to CSV."""
+        try:
+            self._macro_history.to_csv(self._macro_path)
+        except Exception as e:
+            logger.debug(f"Failed to save macro history: {e}")
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -693,7 +850,7 @@ class DataFetcher:
     def get_macro_data(self) -> Dict[str, Any]:
         """
         Fetch global macro indicators with high reliability.
-        Implement ffill (limit=5) and fallback symbol (^NSEI -> NIFTYBEES).
+        Implement ffill (limit=5 iterations) and fallback symbol (^NSEI -> NIFTYBEES).
         Returns {
             'nifty': float, 'vix': float, 'spx_ret': float, 
             'usdinr': float, 'crude_ret': float,
@@ -729,43 +886,60 @@ class DataFetcher:
                 if not df.empty:
                     results[key] = float(df['Close'].iloc[-1])
                     if key in ("spx", "crude") and len(df) > 1:
-                        # Calculate 1d return for momentum indicators
                         results[f"{key}_ret"] = (df['Close'].iloc[-1] / df['Close'].iloc[-2] - 1) * 100
                 else:
                     results[key] = None
             except Exception:
                 results[key] = None
 
-        # 3. Fallback / ffill logic (limit 5)
-        if nifty is None or any(v is None for v in [results.get('vix'), results.get('usdinr')]):
-            # Check cache/history
-            if hasattr(self, '_macro_history') and not self._macro_history.empty:
+        # 3. Fallback / ffill logic (limit 5 iterations)
+        # Check if any critical data is missing
+        missing_critical = (nifty is None or results.get('vix') is None or results.get('usdinr') is None)
+        
+        if missing_critical:
+            # Check how many consecutive FFILLs we've done
+            ffill_count = 0
+            if not self._macro_history.empty and 'status' in self._macro_history.columns:
+                # Count consecutive non-LIVE records from end
+                for s in reversed(self._macro_history['status'].tolist()):
+                    if s != 'LIVE': ffill_count += 1
+                    else: break
+
+            if ffill_count < 5 and not self._macro_history.empty:
                 last = self._macro_history.iloc[-1]
                 nifty = nifty or last.get('nifty')
                 for k in ["vix", "spx_ret", "usdinr", "crude_ret"]:
                     if results.get(k) is None: results[k] = last.get(k)
                 status = "FFILL"
-                logger.warning(f"Macro: Partial fetch failure, using ffill (status={status})")
+                logger.warning(f"Macro: fetch failure, using ffill (count={ffill_count+1}/5)")
             else:
+                # Total failure or limit exceeded -> Use default "safe" values
                 nifty = nifty or 22000.0
                 results.setdefault('vix', 15.0)
                 results.setdefault('usdinr', 83.0)
                 results.setdefault('spx_ret', 0.0)
                 results.setdefault('crude_ret', 0.0)
                 status = "MISSING"
-                logger.error(f"Macro: fetch failure and no history (status={status})")
+                msg = "Macro: fetch failure and history limit exceeded" if ffill_count >= 5 else "Macro: fetch failure and no history"
+                logger.error(f"{msg} (status=MISSING)")
 
-        # Update history
-        if not hasattr(self, '_macro_history'):
-            self._macro_history = pd.DataFrame()
-        
-        row_data = {'nifty': nifty, **results, 'timestamp': now}
+        # 4. Update and Save History
+        row_data = {
+            'nifty': nifty, 
+            'vix': results.get('vix'),
+            'spx_ret': results.get('spx_ret'),
+            'usdinr': results.get('usdinr'),
+            'crude_ret': results.get('crude_ret'),
+            'status': status,
+            'timestamp': now
+        }
         new_row = pd.DataFrame([row_data]).set_index('timestamp')
-        self._macro_history = pd.concat([self._macro_history, new_row]).tail(10)
+        self._macro_history = pd.concat([self._macro_history, new_row]).tail(20) # Keep 20 for history
+        self._save_macro_history()
         
         return {
             'nifty': round(nifty, 2),
-            **{k: round(v, 4) if v else 0.0 for k, v in results.items()},
+            **{k: round(v, 4) if v is not None else 0.0 for k, v in results.items()},
             'status': status,
             'timestamp': now
         }

@@ -37,6 +37,20 @@ class TitanStrategyEngine:
     def __init__(self):
         self.strategies = self._register_all_strategies()
         self.signal_history: dict[str, list] = {}
+        self.optimized_params: dict[str, dict] = {}
+        self._load_optimized_params()
+
+    def _load_optimized_params(self):
+        """Load Bayesian-optimized hyperparameters per symbol if available."""
+        import os, json
+        path = "models/optimized_params.json"
+        if os.path.exists(path):
+            try:
+                with open(path, "r") as f:
+                    self.optimized_params = json.load(f)
+                logger.info("TITAN: Loaded Bayesian optimized parameters for %d stocks", len(self.optimized_params))
+            except Exception as e:
+                logger.debug("Failed to load optimized_params.json: %s", e)
 
     def _register_all_strategies(self):
         """Return list of (id, name, category, timeframe, fn) tuples."""
@@ -109,8 +123,8 @@ class TitanStrategyEngine:
             return None
         return df[col].iloc[-1]
 
-    def _compute_base(self, df: pd.DataFrame) -> dict:
-        """Compute all base indicators if not already present."""
+    def _compute_base(self, df: pd.DataFrame, symbol: str = "") -> dict:
+        """Compute all base indicators using optimized per-symbol params if available."""
         r = {}
         if df.empty:
             return r
@@ -128,24 +142,31 @@ class TitanStrategyEngine:
                 result[i] = x[i] * k + result[i-1] * (1 - k)
             return result
 
+        # Fetch dynamic parameters
+        p = self.optimized_params.get(symbol, {})
+        ema_fast = p.get("EMA_FAST", 20)
+        ema_slow = p.get("EMA_SLOW", 50)
+        rsi_per  = p.get("RSI_PERIOD", 14)
+        atr_per  = p.get("ATR_PERIOD", 14)
+
         r["ema9"]  = ema(c, 9)
-        r["ema20"] = ema(c, 20)
-        r["ema50"] = ema(c, 50)
+        r["ema20"] = ema(c, ema_fast) # Re-mapped for dynamic T1
+        r["ema50"] = ema(c, ema_slow) # Re-mapped for dynamic T1
         r["ema200"]= ema(c, 200) if len(c) >= 200 else ema(c, len(c))
 
         # ATR
         if len(c) > 1:
             tr = np.maximum(h - l, np.maximum(abs(h - np.roll(c, 1)), abs(l - np.roll(c, 1))))
             tr[0] = h[0] - l[0]
-            r["atr14"] = ema(tr, 14)
+            r["atr14"] = ema(tr, atr_per)
 
         # RSI
-        if len(c) >= 15:
+        if len(c) >= rsi_per + 1:
             delta = np.diff(c, prepend=c[0])
             gain = np.where(delta > 0, delta, 0)
             loss = np.where(delta < 0, -delta, 0)
-            avg_g = ema(gain, 14)
-            avg_l = ema(loss, 14)
+            avg_g = ema(gain, rsi_per)
+            avg_l = ema(loss, rsi_per)
             rs = np.where(avg_l != 0, avg_g / avg_l, 100)
             r["rsi"] = 100 - 100 / (1 + rs)
 
@@ -648,7 +669,7 @@ class TitanStrategyEngine:
             logger.warning(f"TITAN: insufficient data for {symbol}")
             return []
 
-        ind = self._compute_base(df)
+        ind = self._compute_base(df, symbol=symbol)
         signals = []
         for sid, name, cat, tf, fn in self.strategies:
             # Timeframe filter (e.g. only run '5m' strategies)

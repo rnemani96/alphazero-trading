@@ -101,11 +101,13 @@ class LensAgent(BaseAgent):
         pnl = trade.get('pnl', 0)
         self.total_pnl += pnl
 
-        if pnl > 0:
+        # WIN only if pnl_pct > +0.2% (USER REQUEST)
+        pnl_pct = trade.get('pnl_pct', trade.get('realised_pct', 0))
+        if pnl_pct > 0.2:
             self.winning_trades += 1
-        elif pnl < 0:
+        elif pnl_pct < -0.2:
             self.losing_trades += 1
-
+            
         strategy = trade.get('strategy', 'unknown')
         if strategy not in self.strategy_performance:
             self.strategy_performance[strategy] = {
@@ -115,9 +117,9 @@ class LensAgent(BaseAgent):
         sp = self.strategy_performance[strategy]
         sp['trades'] += 1
         sp['pnl'] += pnl
-        if pnl > 0:
+        if pnl_pct > 0.2:
             sp['wins'] += 1
-        elif pnl < 0:
+        elif pnl_pct < -0.2:
             sp['losses'] += 1
 
         logger.info(f"LENS recorded actual trade: {trade.get('symbol')} P&L: ₹{pnl:,.0f}")

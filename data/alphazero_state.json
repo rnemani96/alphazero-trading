@@ -156,109 +156,39 @@
         "realised_pct": -0.53
       }
     ],
-    "last_updated": "2026-03-20T21:07:06.393252+05:30",
+    "last_updated": "2026-03-21T01:30:57.550706+05:30",
     "blocked_symbols": [
       "LLOYDSME",
       "CANBK",
       "INOXWIND"
     ]
   },
-  "iteration": 5,
+  "iteration": 34,
   "regime": "SIDEWAYS",
-  "sentiment": 0.0294,
+  "sentiment": 0.0,
   "sentiment_scores": {
-    "FORCEMOT": 0.0,
-    "DOMS": 0.5835,
-    "ABFRL": 0.2267125,
-    "INOXWIND": 0.5318875000000001,
-    "HONASA": 0.4119625,
-    "ESCORTS": 0.40111874999999997,
-    "IDEA": 0.04784375,
-    "MAHABANK": 0.46359453124999994,
-    "HINDCOPPER": -0.346,
-    "HAPPSTMNDS": 0.3587,
-    "SAGILITY": 0.58255,
-    "CCL": 0.5814,
-    "BAYERCROP": 0.37760000000000005,
-    "LAURUSLABS": 0.2575515625,
+    "BAYERCROP": 0.0,
+    "IOB": 0.0,
+    "IDEA": 0.0,
+    "JINDALSTEL": 0.0,
+    "IDBI": 0.0,
+    "MAPMYINDIA": 0.0,
+    "HINDPETRO": 0.0,
+    "LAURUSLABS": 0.0,
+    "TATAELXSI": 0.0,
+    "MAHABANK": 0.0,
     "TRIVENI": 0.0,
+    "HAPPSTMNDS": 0.0,
+    "ATHERENERG": 0.0,
+    "MRPL": 0.0,
+    "TARIL": 0.0,
+    "ANANTRAJ": 0.0,
+    "SAGILITY": 0.0,
+    "SCHAEFFLER": 0.0,
     "GPIL": 0.0,
-    "RPOWER": 0.003575000000000002,
-    "LLOYDSME": 0.36975,
-    "IOB": 0.32277500000000003,
-    "JINDALSTEL": 0.276985546875
+    "HEXT": 0.0
   },
   "selected_stocks": [
-    {
-      "symbol": "IOB",
-      "momentum": 0.7216311595834197,
-      "trend_strength": 0.9178684239907016,
-      "earnings_quality": 0.5,
-      "relative_strength": 0.822148845114748,
-      "news_sentiment": 0.822775,
-      "volume_confirm": 0.853100400448407,
-      "volatility": 0.21958043725478885,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6922,
-      "capital_weight": 0.1006,
-      "capital_amount": 100600.0
-    },
-    {
-      "symbol": "CCL",
-      "momentum": 0.5515461658697758,
-      "trend_strength": 0.5266413997866527,
-      "earnings_quality": 0.5,
-      "relative_strength": 0.6924788737096308,
-      "news_sentiment": 1.0,
-      "volume_confirm": 1.0,
-      "volatility": 0.15269028848648214,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6875,
-      "capital_weight": 0.1005,
-      "capital_amount": 100500.0
-    },
-    {
-      "symbol": "ESCORTS",
-      "momentum": 0.6490182527686401,
-      "trend_strength": 1.0,
-      "earnings_quality": 0.5,
-      "relative_strength": 0.6408716140843671,
-      "news_sentiment": 0.90111875,
-      "volume_confirm": 0.8768419847248105,
-      "volatility": 0.2199224210810789,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6759,
-      "capital_weight": 0.1003,
-      "capital_amount": 100300.0
-    },
-    {
-      "symbol": "SAGILITY",
-      "momentum": 0.5334450917642282,
-      "trend_strength": 0.6782909362112316,
-      "earnings_quality": 0.5,
-      "relative_strength": 0.71889398027548,
-      "news_sentiment": 1.0,
-      "volume_confirm": 0.9702952617720353,
-      "volatility": 0.2862548228098304,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6742,
-      "capital_weight": 0.1002,
-      "capital_amount": 100200.0
-    },
-    {
-      "symbol": "HONASA",
-      "momentum": 0.4999995782680684,
-      "trend_strength": 1.0,
-      "earnings_quality": 0.5,
-      "relative_strength": 0.8153857990986009,
-      "news_sentiment": 0.9119625,
-      "volume_confirm": 0.5726827442277642,
-      "volatility": 0.15744453371779363,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6678,
-      "capital_weight": 0.1001,
-      "capital_amount": 100100.0
-    },
     {
       "symbol": "ATHERENERG",
       "momentum": 0.6877365909195072,
@@ -270,8 +200,22 @@
       "volatility": 0.16502061199081752,
       "fii_interest": 0.5,
       "sigma_score": 0.6623,
-      "capital_weight": 0.1,
-      "capital_amount": 100000.0
+      "capital_weight": 0.1006,
+      "capital_amount": 100600.0
+    },
+    {
+      "symbol": "IOB",
+      "momentum": 0.7216311595834197,
+      "trend_strength": 0.9178684239907016,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.822148845114748,
+      "news_sentiment": 0.5,
+      "volume_confirm": 0.853100400448407,
+      "volatility": 0.21958043725478885,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6438,
+      "capital_weight": 0.1002,
+      "capital_amount": 100200.0
     },
     {
       "symbol": "OLAELEC",
@@ -284,22 +228,8 @@
       "volatility": 0.27367597338868555,
       "fii_interest": 0.5,
       "sigma_score": 0.6408,
-      "capital_weight": 0.0996,
-      "capital_amount": 99600.0
-    },
-    {
-      "symbol": "LAURUSLABS",
-      "momentum": 0.4939242978639243,
-      "trend_strength": 0.585664829152706,
-      "earnings_quality": 0.5,
-      "relative_strength": 0.6313566660593698,
-      "news_sentiment": 0.7575515625,
-      "volume_confirm": 0.9135385787422008,
-      "volatility": 0.0902737535309321,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6398,
-      "capital_weight": 0.0996,
-      "capital_amount": 99600.0
+      "capital_weight": 0.1002,
+      "capital_amount": 100200.0
     },
     {
       "symbol": "AARTIIND",
@@ -312,20 +242,90 @@
       "volatility": 0.11072812911872346,
       "fii_interest": 0.5,
       "sigma_score": 0.6396,
-      "capital_weight": 0.0996,
-      "capital_amount": 99600.0
+      "capital_weight": 0.1002,
+      "capital_amount": 100200.0
     },
     {
-      "symbol": "BAYERCROP",
-      "momentum": 0.514705360499867,
+      "symbol": "TRIVENI",
+      "momentum": 0.5153008144190014,
+      "trend_strength": 0.981766182424808,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.6708466463067976,
+      "news_sentiment": 0.5,
+      "volume_confirm": 1.0,
+      "volatility": 0.12047149275491051,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6332,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "SCHAEFFLER",
+      "momentum": 0.46134712121215626,
       "trend_strength": 1.0,
       "earnings_quality": 0.5,
-      "relative_strength": 0.7587033221455658,
-      "news_sentiment": 0.8776,
-      "volume_confirm": 0.4797485314036789,
-      "volatility": 0.2076578579247174,
+      "relative_strength": 0.736866916342662,
+      "news_sentiment": 0.5,
+      "volume_confirm": 0.9391357178679375,
+      "volatility": 0.17077599553157904,
       "fii_interest": 0.5,
-      "sigma_score": 0.6387,
+      "sigma_score": 0.625,
+      "capital_weight": 0.0999,
+      "capital_amount": 99900.0
+    },
+    {
+      "symbol": "GLENMARK",
+      "momentum": 0.4981659220250374,
+      "trend_strength": 0.8186461360281548,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.6397246214580596,
+      "news_sentiment": 0.5,
+      "volume_confirm": 1.0,
+      "volatility": 0.08527631456858162,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6239,
+      "capital_weight": 0.0999,
+      "capital_amount": 99900.0
+    },
+    {
+      "symbol": "ESCORTS",
+      "momentum": 0.6490182527686401,
+      "trend_strength": 1.0,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.6408716140843671,
+      "news_sentiment": 0.5,
+      "volume_confirm": 0.8768419847248105,
+      "volatility": 0.2199224210810789,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6157,
+      "capital_weight": 0.0997,
+      "capital_amount": 99700.0
+    },
+    {
+      "symbol": "HINDPETRO",
+      "momentum": 0.5581139108320983,
+      "trend_strength": 0.8196693704173278,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.6693541631422366,
+      "news_sentiment": 0.5,
+      "volume_confirm": 0.9009217037777644,
+      "volatility": 0.15083811919722495,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6147,
+      "capital_weight": 0.0997,
+      "capital_amount": 99700.0
+    },
+    {
+      "symbol": "CCL",
+      "momentum": 0.5515461658697758,
+      "trend_strength": 0.5266413997866527,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.6924788737096308,
+      "news_sentiment": 0.5,
+      "volume_confirm": 1.0,
+      "volatility": 0.15269028848648214,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6125,
       "capital_weight": 0.0996,
       "capital_amount": 99600.0
     }
@@ -334,89 +334,44 @@
   "capital_alloc": {},
   "portfolio": {},
   "market_data": {
-    "FORCEMOT": {
-      "ltp": 21750.0
+    "BAYERCROP": {
+      "ltp": 4699.0
     },
-    "DOMS": {
-      "ltp": 2275.0
-    },
-    "ABFRL": {
-      "ltp": 60.2
-    },
-    "INOXWIND": {
-      "ltp": 0.0
-    },
-    "HONASA": {
-      "ltp": 289.45
-    },
-    "ESCORTS": {
-      "ltp": 3092.0
+    "IOB": {
+      "ltp": 34.59
     },
     "IDEA": {
+      "ltp": 0.0
+    },
+    "JINDALSTEL": {
+      "ltp": 0.0
+    },
+    "IDBI": {
+      "ltp": 73.13
+    },
+    "MAPMYINDIA": {
+      "ltp": 917.5
+    },
+    "HINDPETRO": {
+      "ltp": 0.0
+    },
+    "LAURUSLABS": {
+      "ltp": 0.0
+    },
+    "TATAELXSI": {
       "ltp": 0.0
     },
     "MAHABANK": {
       "ltp": 65.37
     },
-    "HINDCOPPER": {
-      "ltp": 489.2
+    "TRIVENI": {
+      "ltp": 360.0
     },
     "HAPPSTMNDS": {
       "ltp": 400.1
     },
-    "SAGILITY": {
-      "ltp": 39.0
-    },
-    "CCL": {
-      "ltp": 1092.0
-    },
-    "BAYERCROP": {
-      "ltp": 4699.0
-    },
-    "LAURUSLABS": {
-      "ltp": 0.0
-    },
-    "TRIVENI": {
-      "ltp": 360.0
-    },
-    "GPIL": {
-      "ltp": 262.0
-    },
-    "RPOWER": {
-      "ltp": 22.6
-    },
-    "LLOYDSME": {
-      "ltp": 1246.0
-    },
-    "IOB": {
-      "ltp": 34.59
-    },
-    "JINDALSTEL": {
-      "ltp": 0.0
-    },
     "ATHERENERG": {
       "ltp": 795.0
-    },
-    "SCHAEFFLER": {
-      "ltp": 4175.0
-    },
-    "AARTIIND": {
-      "ltp": 427.8
-    },
-    "BHEL": {
-      "ltp": 0.0
-    },
-    "AUROPHARMA": {
-      "ltp": 0.0
-    },
-    "HEXT": {
-      "ltp": 440.0
-    },
-    "IDBI": {
-      "ltp": 73.13
-    },
-    "GLENMARK": {
-      "ltp": 0.0
     },
     "MRPL": {
       "ltp": 191.0
@@ -424,35 +379,80 @@
     "TARIL": {
       "ltp": 286.0
     },
-    "TATAELXSI": {
-      "ltp": 0.0
-    },
-    "CHENNPETRO": {
-      "ltp": 1058.0
-    },
-    "HINDPETRO": {
-      "ltp": 0.0
-    },
     "ANANTRAJ": {
       "ltp": 468.0
     },
-    "MAPMYINDIA": {
-      "ltp": 917.5
+    "SAGILITY": {
+      "ltp": 39.0
+    },
+    "SCHAEFFLER": {
+      "ltp": 4175.0
+    },
+    "GPIL": {
+      "ltp": 262.0
+    },
+    "HEXT": {
+      "ltp": 440.0
+    },
+    "AWL": {
+      "ltp": 189.44
+    },
+    "LLOYDSME": {
+      "ltp": 1246.0
+    },
+    "GLENMARK": {
+      "ltp": 0.0
+    },
+    "HINDCOPPER": {
+      "ltp": 489.2
+    },
+    "FORCEMOT": {
+      "ltp": 21750.0
+    },
+    "CCL": {
+      "ltp": 1092.0
+    },
+    "DOMS": {
+      "ltp": 2275.0
+    },
+    "AUROPHARMA": {
+      "ltp": 0.0
     },
     "OLECTRA": {
       "ltp": 1084.9
     },
+    "HONASA": {
+      "ltp": 289.45
+    },
+    "INOXWIND": {
+      "ltp": 0.0
+    },
+    "ESCORTS": {
+      "ltp": 3092.0
+    },
+    "ABFRL": {
+      "ltp": 60.2
+    },
+    "BHEL": {
+      "ltp": 0.0
+    },
     "OLAELEC": {
       "ltp": 25.11
+    },
+    "RPOWER": {
+      "ltp": 22.6
     },
     "GMDCLTD": {
       "ltp": 0.0
     },
+    "AARTIIND": {
+      "ltp": 427.8
+    },
+    "CHENNPETRO": {
+      "ltp": 1058.0
+    },
     "FIRSTCRY": {
       "ltp": 252.07
-    },
-    "AWL": {
-      "ltp": 189.44
     },
     "LLOYDSME:SWING": {
       "ltp": 1246.0
@@ -466,9 +466,9 @@
   },
   "net_pnl": 0.0,
   "daily_trades": 0,
-  "running": false,
+  "running": true,
   "last_backtest_date": null,
-  "last_training_date": "2026-03-20",
+  "last_training_date": null,
   "last_wf_date": null,
   "last_trade_time": {},
   "macro": {
@@ -481,97 +481,97 @@
     "usdinr": 0.0,
     "spx_ret_pct": 0.0,
     "crude_ret_pct": 0.0,
-    "status": "FFILL",
-    "timestamp": "2026-03-20T21:07:07.548032"
+    "status": "MISSING",
+    "timestamp": "2026-03-21T01:26:20.669157"
   },
   "macro_status": "FFILL",
   "sigma_scores": {
-    "IOB": 0.6922,
-    "CCL": 0.6875,
-    "ESCORTS": 0.6759,
-    "SAGILITY": 0.6742,
-    "HONASA": 0.6678,
     "ATHERENERG": 0.6623,
+    "IOB": 0.6438,
     "OLAELEC": 0.6408,
-    "LAURUSLABS": 0.6398,
     "AARTIIND": 0.6396,
-    "BAYERCROP": 0.6387,
     "TRIVENI": 0.6332,
-    "MAHABANK": 0.6287,
-    "JINDALSTEL": 0.6286,
     "SCHAEFFLER": 0.625,
     "GLENMARK": 0.6239,
-    "DOMS": 0.6216,
+    "ESCORTS": 0.6157,
     "HINDPETRO": 0.6147,
+    "CCL": 0.6125,
     "AUROPHARMA": 0.6118,
     "HEXT": 0.6098,
-    "IDEA": 0.5977,
+    "HONASA": 0.606,
+    "LAURUSLABS": 0.6012,
+    "SAGILITY": 0.5992,
     "FORCEMOT": 0.5953,
     "ANANTRAJ": 0.5926,
-    "LLOYDSME": 0.5893,
+    "IDEA": 0.5905,
+    "JINDALSTEL": 0.587,
+    "BAYERCROP": 0.5821,
     "TARIL": 0.5809,
     "FIRSTCRY": 0.5808,
-    "INOXWIND": 0.5785,
+    "HINDCOPPER": 0.5698,
     "MAPMYINDIA": 0.5684,
     "AWL": 0.5658,
-    "HAPPSTMNDS": 0.5649,
+    "MAHABANK": 0.5592,
     "CHENNPETRO": 0.5591,
     "CANBK:SWING": 0.5582,
     "TATAELXSI": 0.5549,
     "IDBI": 0.5548,
+    "DOMS": 0.5466,
     "BHEL": 0.5351,
+    "LLOYDSME": 0.5338,
     "LLOYDSME:SWING": 0.5338,
-    "ABFRL": 0.5265,
-    "HINDCOPPER": 0.5179,
     "OLECTRA": 0.5117,
+    "HAPPSTMNDS": 0.5111,
     "GPIL": 0.5095,
-    "RPOWER": 0.5089,
+    "RPOWER": 0.5084,
     "MRPL": 0.5065,
+    "INOXWIND": 0.5035,
     "INOXWIND:SWING": 0.5035,
-    "GMDCLTD": 0.4998
+    "GMDCLTD": 0.4998,
+    "ABFRL": 0.4925
   },
   "atlas_scores": {
-    "IOB": 0.751,
-    "ESCORTS": 0.7317,
+    "IOB": 0.7187,
     "ATHERENERG": 0.7091,
-    "HONASA": 0.705,
     "AARTIIND": 0.6969,
     "OLAELEC": 0.6965,
+    "ESCORTS": 0.6916,
     "TRIVENI": 0.6889,
-    "SAGILITY": 0.6847,
-    "BAYERCROP": 0.6817,
     "SCHAEFFLER": 0.6796,
-    "CCL": 0.6779,
     "HEXT": 0.6741,
+    "HONASA": 0.6638,
     "HINDPETRO": 0.66,
     "GLENMARK": 0.6599,
     "FIRSTCRY": 0.6458,
     "AUROPHARMA": 0.6455,
+    "BAYERCROP": 0.644,
     "MAPMYINDIA": 0.6405,
-    "LAURUSLABS": 0.6394,
-    "JINDALSTEL": 0.6301,
-    "MAHABANK": 0.6191,
+    "SAGILITY": 0.6347,
+    "CCL": 0.6279,
+    "LAURUSLABS": 0.6137,
     "AWL": 0.6134,
     "FORCEMOT": 0.6105,
     "ANANTRAJ": 0.6083,
-    "IDEA": 0.6077,
     "TARIL": 0.6048,
-    "DOMS": 0.6034,
-    "LLOYDSME": 0.583,
+    "IDEA": 0.6029,
+    "JINDALSTEL": 0.6024,
+    "HINDCOPPER": 0.5879,
     "CHENNPETRO": 0.5753,
     "CANBK:SWING": 0.5734,
+    "MAHABANK": 0.5727,
     "OLECTRA": 0.5616,
-    "HAPPSTMNDS": 0.5596,
     "IDBI": 0.5558,
     "TATAELXSI": 0.5542,
-    "HINDCOPPER": 0.5533,
-    "ABFRL": 0.5486,
+    "DOMS": 0.5534,
+    "LLOYDSME": 0.5461,
     "LLOYDSME:SWING": 0.5461,
     "BHEL": 0.5441,
-    "INOXWIND": 0.544,
-    "RPOWER": 0.5242,
+    "ABFRL": 0.526,
+    "RPOWER": 0.5239,
+    "HAPPSTMNDS": 0.5237,
     "GPIL": 0.5122,
     "GMDCLTD": 0.5082,
+    "INOXWIND": 0.494,
     "INOXWIND:SWING": 0.494,
     "MRPL": 0.4929
   }

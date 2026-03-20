@@ -417,6 +417,18 @@ class KarmaAgent(BaseAgent):
         with self._lock:
             return min(self.strategy_weights, key=self.strategy_weights.get)
 
+    def get_symbol_performance(self, symbol: str) -> float:
+        """Return a normalized score (0-1) based on historical performance for this symbol."""
+        with self._lock:
+            m = self.symbol_memory.get(symbol)
+            if not m or m['trades'] < 3:
+                return 0.5  # Neutral for new symbols
+            
+            wr = m['wins'] / m['trades']
+            # Boost score if win rate > 60%, penalize if < 40%
+            score = 0.5 + (wr - 0.5)
+            return min(1.0, max(0.0, score))
+
     @_safe
     def get_portfolio_sharpe(self) -> float:
         with self._lock:

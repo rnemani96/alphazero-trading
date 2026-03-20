@@ -28,7 +28,8 @@ def analyze_stopped_out_trade(trade: Dict[str, Any], market_context: Dict[str, A
     system_prompt = (
         "You are an expert quantitative trading analyst. Analyze the following failed stock trade "
         "that hit its stop loss. Determine the most likely root cause from these categories: "
-        "[FALSE_BREAKOUT, MARKET_DRAG, SECTOR_WEAKNESS, VOLATILITY_SPIKE, NEWS_EVENT, POOR_ENTRY]. "
+        "[FALSE_BREAKOUT, MARKET_DRAG, SECTOR_WEAKNESS, VOLATILITY_SPIKE, NEWS_EVENT, POOR_ENTRY, OVERBOUGHT_REVERSAL]. "
+        "Consider the Sector strength and VIX at exit. "
         "Respond ONLY with a valid JSON object in this exact format: "
         "{\"root_cause\": \"...\", \"reasoning\": \"A 1-sentence explanation\", \"confidence_score\": 0.85}"
     )
@@ -36,17 +37,19 @@ def analyze_stopped_out_trade(trade: Dict[str, Any], market_context: Dict[str, A
     prompt = f"""
     Trade Details:
     - Symbol: {trade.get('symbol')}
-    - Strategy: {trade.get('strategy')}
+    - Strategy: {trade.get('strategy')} 
     - Entry Price: {trade.get('entry_price')}
     - Exit Price: {trade.get('exit_price', trade.get('current_price'))}
     - Stop Loss: {trade.get('stop_loss')}
     - Target: {trade.get('target')}
     - Hold Duration: {trade.get('days_open', 0)} days
+    - Entry RSI: {trade.get('entry_rsi', 'N/A')}
     
     Market Context at Exit:
     - Market Regime: {market_context.get('regime', 'UNKNOWN')}
     - VIX: {market_context.get('vix', 'UNKNOWN')}
     - Sector: {trade.get('sector', 'UNKNOWN')}
+    - Sector Strength (1-100): {market_context.get('sector_strength', 'N/A')}
     """
     
     logger.info(f"🧠 LLMPostMortem: Analyzing stopped out trade for {trade.get('symbol')}...")

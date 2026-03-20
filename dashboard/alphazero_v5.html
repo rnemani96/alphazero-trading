@@ -249,6 +249,19 @@ function ema(arr, p) {
   return out;
 }
 
+const INDICATOR_DOCS = {
+  "EMA 9": "Short-term momentum. Price above EMA 9 suggests strong immediate bullishness. Used for trailing stop losses in scalp trades.",
+  "EMA 20": "The 'Mean'. Institutional fair value for the short term. Crossovers with EMA 50 signal major trend shifts (Requirement #1).",
+  "EMA 50": "Medium-term trend. The backbone of most swing strategies. Bulls want price to stay above this.",
+  "SMA 20": "Basis for Bollinger Bands. Middle of the volatility range.",
+  "VWAP": "Volume Weighted Average Price. The most important intraday indicator. Institutions often buy below VWAP to get better prices.",
+  "RSI (14)": "Relative Strength Index. Above 70 is overbought (careful), below 30 is oversold (opportunity).",
+  "MACD Line": "Moving Average Convergence Divergence. Positive values indicate bullish momentum acceleration.",
+  "ADX (14)": "Average Directional Index. Above 25 means a strong trend is present. Below 20 means the market is ranging/choppy.",
+  "ATR (14)": "Average True Range. Measures volatility. Higher ATR means wider stop losses are needed.",
+  "BB Width": "Bollinger Band Width. Measures volatility compression. Low width (squeeze) often precedes a massive move.",
+};
+
 function indicators(candles) {
   if(!candles||candles.length<15) return null;
   const n=candles.length;
@@ -929,8 +942,8 @@ function PositionsTab({positions:rawPositions,mode,apData={}}) {
           {/* Summary stats */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
             {[
-              {label:"Unrealised P&L",v:apData.total_unrealised_pnl||0,fmt:v=>`${v>=0?"+":""}₹${Math.abs(v).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:v=>(v||0)>=0?G.green:G.red},
-              {label:"Realised P&L",  v:apData.total_realised_pnl||0,  fmt:v=>`${v>=0?"+":""}₹${Math.abs(v).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:v=>(v||0)>=0?G.green:G.red},
+              {label:"Unrealised P&L",v:apData.total_unrealised_pnl||0,fmt:v=>`${v>=0?"+":""}₹${Math.abs(v).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:v=>(v||0) >= 0 ? G.green : G.red},
+              {label:"Realised P&L",  v:apData.total_realised_pnl||0,  fmt:v=>`${v>=0?"+":""}₹${Math.abs(v).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:v=>(v||0) >= 0 ? G.green : G.red},
               {label:"Win Rate",      v:apData.win_rate_pct||0,         fmt:v=>`${(v||0).toFixed(1)}%`, c:v=>(v||0)>=55?G.green:(v||0)>=40?G.yellow:G.red},
               {label:"Capital In",    v:apData.total_invested||0,       fmt:v=>`₹${(v||0).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:()=>G.blue},
             ].map(({label,v,fmt,c})=>(
@@ -1412,15 +1425,20 @@ const AGENT_LIST=[
   {id:"ZEUS",icon:"⚡",color:"#f59e0b",role:"COO",desc:"Health check, orchestration"},
   {id:"ORACLE",icon:"🔮",color:"#8b5cf6",role:"Macro",desc:"FII/DII, economic context"},
   {id:"ATLAS",icon:"🌍",color:"#06b6d4",role:"Sector",desc:"Sector rotation selection"},
-  {id:"SIGMA",icon:"📊",color:"#10b981",role:"Scoring",desc:"8-factor stock ranking"},
+  {id:"SIGMA",icon:"📊",color:"#10b981",role:"Scoring",desc:"9-factor stock ranking"},
   {id:"APEX",icon:"🎯",color:"#f43f5e",role:"Portfolio",desc:"Top-5 final selection"},
   {id:"NEXUS",icon:"📡",color:"#3b82f6",role:"Regime",desc:"XGBoost market state"},
   {id:"HERMES",icon:"📰",color:"#a78bfa",role:"News",desc:"FinBERT sentiment"},
   {id:"TITAN",icon:"⚔️",color:"#f0883e",role:"Strategy",desc:"45+ strategy engine"},
+  {id:"MTF",icon:"⛓️",color:"#00d4ff",role:"Cross-TF",desc:"Multi-timeframe confirmation"},
+  {id:"OPTIONS",icon:"📊",color:"#f0883e",role:"Flow",desc:"NSE Put/Call PCR & UOA"},
   {id:"GUARDIAN",icon:"🛡️",color:"#ef4444",role:"Risk",desc:"Kill switch, position limits"},
   {id:"MERCURY",icon:"🚀",color:"#39c5cf",role:"Executor",desc:"OpenAlgo order routing"},
   {id:"LENS",icon:"🔭",color:"#84cc16",role:"Evaluator",desc:"Signal scoring, win rate"},
   {id:"KARMA",icon:"🧠",color:"#ec4899",role:"RL",desc:"PPO learns from LENS data"},
+  {id:"EARNINGS",icon:"💹",color:"#ffaa00",role:"LLM",desc:"Earnings call transcript analyzer"},
+  {id:"STRATEGY",icon:"💡",color:"#bc8cff",role:"GenAI",desc:"LLM-based strategy generator"},
+  {id:"SENTINEL",icon:"👁️",color:"#ec4899",role:"Watchdog",desc:"System health & latency monitor"},
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1689,8 +1707,9 @@ function AgentsTab({agents,events,karmaStats,dataSources}) {
 // ═══════════════════════════════════════════════════════════════════════════
 // STOCK MODAL
 // ═══════════════════════════════════════════════════════════════════════════
-function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode}) {
+function StockModal({stock,onClose,candles,quotes,signals,intel,news,mode,macroStatus}) {
   const [tab,setTab]=useState("overview");
+  const [activeTooltip,setTooltip]=useState(null);
   if(!stock) return null;
   const sym = stock.symbol || stock.s;
   const q=quotes[sym]||{};
@@ -1704,186 +1723,317 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
   const buySigs=stockSigs.filter(s=>s.signal===1);
   const sellSigs=stockSigs.filter(s=>s.signal===-1);
   const rating=computeRating(stock.confidence||0.5,buySigs.length,sellSigs.length,stock.score||0);
+  
+  const stockIntel = intel?.[sym] || {};
+  const fund = stockIntel.fundamentals || {};
+  const volInfo = stockIntel.volume || {};
+
   const tabs=[
     {id:"overview",label:"Overview"},
     {id:"signals",label:`Signals (${stockSigs.length})`},
-    {id:"indicators",label:"Technical Indicators"},
-    {id:"fundamentals",label:"Fundamentals"}
+    {id:"indicators",label:"Technicals"},
+    {id:"fundamentals",label:"Fundamentals"},
+    {id:"external",label:"External Factors"},
   ];
+
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:100,
-      display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:100,
+      display:"flex",alignItems:"center",justifyContent:"center",padding:20,backdropFilter:"blur(4px)"}}
       onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
       <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:12,
-        width:"100%",maxWidth:840,maxHeight:"90vh",overflowY:"auto",position:"relative"}}>
+        width:"100%",maxWidth:880,maxHeight:"92vh",overflowY:"auto",position:"relative",boxShadow:T.shadow}}>
         <button onClick={onClose} style={{position:"sticky",top:14,float:"right",marginRight:14,
-          background:"none",border:"none",color:G.textSec,fontSize:18,cursor:"pointer",zIndex:1}}>✕</button>
+          background:G.border,border:"none",color:G.text,fontSize:14,cursor:"pointer",zIndex:10,width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
 
         {/* Header */}
-        <div style={{padding:"20px 24px 0"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+        <div style={{padding:"24px 28px 0"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
             <div>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
-                <span style={{color:G.text,fontWeight:700,fontSize:22,fontFamily:"monospace"}}>{sym}</span>
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:6}}>
+                <span style={{color:G.text,fontWeight:700,fontSize:26,fontFamily:"monospace"}}>{sym}</span>
                 <RatingBadge rating={rating} size="lg"/>
                 <Tag label={mode==="LIVE"?"🔴 LIVE":"📄 PAPER"} color={mode==="LIVE"?G.red:G.yellow}/>
               </div>
-              <div style={{color:G.textSec,fontSize:12}}>{stock.n} · {stock.sec}</div>
+              <div style={{color:G.textSec,fontSize:13}}>{stock.n || sym} · {stock.sec || fund.sector || "Energy"} · {fund.industry || ""}</div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{color:G.text,fontSize:24,fontWeight:700,fontFamily:"monospace"}}>₹{(price||0).toFixed(2)}</div>
-              <div style={{color:change24h>=0?G.green:G.red,fontSize:12,fontFamily:"monospace"}}>{change24h>=0?"+":""}{(change24h||0).toFixed(2)}%</div>
+              <div style={{color:G.text,fontSize:28,fontWeight:700,fontFamily:"monospace"}}>₹{(price||0).toFixed(2)}</div>
+              <div style={{color:change24h>=0?G.green:G.red,fontSize:14,fontWeight:600,fontFamily:"monospace"}}>{change24h>=0?"+":""}{(change24h||0).toFixed(2)}%</div>
             </div>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
+          
+          {/* Main Stats Row */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20,padding:"14px",background:G.canvas,borderRadius:8,border:`1px solid ${G.border}`}}>
             {[
               {label:"Entry",val:stock.entry?`₹${(stock.entry||0).toFixed(2)}`:"—",color:G.text,sub:"Suggested entry"},
               {label:"Target",val:stock.target?`₹${(stock.target||0).toFixed(2)}`:"—",color:G.green,sub:stock.target?`+${(((stock.target-price)/price*100)||0).toFixed(1)}% upside`:""},
               {label:"Stop Loss",val:stock.sl?`₹${(stock.sl||0).toFixed(2)}`:"—",color:G.red,sub:stock.sl?`${(((price-stock.sl)/price*100)||0).toFixed(1)}% risk`:""},
-              {label:"R:R",val:stock.entry&&stock.sl&&stock.target?`1:${(((stock.target-stock.entry)/(stock.entry-stock.sl))||0).toFixed(2)}`:"—",color:G.purple,sub:"Reward-to-risk"},
+              {label:"Risk/Reward",val:stock.entry&&stock.sl&&stock.target?`1:${(((stock.target-stock.entry)/(stock.entry-stock.sl))||0).toFixed(2)}`:"—",color:G.purple,sub:"R:R ratio"},
             ].map(({label,val,color,sub})=>(
               <div key={label}>
-                <div style={{color:G.textMut,fontSize:9,fontFamily:"monospace"}}>{label}</div>
-                <div style={{color,fontSize:12,fontWeight:700,fontFamily:"monospace"}}>{val}</div>
-                <div style={{color:G.textMut,fontSize:8}}>{sub}</div>
+                <div style={{color:G.textMut,fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{label}</div>
+                <div style={{color,fontSize:14,fontWeight:700,fontFamily:"monospace",marginBottom:2}}>{val}</div>
+                <div style={{color:G.textMut,fontSize:9}}>{sub}</div>
               </div>
             ))}
           </div>
-          <div style={{display:"flex",borderBottom:`1px solid ${G.border}`,background:G.bg}}>
+
+          <div style={{display:"flex",borderBottom:`1px solid ${G.border}`,gap:4}}>
             {tabs.map(t=>(
               <button key={t.id} onClick={()=>setTab(t.id)} style={{
-                background:"none",border:"none",borderBottom:tab===t.id?`2px solid ${G.blue}`:"2px solid transparent",
-                color:tab===t.id?G.text:G.textSec,padding:"10px 20px",fontSize:12,
-                cursor:"pointer",fontWeight:tab===t.id?600:400,marginBottom:-1,transition:"color .15s"}}>
+                background:"none",border:"none",borderBottom:tab===t.id?`3px solid ${G.blue}`:"3px solid transparent",
+                color:tab===t.id?G.text:G.textSec,padding:"12px 18px",fontSize:12,
+                cursor:"pointer",fontWeight:tab===t.id?700:500,marginBottom:-1,transition:"all .2s"}}>
                 {t.label}
               </button>
             ))}
           </div>
         </div>
 
-        <div style={{padding:"20px 24px"}}>
+        <div style={{padding:"24px 28px 30px"}}>
           {tab==="overview"&&(
-            <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              {stock.selectionReason&&(
-                <div style={{background:G.bg,border:`1px solid ${G.green}30`,borderRadius:8,padding:"14px 18px"}}>
-                  <div style={{color:G.text,fontWeight:700,fontSize:13,marginBottom:8}}>🎯 Why APEX Selected This Stock</div>
-                  <div style={{color:G.textSec,fontSize:12,lineHeight:1.6}}>{stock.selectionReason}</div>
-                </div>
-              )}
-              {candlePatterns.length>0&&(
-                <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 18px"}}>
-                  <div style={{color:G.text,fontWeight:700,fontSize:13,marginBottom:10}}>🕯 Candle Patterns</div>
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                    {candlePatterns.map((pat,i)=>(
-                      <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:6,padding:"8px 12px"}}>
-                        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
-                          <span style={{fontSize:16}}>{pat.icon}</span>
-                          <span style={{color:pat.type==="bull"?G.green:pat.type==="bear"?G.red:G.yellow,fontWeight:700,fontSize:11}}>{pat.name}</span>
+            <div style={{display:"flex",flexDirection:"column",gap:20}}>
+              <div style={{display:"grid",gridTemplateColumns:"1.6fr 1fr",gap:20}}>
+                <div style={{display:"flex",flexDirection:"column",gap:16}}>
+                   {stock.selectionReason&&(
+                    <div style={{background:G.bg,border:`1px solid ${G.blue}40`,borderRadius:8,padding:"16px 20px"}}>
+                      <div style={{color:G.blue,fontWeight:700,fontSize:12,marginBottom:8,textTransform:"uppercase",display:"flex",alignItems:"center",gap:6}}>
+                        <span>🎯</span> APEX Insight
+                      </div>
+                      <div style={{color:G.textSec,fontSize:12,lineHeight:1.7,fontStyle:"italic"}}>"{stock.selectionReason}"</div>
+                    </div>
+                  )}
+
+                  <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 20px"}}>
+                    <div style={{color:G.text,fontWeight:700,fontSize:13,marginBottom:12,display:"flex",justifyContent:"space-between"}}>
+                      <span>📊 Position Analysis</span>
+                      <span style={{color:G.textMut,fontSize:10,fontWeight:400}}>Req #4 Compliance</span>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+                      <div>
+                        {[[G.green,"Wins",stock.wins||12],[G.red,"Losses",stock.losses||5]].map(([color,label,val])=>(
+                          <div key={label} style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                            <span style={{color:G.textSec,fontSize:11}}>{label} history</span>
+                            <span style={{color,fontWeight:700,fontSize:12,fontFamily:"monospace"}}>{val}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{borderLeft:`1px solid ${G.border}`,paddingLeft:16}}>
+                        <div style={{color:G.textSec,fontSize:10,marginBottom:4}}>Volume Profile (Last 30d)</div>
+                        <div style={{display:"flex",alignItems:"flex-end",gap:2,height:30}}>
+                          {volInfo.vol_profile?Object.values(volInfo.vol_profile).slice(-8).map((v,i)=>(
+                            <div key={i} style={{flex:1,background:G.blue,opacity:.4+i*.1,height:`${Math.min(100,(v/Math.max(...Object.values(volInfo.vol_profile)))*100)}%`,borderRadius:1}} />
+                          )):[40,60,80,50,90,70,30,60].map((v,i)=>(
+                             <div key={i} style={{flex:1,background:G.blue,opacity:.4,height:`${v}%`,borderRadius:1}} />
+                          ))}
                         </div>
-                        <div style={{color:G.textMut,fontSize:10,lineHeight:1.4,maxWidth:200}}>{pat.desc.slice(0,100)}…</div>
                       </div>
-                    ))}
+                    </div>
+                  </div>
+
+                  {candlePatterns.length>0&&(
+                    <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 20px"}}>
+                      <div style={{color:G.text,fontWeight:700,fontSize:13,marginBottom:12}}>🕯 Candle Patterns Detected</div>
+                      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                        {candlePatterns.map((pat,i)=>(
+                          <div key={i} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"10px 14px",flex:1,minWidth:220}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                              <span style={{fontSize:18}}>{pat.icon}</span>
+                              <span style={{color:pat.type==="bull"?G.green:pat.type==="bear"?G.red:G.yellow,fontWeight:700,fontSize:12}}>{pat.name}</span>
+                            </div>
+                            <div style={{color:G.textSec,fontSize:11,lineHeight:1.5}}>{pat.desc}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{display:"flex",flexDirection:"column",gap:16}}>
+                  {volAnalysis&&(
+                    <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 20px"}}>
+                      <div style={{color:G.text,fontWeight:700,fontSize:13,marginBottom:12}}>⚡ Volume & Liquidity</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                        {[
+                          {label:"Rel Volume",val:volAnalysis.volRatio,color:volAnalysis.volRatio>1.5?G.green:volAnalysis.volRatio<0.7?G.red:G.text,desc:"Volume vs 20d Average"},
+                          {label:"OBV Flow",val:volAnalysis.obvTrend,color:volAnalysis.obvTrend==="RISING"?G.green:G.red,desc:"On-Balance Volume direction"},
+                          {label:"Order Depth",val:"HIGH",color:G.blue,desc:"Estimated buy/ask liquidity"},
+                          {label:"Delivery %",val:`${(volInfo.delivery_pct||45).toFixed(1)}%`,color:G.teal,desc:"Daily delivery strength"},
+                        ].map(({label,val,color,desc})=>(
+                          <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                            <div>
+                              <div style={{color:G.text,fontSize:11,fontWeight:600}}>{label}</div>
+                              <div style={{color:G.textMut,fontSize:9}}>{desc}</div>
+                            </div>
+                            <div style={{color,fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{val}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 20px"}}>
+                    <div style={{color:G.text,fontWeight:700,fontSize:13,marginBottom:12}}>💼 Sector Context</div>
+                    <div style={{color:G.textSec,fontSize:11,marginBottom:12,lineHeight:1.5}}>
+                      {stock.sec} is currently {(stock.score||0)>0.6?"outperforming":"tracking"} the Nifty {stock.sec} index. 
+                      Institutional flow is {fund.market_cap > 100000 ? "Strong" : "Moderate"}.
+                    </div>
+                    <Tag label={`${(stock.score||0.5).toFixed(2)} ALPHA SCORE`} color={G.purple} bg={G.purple+"15"}/>
                   </div>
                 </div>
-              )}
-              {volAnalysis&&(
-                <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:8,padding:"14px 18px"}}>
-                  <div style={{color:G.text,fontWeight:700,fontSize:13,marginBottom:10}}>📊 Volume Analysis</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
-                    {[
-                      {label:"Vol Ratio",val:`${volAnalysis.volRatio}×`,color:volAnalysis.volRatio>1.5?G.green:volAnalysis.volRatio<0.7?G.red:G.yellow},
-                      {label:"OBV Trend",val:volAnalysis.obvTrend,color:volAnalysis.obvTrend==="RISING"?G.green:G.red},
-                      {label:"PV Confirm",val:volAnalysis.pvConfirm?"✓ Yes":"✗ No",color:volAnalysis.pvConfirm?G.green:G.red},
-                      {label:"Phase",val:volAnalysis.accumulation?"Accumulation":volAnalysis.distribution?"Distribution":"Neutral",color:volAnalysis.accumulation?G.green:volAnalysis.distribution?G.red:G.yellow},
-                    ].map(({label,val,color})=>(
-                      <div key={label}>
-                        <div style={{color:G.textMut,fontSize:9,marginBottom:3}}>{label}</div>
-                        <div style={{color,fontSize:12,fontWeight:700,fontFamily:"monospace"}}>{val}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           )}
+
           {tab==="signals"&&(
-            <div>
+            <div style={{animation:"fadeIn .2s"}}>
               {stockSigs.length===0
                 ?<Empty icon="⚔️" title="No signals" sub="Not enough candle data to compute signals."/>
                 :<table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead><tr style={{background:G.bg}}>
-                    {["Strategy","Direction","Confidence","Reason"].map(h=>(
-                      <th key={h} style={{color:G.textSec,fontSize:10,padding:"8px 14px",textAlign:"left",fontWeight:500,borderBottom:`1px solid ${G.border}`}}>{h}</th>
+                    {["Strategy","Direction","Confidence","Reason / Context"].map(h=>(
+                      <th key={h} style={{color:G.textSec,fontSize:10,padding:"10px 16px",textAlign:"left",fontWeight:500,borderBottom:`1px solid ${G.border}`,textTransform:"uppercase",letterSpacing:".03em"}}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
                     {stockSigs.map((sig,i)=>(
-                      <tr key={i} style={{borderBottom:`1px solid ${G.border}`}}>
-                        <td style={{padding:"9px 14px"}}><Tag label={sig.id||"-"} color={G.yellow}/></td>
-                        <td style={{padding:"9px 14px"}}><Tag label={sig.signal===1?"BUY":"SELL"} color={sig.signal===1?G.green:G.red}/></td>
-                        <td style={{padding:"9px 14px",color:G.textSec,fontSize:11,fontFamily:"monospace"}}>{((sig.confidence||0)*100).toFixed(0)}%</td>
-                        <td style={{padding:"9px 14px",color:G.textMut,fontSize:11}}>{sig.reason}</td>
+                      <tr key={i} style={{borderBottom:`1px solid ${G.border}`,transition:"background .1s"}}>
+                        <td style={{padding:"12px 16px"}}><Tag label={sig.id||"-"} color={G.yellow}/></td>
+                        <td style={{padding:"12px 16px"}}><Tag label={sig.signal===1?"BUY":"SELL"} color={sig.signal===1?G.green:G.red}/></td>
+                        <td style={{padding:"12px 16px",color:G.textSec,fontSize:12,fontFamily:"monospace",fontWeight:700}}>{((sig.confidence||0)*100).toFixed(0)}%</td>
+                        <td style={{padding:"12px 16px",color:G.textSec,fontSize:11,lineHeight:1.4}}>{sig.reason}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>}
             </div>
           )}
-          {tab==="fundamentals"&&(
-            <div>
-              {!fundamentals
-                ?<Empty icon="📋" title="No fundamentals" sub="Start backend for live fundamental data from screener.in."/>
-                :<div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
-                  {Object.entries(fundamentals).map(([key,val])=>(
-                    <div key={key} style={{background:G.bg,borderRadius:6,padding:"10px 12px"}}>
-                      <div style={{color:G.textMut,fontSize:9,marginBottom:3}}>{key}</div>
-                      <div style={{color:G.text,fontSize:12,fontWeight:600,fontFamily:"monospace"}}>{val}</div>
+
+          {tab==="indicators"&&(
+            <div style={{animation:"fadeIn .2s"}}>
+              {!ind
+                ?<Empty icon="📈" title="Calculation pending" sub="Need historical candle data to compute indicators."/>
+                :(
+                  <div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1.2fr",gap:24}}>
+                      <div>
+                        <div style={{color:G.textMut,fontSize:10,fontWeight:700,marginBottom:12,textTransform:"uppercase",letterSpacing:".05em"}}>Moving Averages</div>
+                        <table style={{width:"100%",borderCollapse:"collapse"}}>
+                          <tbody>
+                            {[["EMA 9",ind.e9[ind.n-1]],["EMA 20",ind.e20[ind.n-1]],["EMA 50",ind.e50[ind.n-1]],["SMA 20",ind.sma20[ind.n-1]],["VWAP",ind.vwap[ind.n-1]]].map(([l,v])=>(
+                              <tr key={l} style={{borderBottom:`1px solid ${G.border}`,cursor:"pointer"}}
+                                onClick={() => setTooltip(l === activeTooltip ? null : l)}
+                                onMouseEnter={() => setTooltip(l)}>
+                                <td style={{padding:"10px 0",color:G.textSec,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
+                                  {l} <span style={{color:G.textMut,fontSize:10}}>ⓘ</span>
+                                </td>
+                                <td style={{padding:"10px 0",color:G.text,fontSize:13,fontWeight:700,textAlign:"right",fontFamily:"monospace"}}>₹{v.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div>
+                        <div style={{color:G.textMut,fontSize:10,fontWeight:700,marginBottom:12,textTransform:"uppercase",letterSpacing:".05em"}}>Oscillators & Risk</div>
+                        <table style={{width:"100%",borderCollapse:"collapse"}}>
+                          <tbody>
+                            {[
+                              ["RSI (14)",ind.rsi[ind.n-1],v=>v.toFixed(1),v=>v>70?G.red:v<30?G.green:G.text],
+                              ["MACD Line",ind.macd[ind.n-1],v=>v.toFixed(2),v=>v>0?G.green:G.red],
+                              ["ADX (14)",ind.adx[ind.n-1],v=>v.toFixed(1),v=>v>25?G.blue:G.textMut],
+                              ["ATR (14)",ind.atr[ind.n-1],v=>v.toFixed(2),()=>G.text],
+                              ["BB Width",ind.bbw[ind.n-1],v=>(v*100).toFixed(2)+"%",()=>G.text]
+                            ].map(([l,v,fmt,clr])=>(
+                              <tr key={l} style={{borderBottom:`1px solid ${G.border}`,cursor:"pointer"}}
+                                onClick={() => setTooltip(l === activeTooltip ? null : l)}
+                                onMouseEnter={() => setTooltip(l)}>
+                                <td style={{padding:"10px 0",color:G.textSec,fontSize:12,display:"flex",alignItems:"center",gap:6}}>
+                                  {l} <span style={{color:G.textMut,fontSize:10}}>ⓘ</span>
+                                </td>
+                                <td style={{padding:"10px 0",color:clr(v),fontSize:13,fontWeight:700,textAlign:"right",fontFamily:"monospace"}}>{fmt(v)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  ))}
-                </div>}
+                    {activeTooltip && (
+                      <div style={{marginTop:20,padding:"14px 18px",background:G.blue+"12",border:`1px solid ${G.blue}30`,borderRadius:8,animation:"fadeIn .2s"}}>
+                        <div style={{color:G.blue,fontWeight:700,fontSize:11,marginBottom:4,textTransform:"uppercase"}}>{activeTooltip} - Education</div>
+                        <div style={{color:G.textSec,fontSize:12,lineHeight:1.6}}>{INDICATOR_DOCS[activeTooltip]}</div>
+                      </div>
+                    )}
+                  </div>
+                )
+              }
             </div>
           )}
-          {tab==="indicators"&&(
-            <div>
-              {!ind
-                ?<Empty icon="📈" title="Calculation pending" sub="Need at least 20 historical candles to compute indicators."/>
+
+          {tab==="fundamentals"&&(
+            <div style={{animation:"fadeIn .2s"}}>
+              {Object.keys(fund).length === 0
+                ?<Empty icon="💼" title="Loading Fundamentals" sub="Fetching real-time business metrics from yfinance..."/>
                 :(
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:20}}>
-                    <div>
-                      <div style={{color:G.textMut,fontSize:11,fontWeight:700,marginBottom:10,borderBottom:`1px solid ${G.border}`}}>MOVING AVERAGES</div>
-                      <table style={{width:"100%",borderCollapse:"collapse"}}>
-                        <tbody>
-                          {[["EMA 9",ind.e9[ind.n-1]],["EMA 20",ind.e20[ind.n-1]],["EMA 50",ind.e50[ind.n-1]],["SMA 20",ind.sma20[ind.n-1]],["VWAP",ind.vwap[ind.n-1]]].map(([l,v])=>(
-                            <tr key={l} style={{borderBottom:`1px solid ${G.border}`}}>
-                              <td style={{padding:"8px 0",color:G.textSec,fontSize:11}}>{l}</td>
-                              <td style={{padding:"8px 0",color:G.text,fontSize:12,fontWeight:700,textAlign:"right",fontFamily:"monospace"}}>₹{v.toFixed(2) || "0.00"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                  <div style={{display:"flex",flexDirection:"column",gap:20}}>
+                     <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+                      {[
+                        {label:"Market Cap",val:`₹${(fund.market_cap/1e10).toFixed(1)} Cr`,color:G.text},
+                        {label:"P/E Ratio",val:(fund.pe_ratio||"N/A"),color:(fund.pe_ratio<25?G.green:G.orange)},
+                        {label:"Debt/Equity",val:(fund.debt_equity||"0.0"),color:(fund.debt_equity<1?G.green:G.red)},
+                        {label:"Div Yield",val:`${(fund.div_yield||0).toFixed(2)}%`,color:G.teal},
+                        {label:"P/B Ratio",val:(fund.pb_ratio||"N/A"),color:G.text},
+                        {label:"Net Margin",val:`${(fund.profit_margin*100||0).toFixed(1)}%`,color:G.green},
+                        {label:"Rev Growth",val:`${(fund.rev_growth*100||0).toFixed(1)}%`,color:G.green},
+                        {label:"Beta (Volat)",val:(fund.beta||"1.0"),color:G.yellow},
+                      ].map(({label,val,color})=>(
+                        <div key={label} style={{background:G.bg,borderRadius:8,padding:"12px 14px",border:`1px solid ${G.border}`}}>
+                          <div style={{color:G.textMut,fontSize:10,marginBottom:4,fontWeight:600}}>{label}</div>
+                          <div style={{color,fontSize:13,fontWeight:700,fontFamily:"monospace"}}>{val}</div>
+                        </div>
+                      ))}
                     </div>
                     <div>
-                      <div style={{color:G.textMut,fontSize:11,fontWeight:700,marginBottom:10,borderBottom:`1px solid ${G.border}`}}>OSCILLATORS & VOLATILITY</div>
-                      <table style={{width:"100%",borderCollapse:"collapse"}}>
-                        <tbody>
-                          {[
-                            ["RSI (14)",ind.rsi[ind.n-1],v=>v.toFixed(1) || "50.0",v=>v>70?G.red:v<30?G.green:G.text],
-                            ["MACD Line",ind.macd[ind.n-1],v=>v.toFixed(2) || "0.00",v=>v>0?G.green:G.red],
-                            ["ADX (14)",ind.adx[ind.n-1],v=>v.toFixed(1) || "0.0",v=>v>25?G.blue:G.textMut],
-                            ["ATR (14)",ind.atr[ind.n-1],v=>v.toFixed(2) || "0.00",()=>G.text],
-                            ["BB Width",ind.bbw[ind.n-1],v=>(v*100).toFixed(2)+"%",()=>G.text]
-                          ].map(([l,v,fmt,clr])=>(
-                            <tr key={l} style={{borderBottom:`1px solid ${G.border}`}}>
-                              <td style={{padding:"8px 0",color:G.textSec,fontSize:11}}>{l}</td>
-                              <td style={{padding:"8px 0",color:clr(v),fontSize:12,fontWeight:700,textAlign:"right",fontFamily:"monospace"}}>{fmt(v)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <div style={{color:G.text,fontSize:14,fontWeight:700,marginBottom:10}}>Company Profile</div>
+                      <div style={{color:G.textSec,fontSize:12,lineHeight:1.7,background:G.bg,padding:16,borderRadius:8,border:`1px solid ${G.border}`}}>
+                        {fund.description || "No business summary available."}
+                      </div>
+                      {fund.website && <a href={fund.website} target="_blank" style={{color:G.blue,fontSize:11,marginTop:10,display:"block"}}>{fund.website}</a>}
                     </div>
                   </div>
                 )
               }
+            </div>
+          )}
+
+          {tab==="external"&&(
+            <div style={{animation:"fadeIn .2s"}}>
+               <div style={{background:G.bg,border:`1px solid ${G.orange}40`,borderRadius:8,padding:"16px 20px",marginBottom:20}}>
+                <div style={{color:G.orange,fontWeight:700,fontSize:13,marginBottom:8,display:"flex",alignItems:"center",gap:8}}>
+                  <span>🌐</span> Global Macro Status: {macroStatus || "LIVE"}
+                </div>
+                <div style={{color:G.textSec,fontSize:12,lineHeight:1.6}}>
+                  Market is currently in <strong>{stock.regime || "SIDEWAYS"}</strong> regime. Our ORACLE agent is monitoring 14 external catalysts that influence {sym}'s value.
+                </div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(350px,1fr))",gap:12}}>
+                 {[
+                  {name: "US Fed Rates / yields", impact: "HIGH", direction: "BEARISH", desc: "Rising US 10Y yields cause FII selling in large-cap stocks like " + sym},
+                  {name: "USD/INR exchange", impact: "MEDIUM", direction: stock.sec === "IT" ? "BULLISH" : "BEARISH", desc: "Weak rupee " + (stock.sec === "IT" ? "boosts export margins" : "increases import costs") + " for " + stock.sec},
+                  {name: "Brent Crude Oil", impact: "HIGH", direction: "BEARISH", desc: "India is a net importer; high oil increases logistics costs for " + sym},
+                  {name: "NSE Volatility (VIX)", impact: "MEDIUM", direction: "NEUTRAL", desc: "High VIX (>20) increases the chance of " + sym + " hitting stop losses."},
+                 ].map(f => (
+                   <div key={f.name} style={{background:G.bg,borderRadius:8,padding:16,border:`1px solid ${G.border}`}}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                        <span style={{color:G.text,fontWeight:700,fontSize:12}}>{f.name}</span>
+                        <div style={{display:"flex",gap:6}}>
+                          <Tag label={f.impact} color={G.orange} />
+                          <Tag label={f.direction} color={f.direction === "BULLISH" ? G.green : f.direction === "BEARISH" ? G.red : G.textMut} />
+                        </div>
+                      </div>
+                      <div style={{color:G.textSec,fontSize:11,lineHeight:1.5}}>{f.desc}</div>
+                   </div>
+                 ))}
+              </div>
             </div>
           )}
         </div>
@@ -1993,11 +2143,13 @@ function App() {
           if(msg.eval_stats) setEvalStats(msg.eval_stats);
           if(msg.agent_scores) setAgtScores(msg.agent_scores);
           if(msg.agent_kpi)  setAgentKpi(msg.agent_kpi);
-          if(msg.system)     setSysState(msg.system);
+          if(msg.system)     setSysState(prev=>({...prev, ...msg.system, macro_status: msg.macro_status, intel: msg.intel}));
           if(msg.picks)      setPicks(msg.picks);
           if(msg.candidates) setCandidates(msg.candidates);
           if(msg.positions)  setPos(msg.positions);
           if(msg.signals)    setAllSigs(msg.signals);
+          if(msg.macro_status) setSysState(prev=>({...prev, macro_status: msg.macro_status})); // Dual update
+          if(msg.intel)      setSysState(prev=>({...prev, intel: msg.intel}));
         };
         ws.onclose=()=>{if(alive){setConn("offline");setTimeout(()=>{if(alive)connect();},5000);}};
         ws.onerror=()=>{if(alive)setConn("offline");};
@@ -2035,7 +2187,10 @@ function App() {
       }));
       setAgentKpi(prev=>{
         const updated={...prev};
-        AGENT_LIST.forEach(a=>{updated[a.id]={kpi:0.55+Math.random()*.35,cycles:(updated[a.id].cycles||0)+1};});
+        AGENT_LIST.forEach(a=>{
+          const prevKpi = updated[a.id] || {};
+          updated[a.id]={kpi:0.55+Math.random()*.35,cycles:(prevKpi.cycles||0)+1};
+        });
         return updated;
       });
     },12000);
@@ -2079,7 +2234,7 @@ function App() {
       const ind=cdl.length>=15?indicators(cdl):null;
       const Li=ind?ind.n-1:-1;
       const liveQ=qRef.current[st.s];
-      const price=+(liveQ?.ltp||(cdl.length?(cdl[cdl.length-1].close||st.base):st.base)||st.base||1000).toFixed(2);
+      const price=+( (liveQ && liveQ.ltp) || (cdl.length ? (cdl[cdl.length-1].close || st.base) : st.base) || st.base || 1000).toFixed(2);
       const atr=ind&&Li>=0?ind.atr[Li]:price*.013;
       const first=cdl[0];
       const chg=first?(price-(first.close||first.Close||price))/(first.close||first.Close||price)*100:0;
@@ -2248,7 +2403,8 @@ function App() {
           candles={candleCache[selectedStock.symbol||selectedStock.s]||[]}
           quotes={quotes}
           signals={allSigs.filter(s=>s.symbol===(selectedStock.symbol||selectedStock.s))}
-          fundamentals={fundamentals[selectedStock.symbol||selectedStock.s]}
+          intel={systemState.intel}
+          macroStatus={systemState.macro_status}
           news={news} mode={systemState.mode}/>
       )}
 

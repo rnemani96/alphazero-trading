@@ -154,6 +154,42 @@ class OrderManager:
 
         return order
 
+    def modify_order(self, order_id: str, symbol: str, new_price: float, 
+                     new_trigger: float = 0.0, order_type: str = "SL-M") -> bool:
+        """
+        Modify an existing open order (e.g., update trailing stop loss).
+        """
+        if not self.executor:
+            # Paper mode simulation
+            order = self._orders.get(order_id)
+            if order:
+                order.stop_loss = new_price
+                order.updated_at = datetime.now().isoformat()
+                _save_order(order)
+            return True
+
+        try:
+            # Call underlying executor
+            success = self.executor.modify_order(
+                order_id=order_id,
+                symbol=symbol,
+                new_price=new_price,
+                new_trigger=new_trigger or new_price,
+                order_type=order_type
+            )
+            
+            if success:
+                order = self._orders.get(order_id)
+                if order:
+                    order.stop_loss = new_price
+                    order.updated_at = datetime.now().isoformat()
+                    _save_order(order)
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"OrderManager.modify_order error: {e}")
+            return False
+
     # ── Cancel order ──────────────────────────────────────────────────────────
     def cancel_order(self, order_id: str) -> bool:
         order = self._orders.get(order_id)

@@ -239,10 +239,32 @@ class SGXSignal:
         return self._session
 
     def _fetch_gift_nifty_nse(self) -> float:
-        """Fetch GIFT Nifty from NSE India pre-open API."""
+        """Fetch GIFT Nifty from NSE India pre-open API or giftnifty.info scrapper."""
         session = self._get_session()
         if not session:
             return 0.0
+            
+        # Source A: giftnifty.info (Public, simple)
+        try:
+            r = session.get("https://giftnifty.info/", timeout=8)
+            if r.status_code == 200:
+                from html.parser import HTMLParser
+                import re
+                # Look for LTP value in their clean table
+                match = re.search(r'>([\d,]+\.\d+)</span>', r.text)
+                if not match:
+                    # Alternative regex for their different themes
+                    match = re.search(r'([\d,]+\.\d+)\s*<', r.text)
+                if match:
+                    val = match.group(1).replace(",", "")
+                    ltp = float(val)
+                    if 15000 < ltp < 30000:
+                        logger.info("GIFT Nifty via Scraper: %.2f", ltp)
+                        return ltp
+        except Exception as e:
+            logger.debug("Scraper GIFT: %s", e)
+
+        # Source B: NSE pre-open API
         try:
             # NSE provides GIFT Nifty in pre-open data
             url = "https://www.nseindia.com/api/getQuotes?symbol=NIFTYFUT&identifier=NIFTYSGX"

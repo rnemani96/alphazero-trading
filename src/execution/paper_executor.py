@@ -39,6 +39,51 @@ class PaperExecutor:
         # Shared price cache — updated by main loop via update_prices()
         self._prices: Dict[str, float] = {}
 
+    def _simulate_order_book_fill(self, action: str, qty: int, ltp: float) -> tuple[float, int]:
+        """
+        Simulate walking the Level 2 Order Book.
+        Computes Volume-Weighted Average Price (VWAP) to clear the requested quantity across multiple depth levels.
+        """
+        if qty <= 0 or ltp <= 0:
+            return ltp, 0
+
+        # Assumptions for a NIFTY50 stock:
+        # Tick size = 0.05. Average liquid depth per tick = 500-1500 shares.
+        tick_size = 0.05
+        avg_depth_per_level = random.randint(500, 2000)
+        
+        remaining = qty
+        total_cost = 0.0
+        current_level_price = ltp
+        
+        # Base spread crossing cost
+        spread_ticks = random.randint(1, 3)
+        if action.upper() in ('BUY', 'LONG'):
+            current_level_price += (spread_ticks * tick_size)
+        else:
+            current_level_price -= (spread_ticks * tick_size)
+        
+        while remaining > 0:
+            filled_at_level = min(remaining, avg_depth_per_level)
+            total_cost += (filled_at_level * current_level_price)
+            remaining -= filled_at_level
+            
+            if remaining > 0:
+                if action.upper() in ('BUY', 'LONG'):
+                    current_level_price += tick_size
+                else:
+                    current_level_price -= tick_size
+                    
+                # Market depth gets thinner (or thicker) as you push the book
+                avg_depth_per_level = int(avg_depth_per_level * 0.8)
+                if avg_depth_per_level < 50:
+                    avg_depth_per_level = 50
+                    
+        vwap_fill = total_cost / qty
+        # Calculate resulting slippage in basis points
+        slip_bps = abs(vwap_fill - ltp) / ltp * 10000
+        return round(vwap_fill, 2), int(slip_bps)
+
     # ── public API ────────────────────────────────────────────────────────────
 
     def execute_trade(self, signal: Dict) -> Dict:
@@ -68,10 +113,8 @@ class PaperExecutor:
             logger.error(f"[PAPER] No price available for {symbol} — trade rejected")
             return {'success': False, 'error': f'No LTP available for {symbol}'}
 
-        # --- Apply realistic slippage ---
-        slip_bps  = random.randint(0, self.SLIPPAGE_BPS_MAX)
-        slip_sign = 1 if action == 'BUY' else -1       # buy high, sell low
-        fill_price = round(raw_price * (1 + slip_sign * slip_bps / 10_000), 2)
+        # --- Apply level 2 order book impact ---
+        fill_price, slip_bps = self._simulate_order_book_fill(action, qty, raw_price)
 
         # --- Stop loss and target from signal ---
         atr       = signal.get('atr', raw_price * 0.015)
@@ -124,10 +167,9 @@ class PaperExecutor:
             pos.get('current_price', entry)
         )
 
-        # Slippage on exit
-        slip_bps  = random.randint(0, self.SLIPPAGE_BPS_MAX)
-        slip_sign = 1 if side == 'SELL' else -1
-        fill_exit = round(exit_price * (1 + slip_sign * slip_bps / 10_000), 2)
+        # Slippage on exit via Order Book Simulation
+        close_action = 'SELL' if side in ('BUY', 'LONG') else 'BUY'
+        fill_exit, slip_bps = self._simulate_order_book_fill(close_action, qty, exit_price)
 
         if side in ('BUY', 'LONG'):
             pnl = (fill_exit - entry) * qty

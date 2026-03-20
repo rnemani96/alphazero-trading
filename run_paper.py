@@ -763,14 +763,37 @@ class Mercury:
         if price <= 0 or position_size <= 0:
             return None
 
-        # Simulate slippage (0–16 bps)
-        slip_bps = random.randint(0, 16)
-        fill     = price * (1 + slip_bps / 10000)
-        qty      = int(position_size / fill)
+        # Base properties for typical NIFTY50 depth
+        action = signal.get('signal', 'BUY').upper()
+        tick_size = 0.05
+        avg_depth_per_level = random.randint(500, 2000)
+        
+        qty = int(position_size / price)
         if qty < 1:
             return None
+            
+        remaining = qty
+        total_cost = 0.0
+        current_level_price = price
+        
+        # Base spread 
+        spread_ticks = random.randint(1, 3)
+        current_level_price += (spread_ticks * tick_size) if action == 'BUY' else -(spread_ticks * tick_size)
+            
+        while remaining > 0:
+            filled_at_level = min(remaining, avg_depth_per_level)
+            total_cost += (filled_at_level * current_level_price)
+            remaining -= filled_at_level
+            
+            if remaining > 0:
+                current_level_price += tick_size if action == 'BUY' else -tick_size
+                avg_depth_per_level = int(avg_depth_per_level * 0.8)
+                if avg_depth_per_level < 50:
+                    avg_depth_per_level = 50
 
-        fill = round(fill, 2)
+        fill = round(total_cost / qty, 2)
+        slip_bps = int(abs(fill - price) / price * 10000)
+
         self.total_slippage += slip_bps
         self.total_trades   += 1
 

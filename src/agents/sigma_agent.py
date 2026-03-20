@@ -40,41 +40,45 @@ class SigmaAgent(BaseAgent):
         'relative_strength':0.15,
         'news_sentiment':   0.10,
         'volume_confirm':   0.10,
-        'low_volatility':   0.10,   # inverted volatility
+        'low_volatility':   0.05,   # inverted volatility
         'delivery_pct':     0.05,
+        'historical_sharpe':0.05,
     }
 
     # Regime-adjusted weight overrides
     REGIME_WEIGHTS: Dict[str, Dict[str, float]] = {
         'TRENDING': {
             'momentum': 0.30,
-            'trend_strength': 0.25,
+            'trend_strength': 0.20,
             'earnings_quality': 0.10,
             'relative_strength': 0.15,
             'news_sentiment': 0.05,
             'volume_confirm': 0.10,
             'low_volatility': 0.03,
             'delivery_pct': 0.02,
+            'historical_sharpe': 0.05,
         },
         'SIDEWAYS': {
             'momentum': 0.10,
             'trend_strength': 0.05,
-            'earnings_quality': 0.25,
+            'earnings_quality': 0.20,
             'relative_strength': 0.15,
             'news_sentiment': 0.15,
             'volume_confirm': 0.10,
-            'low_volatility': 0.15,
+            'low_volatility': 0.10,
             'delivery_pct': 0.05,
+            'historical_sharpe': 0.10,   # favor stability in sideways
         },
         'VOLATILE': {
             'momentum': 0.15,
             'trend_strength': 0.10,
-            'earnings_quality': 0.15,
+            'earnings_quality': 0.10,
             'relative_strength': 0.10,
             'news_sentiment': 0.10,
             'volume_confirm': 0.10,
-            'low_volatility': 0.25,   # prioritise low-vol stocks in turbulence
+            'low_volatility': 0.20,
             'delivery_pct': 0.05,
+            'historical_sharpe': 0.10,
         },
     }
 

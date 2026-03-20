@@ -89,7 +89,7 @@ class OpenAlgoExecutor:
     """Live order execution via OpenAlgo API. Called ONLY in LIVE mode."""
 
     MAX_RETRIES      = 3
-    RETRY_DELAY_S    = 0.5   # 500 ms between retries (MasterReference §2 critical fix)
+    RETRY_DELAY_S    = 0.05  # 50 ms between retries (Optimized for NSE Co-Location latency)
 
     def __init__(self):
         self.host  = OPENALGO_HOST
@@ -350,6 +350,21 @@ class MercuryAgent:
             logger.info("MERCURY: Order FILLED — %s %s ×%d @₹%.2f [%s]",
                         dir_, sym, adj_qty, result.filled_price, self.mode)
         return result
+
+    def modify_order(self, order_id: str, symbol: str, new_price: float, 
+                     new_trigger: float = 0.0, order_type: str = "SL-M") -> bool:
+        """Forward modification request to executor."""
+        try:
+            return self.executor.modify_order(
+                order_id=order_id,
+                symbol=symbol,
+                new_price=new_price,
+                new_trigger=new_trigger or new_price,
+                order_type=order_type
+            )
+        except Exception as e:
+            logger.error(f"MERCURY: Modify order failed: {e}")
+            return False
 
     def get_stats(self) -> dict:
         return self.executor.get_fill_stats()

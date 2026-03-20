@@ -216,6 +216,8 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
                             "picks": status_data.get("picks", []),
                             "candidates": status_data.get("candidates", []),
                             "macro": status_data.get("macro", {}),
+                            "macro_status": status_data.get("macro_status", "LIVE"),
+                            "intel": status_data.get("intel", {}),
                             "signals": signals_data,
                         }
                         await websocket.send_text(_safe_json_dumps(ws_payload))

@@ -179,11 +179,12 @@ agents['KARMA']    = _load_agent('KARMA',   'src.agents.karma_agent',           
 agents['MTF']      = _load_agent('MTF',     'src.agents.multi_timeframe_agent', 'MultiTimeframeAgent',    eb, _cfg)
 agents['OPTIONS']  = _load_agent('OPTIONS', 'src.agents.options_flow_agent',    'OptionsFlowAgent',       eb, _cfg)
 agents['EARNINGS'] = _load_agent('EARNINGS','src.agents.llm_earnings_analyzer', 'EarningsCallAnalyzer',   eb, _cfg)
+agents['EARNINGS_CALENDAR'] = _load_agent('EARNINGS_CALENDAR', 'src.agents.earnings_calendar_agent', 'EarningsCalendarAgent', eb, _cfg)
 agents['STRATEGY'] = _load_agent('STRATEGY','src.agents.llm_strategy_generator','StrategyGenerator',      eb, _cfg)
 agents['SENTINEL'] = _load_agent('SENTINEL', 'src.agents.sentinel', 'SentinelAgent', eb, _cfg)
 
 active_agents = {k: v for k, v in agents.items() if v is not None}
-logger.info("Agents online: %d / 16", len(active_agents))
+logger.info("Agents online: %d / 18", len(active_agents))
 
 # ── Auto-load NEXUS XGBoost model (trained by scripts/train_nexus.py) ─────────
 # NEXUS uses rule-based detection by default. If the XGBoost model exists
@@ -299,6 +300,8 @@ def _write_state():
             "signals":     _state.get("latest_signals", [])[:10],
             "sgx_signal":  _state.get("sgx_signal", {}),
             "macro":       _state.get("macro", {}),
+            "macro_status":_state.get("macro_status", "LIVE"),
+            "intel":       _state.get("intelligence", {}),
             "mc_result":   _state.get("last_mc_result", {}),
             "nexus_model": os.path.exists(_nexus_model_path),
             "audit_active":_audit is not None,
@@ -325,7 +328,7 @@ def _write_state():
         safe_json_write("logs/status.json", status)
         safe_json_write("logs/signals.json", _state.get("latest_signals", []))
         
-        # Notify Dashboard via EventBus
+        # Notify Dashboard via EventBus to power WebSockets (P3 latency fix)
         if eb:
             eb.publish(EventType.STATE_UPDATED, {
                 "status": status,
@@ -462,18 +465,20 @@ def _aggregate_signals(
       min_agreement  = 1    (was 2+)
     """
     # Dynamic thresholds based on regime (AlphaZero v5.0)
+    # Dynamic thresholds based on regime (AlphaZero v5.0)
+    # RELAXED FOR PAPER MODE/TESTING (USER REQUEST #4)
     if regime == 'TRENDING':
-        MIN_AGG_CONF = 0.60   # Be more aggressive in strong trends
-        MIN_AGREEMENT = 2
+        MIN_AGG_CONF = 0.55   # (was 0.60)
+        MIN_AGREEMENT = 1     # (was 2)
     elif regime == "SIDEWAYS":
-        MIN_AGG_CONF = 0.75   # High conviction required to trade ranges
-        MIN_AGREEMENT = 3
+        MIN_AGG_CONF = 0.45   # (was 0.75 - very high)
+        MIN_AGREEMENT = 1     # (was 3)
     elif regime == "VOLATILE":
-        MIN_AGG_CONF = 0.72   # Safety first in high choppiness
-        MIN_AGREEMENT = 2
+        MIN_AGG_CONF = 0.52   # (was 0.72)
+        MIN_AGREEMENT = 1     # (was 2)
     else:
-        MIN_AGG_CONF = 0.65
-        MIN_AGREEMENT = 2
+        MIN_AGG_CONF = 0.50
+        MIN_AGREEMENT = 1
 
     TITAN_W  = 0.45
     NEXUS_W  = 0.30
@@ -591,7 +596,7 @@ def _regime_compatible(action: str, regime: str) -> bool:
 
 # ── Portfolio management callbacks ────────────────────────────────────────────
 
-def _register_trade(sig: Dict, fill_price: float):
+def _register_trade(sig: Dict, fill_price: float, broker_id: str = ""):
     """Register a new position with ActivePortfolio and KARMA."""
     if AP:
         trade_type = sig.get('trade_type', 'SWING').upper()
@@ -606,6 +611,7 @@ def _register_trade(sig: Dict, fill_price: float):
                 atr        = sig.get('atr', 0),
                 sector     = sig.get('sector', ''),
                 confidence = sig.get('confidence', 0),
+                broker_id  = broker_id,
             )
 
     # Notify position sizer to track for adaptive Kelly
@@ -629,12 +635,39 @@ def _update_positions(prices: Dict[str, float]):
     """Tick ActivePortfolio and feed closed trade outcomes to KARMA."""
     if not AP:
         return
-    closed = AP.update_prices(prices)
+    closed, updated = AP.update_prices(prices)
+    
+    # ── P1 #5 Logic: Forward trailing stops to broker ──
+    if updated and agents.get('MERCURY'):
+        for up in updated:
+            try:
+                sym = up['symbol']
+                new_sl = up['new_sl']
+                oid = up.get('broker_id')
+                if oid and oid != "FAILED":
+                    logger.info("📡 Trailing Update: %s → ₹%.2f (Broker ID: %s)", sym, new_sl, oid)
+                    agents['MERCURY'].modify_order(
+                        order_id=oid,
+                        symbol=sym,
+                        new_price=new_sl,
+                        new_trigger=new_sl,
+                        order_type="SL-M"
+                    )
+            except Exception as me:
+                logger.error("MERCURY modify_order error: %s", me)
+
     for pos in closed:
         sym    = pos['symbol']
         pnl    = pos.get('realised_pnl', 0)
         status = pos.get('status', '')
         logger.info("🔔 CLOSED %s | %s | P&L ₹%+,.0f", sym, status, pnl)
+
+        # ── Link to LENS Performance Attribution ──
+        if agents.get('LENS') and hasattr(agents['LENS'], 'record_trade'):
+            try:
+                agents['LENS'].record_trade(pos)
+            except Exception as le:
+                logger.debug("LENS record_trade failed: %s", le)
 
         # ── Trigger LLM Post Mortem ──
         if "Stop-loss" in pos.get("close_reason", "") or status == "STOPPED":
@@ -850,6 +883,7 @@ def _run_iteration():
     def process_sym_data(sym):
         res_15 = None; hist_15 = None
         res_5 = None;  hist_5 = None
+        intel = {}
         
         # Process 15m
         c15 = all_c15.get(sym)
@@ -870,21 +904,31 @@ def _run_iteration():
             if hist_5 is not None:
                 res_5 = hist_5.iloc[-1].to_dict()
                 res_5['price'] = res_5.get('close', prices.get(sym))
-            
-        return sym, res_15, hist_15, res_5, hist_5
 
-    # Parallel enrichment
-    with ThreadPoolExecutor(max_workers=10) as tp_executor:
+        # Stock Intel (Requirement #2, #4) — throttled refresh
+        if it == 1 or it % 48 == 0 or sym not in _state.get('intelligence', {}):
+            try:
+                intel['fundamentals'] = MSD.get_stock_fundamentals(sym)
+                intel['volume']       = MSD.get_volume_analysis(sym)
+                intel['ts']           = time.time()
+            except Exception: pass
+            
+        return sym, res_15, hist_15, res_5, hist_5, intel
+
+    # Parallel enrichment for ultra-low latency
+    with ThreadPoolExecutor(max_workers=50) as tp_executor:
         results = list(tp_executor.map(process_sym_data, universe))
         
     mdata_15m_history: Dict[str, pd.DataFrame] = {}
     mdata_5m_history:  Dict[str, pd.DataFrame] = {}
+    if 'intelligence' not in _state: _state['intelligence'] = {}
 
-    for sym, res_15, h15, res_5, h5 in results:
+    for sym, res_15, h15, res_5, h5, intel in results:
         if res_15: mdata_15m[sym] = res_15
         if h15 is not None: mdata_15m_history[sym] = h15
         if res_5:  mdata_5m[sym] = res_5
         if h5 is not None:  mdata_5m_history[sym] = h5
+        if intel: _state['intelligence'][sym] = intel
 
     mdata = mdata_15m # fallback for legacy code
     _state['market_data'] = {s: {'ltp': prices.get(s, 0)} for s in universe}
@@ -912,6 +956,16 @@ def _run_iteration():
             if macro_status == 'MISSING':
                 macro_status = 'FFILL'
             _state['macro_status'] = macro_status
+            
+            # FII / DII Data (P1 #9)
+            if it % 12 == 0 or it == 1:   # every 30-40 mins
+                try:
+                    _fii_res = MSD.get_fii_dii_data() if MSD else {}
+                    if _fii_res:
+                        _state['fii_dii'] = _fii_res
+                        logger.info("FII/DII: FII=%+,.0f Cr  DII=%+,.0f Cr", 
+                                    _fii_res.get('fii_net',0), _fii_res.get('dii_net',0))
+                except Exception: pass
             
             if agents.get('GUARDIAN'):
                 agents['GUARDIAN'].set_vix(vix)
@@ -962,7 +1016,25 @@ def _run_iteration():
     regime = _state.get('regime', 'TRENDING')
     if agents.get('NEXUS') and hasattr(agents['NEXUS'], 'detect_regime'):
         try:
-            # Prepare all 14 causal features from macro and sentiment
+            # ── P1 #1: Options Market leading indicator ──
+            pc_ratio = 1.0; max_pain_diff = 0.0; uoa_flag = 0
+            if it % 5 == 0 or it == 1:
+                try:
+                    oc = MSD.get_options_chain("NIFTY50") if MSD else \
+                         _fetcher.get_options_chain("NIFTY50") if _fetcher else None
+                    if oc:
+                        calls = [c for c in oc['contracts'] if c['type'] == 'CALL']
+                        puts  = [c for c in oc['contracts'] if c['type'] == 'PUT']
+                        call_oi = sum(c.get('open_interest', 0) for c in calls)
+                        put_oi  = sum(c.get('open_interest', 0) for c in puts)
+                        if call_oi > 0: pc_ratio = put_oi / call_oi
+                        
+                        # Unusual Volume (UOA) proxy
+                        uoa_flag = 1 if any(c.get('multi_exchange', False) for c in oc['contracts']) else 0
+                        logger.info("NEXUS: Options context — PCR=%.2f  OI_TOT=%d", pc_ratio, (call_oi + put_oi))
+                except Exception: pass
+
+            # Prepare all 14+ causal features from macro and sentiment
             nexus_input = {
                 'data':           mdata,
                 'india_vix':      vix,
@@ -970,6 +1042,9 @@ def _run_iteration():
                 'usdinr_change':  macro.get('usdinr_change', 0.0) if 'macro' in locals() else 0.0,
                 'news_sentiment': overall_sentiment,
                 'event_flag':     macro.get('event_flag', 0.0) if 'macro' in locals() else 0.0,
+                'pc_ratio':       pc_ratio,
+                'max_pain_diff':  max_pain_diff,
+                'uoa_flag':       uoa_flag,
             }
             raw_regime = agents['NEXUS'].detect_regime(nexus_input)
             regime = raw_regime if isinstance(raw_regime, str) else regime
@@ -993,7 +1068,9 @@ def _run_iteration():
                     'news_sentiment':   min(1.0, max(0, sentiment_scores.get(sym, 0.0) + 0.5)),
                     'volume_confirm':   min(1.0, max(0, (float(d.get('volume_zscore', 0)) + 3) / 6)),
                     'volatility':       min(1.0, float(d.get('atr', 0)) / max(float(d.get('close', 1)), 1) * 20),
-                    'fii_interest':     0.5,
+                    'fii_interest':     0.7 if _state.get('fii_dii', {}).get('fii_net', 0) > 0 else 0.3,
+                    'delivery_pct':     min(1.0, float(_state.get('intelligence', {}).get(sym, {}).get('volume', {}).get('delivery_pct', 45.0)) / 100),
+                    'historical_sharpe': agents['KARMA'].get_symbol_performance(sym) if agents.get('KARMA') else 0.5,
                 }
                 for sym, d in mdata.items()
             ]
@@ -1022,7 +1099,7 @@ def _run_iteration():
 
     # ── Step 7: TITAN signals ─────────────────────────────────────────────────
     signals: List[Dict] = []
-    if market_hours and agents.get('TITAN'):
+    if (market_hours or settings.MODE == "PAPER") and agents.get('TITAN'):
         try:
             # Pass multi-agent scores to TITAN for internal boosting
             # CRITICAL FIX: Pass the historical DataFrames (mdata_15m_history) rather than snapshots
@@ -1052,6 +1129,24 @@ def _run_iteration():
                     dedup_signals[sym] = s
             raw_signals = list(dedup_signals.values())
             
+            # --- P2 EARNINGS CALENDAR STRATEGIES ---
+            if agents.get('EARNINGS_CALENDAR'):
+                for sym, d in mdata.items():
+                    price = float(d.get('price', 0))
+                    prev_close = float(d.get('prev_close', 0))
+                    vol_r = float(d.get('vol_ratio', 1.0))
+                    sig_score = float(sigma_scores.get(sym, 0.5))
+                    
+                    pre_sig = agents['EARNINGS_CALENDAR'].check_pre_earnings_momentum(sym, sig_score)
+                    if pre_sig:
+                        pre_sig.update({'symbol': sym, 'price': price, 'action': pre_sig['signal'], 'source': 'EARNINGS_CALENDAR', 'atr': price * 0.02})
+                        raw_signals.append(pre_sig)
+                        
+                    post_sig = agents['EARNINGS_CALENDAR'].check_post_earnings_gap(sym, price, prev_close, vol_r)
+                    if post_sig:
+                        post_sig.update({'symbol': sym, 'price': price, 'action': post_sig['signal'], 'source': 'EARNINGS_CALENDAR', 'atr': price * 0.02})
+                        raw_signals.append(post_sig)
+                        
             # Multi-agent aggregation
             signals = _aggregate_signals(raw_signals, regime, sentiment_scores, vix)
             _state['latest_signals'] = signals
@@ -1063,6 +1158,23 @@ def _run_iteration():
     approved: List[Dict] = []
     current_capital = settings.INITIAL_CAPITAL + _state.get('net_pnl', 0)
     open_positions  = list(AP.open_positions.values()) if AP else []
+    
+    # --- P3: Dynamic Portfolio Hedging (RISK_OFF Put buying) ---
+    if regime == 'RISK_OFF' and AP and len(open_positions) > 0:
+        has_hedge = any("PE" in str(p.get('symbol', '')) or "Hedge" in str(p.get('top_strategy', '')) for p in open_positions)
+        if not has_hedge:
+            logger.info("🛡️ RISK_OFF detected with open portfolio -> Sourcing NIFTY Put hedge")
+            # Create a synthetic high-conviction hedge signal that overrides regime filters
+            put_signal = {
+                'symbol': 'NIFTY_HEDGE_PE',
+                'action': 'BUY',
+                'confidence': 0.99,
+                'price': 150.0,
+                'top_strategy': 'P3_RiskOff_Hedge',
+                'reasons': ['Dynamic Portfolio Hedging due to RISK_OFF regime'],
+                'atr': 20.0
+            }
+            signals.insert(0, put_signal)
 
     for sig in signals:
         try:
@@ -1148,8 +1260,9 @@ def _run_iteration():
                 
                 if result and (result.get('success') or result.get('status') in ('COMPLETE', 'filled')):
                     fill_price = result.get('fill_price', sig.get('price', 0))
+                    broker_id  = result.get('order_id') or result.get('broker_id') or ""
                     _state['last_trade_time'][sym] = time.time()  # Record execution time
-                    _register_trade(sig, fill_price)
+                    _register_trade(sig, fill_price, broker_id)
                     executed_in_batch.add(sym)
                     executed += 1
                 else:
@@ -1305,7 +1418,7 @@ signal.signal(signal.SIGTERM, _shutdown)
 def main():
     logger.info("═" * 70)
     logger.info("AlphaZero Capital v4.0")
-    logger.info("MODE: %s | Capital: ₹%s | Agents: %d/16",
+    logger.info("MODE: %s | Capital: ₹%s | Agents: %d/17",
                 settings.MODE, f"{settings.INITIAL_CAPITAL:,.0f}", len(active_agents))
     if AP:
         summ = AP.get_summary()
@@ -1322,6 +1435,14 @@ def main():
 
     # Start dashboard + browser
     _start_dashboard()
+    
+    # Start Natural Language /query Bot (P4)
+    _telegram_bot = None
+    try:
+        from src.interfaces.telegram_bot import init_telegram_bot
+        _telegram_bot = init_telegram_bot()
+    except Exception as e:
+        logger.debug(f"Telegram Natural Language Query Interface failed to start: {e}")
 
     # Main loop
     while _state["running"]:

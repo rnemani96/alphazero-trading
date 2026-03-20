@@ -201,6 +201,7 @@ class ActivePortfolio:
         atr:        float = 0.0,
         sector:     str   = "",
         confidence: float = 0.0,
+        broker_id:  str   = "",
     ) -> Dict:
         """Register a new open position."""
         with self._lock:
@@ -232,6 +233,7 @@ class ActivePortfolio:
                 "sector":        sector,
                 "confidence":    round(confidence, 3),
                 "invested_amount": round(entry_price * quantity, 2),
+                "broker_id":     broker_id,
             }
             key = f"{symbol}:{trade_type}"
             self._state["positions"][key] = pos
@@ -247,9 +249,10 @@ class ActivePortfolio:
         Update current prices for all open positions and check target/SL.
 
         price_map: {symbol: ltp, ...}
-        Returns list of closed positions (target/SL hit this tick).
+        Returns: (closed_positions, updated_stops)
         """
         closed_this_tick: List[Dict] = []
+        updated_stops: List[Dict]    = []
         with self._lock:
             for key, pos in list(self.positions.items()):
                 sym = pos.get("symbol")
@@ -282,7 +285,14 @@ class ActivePortfolio:
                 if pnl_pct >= 2.0:
                     lock_in_sl = ep * 1.01
                     if lock_in_sl > pos["stop_loss"]:
+                        old_sl = pos["stop_loss"]
                         pos["stop_loss"] = round(lock_in_sl, 2)
+                        updated_stops.append({
+                            "symbol": sym,
+                            "old_sl": old_sl,
+                            "new_sl": pos["stop_loss"],
+                            "broker_id": pos.get("broker_id")
+                        })
                         logger.info("[ActivePortfolio] %s SL moved to lock 1%% profit (₹%.2f)", sym, lock_in_sl)
 
                 # Rule B: ATR-based trailing from highest price
@@ -292,7 +302,15 @@ class ActivePortfolio:
                 trail_sl = round(highest - trail_buffer, 2)
 
                 if trail_sl > pos.get("trailing_stop", 0):
+                    old_ts = pos.get("trailing_stop", sl)
                     pos["trailing_stop"] = trail_sl
+                    updated_stops.append({
+                        "symbol": sym,
+                        "old_sl": old_ts,
+                        "new_sl": trail_sl,
+                        "broker_id": pos.get("broker_id"),
+                        "is_trailing": True
+                    })
                     logger.debug("[ActivePortfolio] %s trailing stop raised to ₹%.2f", sym, trail_sl)
 
                 # Update days open
@@ -329,7 +347,7 @@ class ActivePortfolio:
                     logger.info("[ActivePortfolio] CLOSED %s (%s) — %s | %s", sym, pos.get('trade_type'), close_status, reason)
 
             self._save()
-        return closed_this_tick
+        return closed_this_tick, updated_stops
 
     def force_close(self, symbol: str, current_price: float, reason: str = "Manual override") -> Optional[Dict]:
         """Force-close a position (manual override / risk kill-switch)."""

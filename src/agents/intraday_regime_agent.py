@@ -254,7 +254,13 @@ class IntradayRegimeAgent(BaseAgent):
         except Exception:
             pass
 
-        # 4. Macro & News (from main.py / market_data)
+        # 4. Options Market Signals (P1 #1)
+        # PCR, Max Pain, and Unusual OI are leading indicators for Smart Money
+        pc_ratio      = float(market_data.get('pc_ratio', 1.0))
+        max_pain_diff = float(market_data.get('max_pain_diff', 0.0))
+        uoa_flag      = float(market_data.get('uoa_flag', 0.0))
+
+        # 5. Macro & News (from main.py / market_data)
         return {
             'adx':            _mean(adx_vals) or 25.0,
             'rsi':            _mean(rsi_vals) or 50.0,
@@ -270,6 +276,9 @@ class IntradayRegimeAgent(BaseAgent):
             'usdinr_change':  float(market_data.get('usdinr_change', 0.0)),
             'news_sentiment': float(market_data.get('news_sentiment', 0.0)),
             'event_flag':     float(market_data.get('event_flag', 0.0)),
+            'pc_ratio':       pc_ratio,
+            'max_pain_diff':  max_pain_diff,
+            'uoa_flag':       uoa_flag,
         }
 
     # ── Rule-based detection (always available) ───────────────────────────────
@@ -283,13 +292,21 @@ class IntradayRegimeAgent(BaseAgent):
         adx    = f['adx']
         rsi    = f['rsi']
         vix    = f['vix']
-        breadth = f['breadth']   # 0–1
-        cev     = f['close_vs_ema']  # % price deviation from ema20
-        fii     = f['fii_flow']
+        breadth = f.get('breadth', 0.5)   # 0–1
+        cev     = f.get('close_vs_ema', f.get('cev', 0.0))  % price deviation from ema20
+        fii     = f.get('fii_flow', 0.0)
+        pc_ratio = f.get('pc_ratio', 1.0)
+        uoa      = f.get('uoa_flag', 0.0)
 
         th = self._cfg
 
         votes: Dict[str, int] = {r: 0 for r in self.REGIMES}
+
+        # ── Options Market Votes (Put/Call Surge) ──────────────────────────────
+        if pc_ratio >= 1.4 or uoa > 0:
+            votes["RISK_OFF"] += 1          # Institutions hedging
+        elif pc_ratio <= 0.6:
+            votes["TRENDING"] += 1          # Call heavy / Bullish
 
         # ── VIX votes ──────────────────────────────────────────────────────────
         if vix >= th["NEXUS_VIX_RISK_OFF"]:

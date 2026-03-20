@@ -19,12 +19,25 @@ from config.sectors import SECTORS, get_sector
 logger = logging.getLogger(__name__)
 
 
+SECTOR_INDICES = {
+    'BANKING': '^NSEBANK',
+    'IT': '^CNXIT',
+    'AUTO': '^CNXAUTO',
+    'ENERGY': '^CNXENERGY',
+    'FINANCE': '^CNXFIN',
+    'INFRA': '^CNXINFRA',
+    'METALS': '^CNXMETAL',
+    'PHARMA': '^CNXPHARMA',
+    'FMCG': '^CNXFMCG',
+    'TELECOM': '^CNXMEDIA'
+}
+
 class SectorAgent(BaseAgent):
     """
     ATLAS - Sector Strategy Agent
     
     Determines WHICH sectors to overweight/underweight based on the regime,
-    and HOW to rank stocks within those sectors.
+    and HOW to rank stocks within those sectors using dynamic 90-day rotation.
     """
 
     # Default sector weights (equally weighted)
@@ -62,6 +75,7 @@ class SectorAgent(BaseAgent):
         
         self.current_allocations = self.DEFAULT_ALLOCATION.copy()
         self.last_update = datetime.now()
+        self.last_rs_update = None
         
         # Internal state for tracking performance
         self.sector_performance: Dict[str, float] = {sector: 0.0 for sector in SECTORS}
@@ -70,26 +84,65 @@ class SectorAgent(BaseAgent):
 
     # ── public API ───────────────────────────────────────────────────────────
 
+    def _update_sector_momentum(self):
+        """Fetch 90-day relative strength of NSE sector indices vs Nifty 500."""
+        try:
+            import yfinance as yf
+            from datetime import timedelta
+            end = datetime.now()
+            start = end - timedelta(days=90)
+            
+            # Fetch Nifty 500 baseline (^CRSLDX is NSE 500)
+            n500 = yf.download("^CRSLDX", start=start, end=end, progress=False)
+            baseline = float((n500['Close'].iloc[-1] - n500['Close'].iloc[0]) / n500['Close'].iloc[0]) if len(n500) > 0 else 0.0
+            
+            for sector, idx in SECTOR_INDICES.items():
+                try:
+                    data = yf.download(idx, start=start, end=end, progress=False)
+                    if len(data) > 0:
+                        ret = float((data['Close'].iloc[-1] - data['Close'].iloc[0]) / data['Close'].iloc[0])
+                        self.sector_performance[sector] = ret - baseline
+                except Exception: pass
+        except Exception as e:
+            logger.debug(f"ATLAS Sector RS update failed: {e}")
+        self.last_rs_update = datetime.now()
+
     def get_sector_allocation(self, regime: str = 'NEUTRAL') -> Dict[str, float]:
         """
-        Return the optimal sector weights for the current regime.
-        CHIEF uses this to determine position sizing.
+        Return the optimal sector weights for the current regime, 
+        dynamically adjusted for 90-day leading/lagging relative strength.
         """
-        alloc = self.REGIME_ALLOCATIONS.get(regime, self.DEFAULT_ALLOCATION)
-        self.current_allocations = alloc
+        if not self.last_rs_update or (datetime.now() - self.last_rs_update).days >= 1:
+            self._update_sector_momentum()
+            
+        base_alloc = self.REGIME_ALLOCATIONS.get(regime, self.DEFAULT_ALLOCATION).copy()
+        
+        total_weight = 0.0
+        for sector in base_alloc:
+            rs = self.sector_performance.get(sector, 0.0)
+            # Tilt fundamental regime allocation by up to +-30% depending on momentum
+            tilt = 1.0 + max(min(rs * 2.0, 0.3), -0.3)
+            base_alloc[sector] *= tilt
+            total_weight += base_alloc[sector]
+            
+        if total_weight > 0:
+            for sector in base_alloc:
+                base_alloc[sector] = round(base_alloc[sector] / total_weight, 4)
+                
+        self.current_allocations = base_alloc
         self.last_update = datetime.now()
         
         self.publish_event(
-            EventType.MACRO_UPDATE, # Re-using MACRO_UPDATE for sector shifts
+            EventType.MACRO_UPDATE,
             {
                 'source': 'ATLAS',
                 'regime': regime,
-                'allocations': alloc,
+                'allocations': base_alloc,
                 'timestamp': self.last_update.isoformat()
             }
         )
         
-        return alloc
+        return base_alloc
 
     def score_stocks(self, stocks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -100,8 +153,13 @@ class SectorAgent(BaseAgent):
         for stock in stocks:
             symbol = stock.get('symbol', 'UNKNOWN')
             sector = get_sector(symbol)
+            rs = self.sector_performance.get(sector, 0.0)
             
-            # 8-factor scoring model (sector-relative)
+            # Map Relative Strength linearly around 0.5 (Scale: +15% alpha = score 0.95)
+            norm_rs = max(0.0, min(1.0, 0.5 + (rs * 3.0)))
+            stock['sector_momentum'] = round(norm_rs, 2)
+            
+            # Incorporate directly into the 8-factor score
             score = self._calculate_score(stock)
             
             scored_stock = {
@@ -123,8 +181,11 @@ class SectorAgent(BaseAgent):
         """
         score = 0.0
         
-        # Momentum (20%)
-        score += stock.get('momentum', 0.5) * 0.20
+        # Sector Rotation Momentum Premium (10%) - Reallocating 10% from base Momentum
+        score += stock.get('sector_momentum', 0.5) * 0.10
+        
+        # Pure Momentum (10% now)
+        score += stock.get('momentum', 0.5) * 0.10
         
         # Trend Strength (15%)
         score += stock.get('trend_strength', 0.5) * 0.15
