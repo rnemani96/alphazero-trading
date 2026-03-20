@@ -1,4 +1,4 @@
-# AlphaZero Capital — Requirements (v3.0)
+# AlphaZero Capital — Requirements (v4.0)
 # Install: pip install -r requirements.txt
 
 # ── Core ─────────────────────────────────────────────────────────────────────
@@ -26,7 +26,7 @@ pandas-ta>=0.3.14b           # Pure-Python TA library (no TA-Lib C dependency)
 anthropic>=0.29.0            # Claude API
 openai>=1.30.0               # GPT-4 optional fallback
 google-generativeai>=0.7.0   # Gemini optional fallback
-openrouter                   # OpenRouter optional fallback
+# openrouter is accessed via raw requests usually
 
 # ── News / NLP ────────────────────────────────────────────────────────────────
 transformers>=4.40.0         # HuggingFace (for FinBERT sentiment)
@@ -37,6 +37,7 @@ sentencepiece>=0.2.0         # Tokenizer support
 stable-baselines3>=2.3.0     # PPO for KARMA learning agent
 gymnasium>=0.29.0            # RL environment API
 shimmy>=1.3.0                # Gym/Gymnasium compatibility shim
+optuna>=3.6.0                # Bayesian optimization for params
 
 # ── Backend / Dashboard ───────────────────────────────────────────────────────
 fastapi>=0.109.0
@@ -54,10 +55,3 @@ pytz>=2024.1                 # Timezone handling
 tqdm>=4.66.0                 # Progress bars
 colorlog>=6.8.0              # Colored logging output
 
-# ── Optional: Redis (for event bus / distributed agents) ─────────────────────
-# redis>=5.0.0
-# celery>=5.3.0
-
-# ── Optional: Database ────────────────────────────────────────────────────────
-# sqlalchemy>=2.0.0
-# alembic>=1.13.0

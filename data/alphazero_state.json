@@ -156,14 +156,14 @@
         "realised_pct": -0.53
       }
     ],
-    "last_updated": "2026-03-21T01:59:25.049016+05:30",
+    "last_updated": "2026-03-21T03:52:01.606974+05:30",
     "blocked_symbols": [
       "LLOYDSME",
       "CANBK",
       "INOXWIND"
     ]
   },
-  "iteration": 40,
+  "iteration": 67,
   "regime": "SIDEWAYS",
   "sentiment": 0.0,
   "sentiment_scores": {
@@ -482,7 +482,7 @@
     "spx_ret_pct": 0.0,
     "crude_ret_pct": 0.0,
     "status": "MISSING",
-    "timestamp": "2026-03-21T01:45:13.946030"
+    "timestamp": "2026-03-21T03:42:39.942566"
   },
   "macro_status": "FFILL",
   "sigma_scores": {
