@@ -344,20 +344,41 @@ class TitanAgent(BaseAgent):
             'timestamp':      datetime.now().strftime('%H:%M:%S'),
         }
 
-    def _build_df(self, ind_data: Dict[str, Any]) -> Optional[pd.DataFrame]:
-        """Build a minimal DataFrame from indicator data so TitanStrategyEngine can run."""
-        required = ['close']
-        if not all(k in ind_data for k in required):
-            return None
-        row = {
-            'open':   ind_data.get('open',   ind_data['close']),
-            'high':   ind_data.get('high',   ind_data['close']),
-            'low':    ind_data.get('low',    ind_data['close']),
-            'close':  ind_data['close'],
-            'volume': ind_data.get('volume', 0),
-        }
-        # Create single-row DF — engine will handle gracefully
-        return pd.DataFrame([row])
+    def _build_df(self, ind_data: Any) -> Optional[pd.DataFrame]:
+        """Build a DataFrame from indicator data so TitanStrategyEngine can run."""
+        # Case 1: Already a DataFrame (most efficient)
+        if isinstance(ind_data, pd.DataFrame):
+            if ind_data.empty: return None
+            # Ensure required columns exist, even if as placeholders
+            for col in ['open', 'high', 'low', 'close', 'volume']:
+                if col not in ind_data.columns:
+                    ind_data[col] = ind_data.get('close', 0)
+            return ind_data
+
+        # Case 2: List of dicts (historical data)
+        if isinstance(ind_data, list):
+            if not ind_data: return None
+            df = pd.DataFrame(ind_data)
+            return df
+
+        # Case 3: Single dict snapshot (legacy / fallback)
+        if isinstance(ind_data, dict):
+            required = ['close']
+            if not all(k in ind_data for k in required):
+                return None
+            row = {
+                'open':   ind_data.get('open',   ind_data['close']),
+                'high':   ind_data.get('high',   ind_data['close']),
+                'low':    ind_data.get('low',    ind_data['close']),
+                'close':  ind_data['close'],
+                'volume': ind_data.get('volume', 0),
+            }
+            # Add all other indicators in the dict as columns (e.g. rsi, ema20)
+            for k, v in ind_data.items():
+                if k not in row: row[k] = v
+            return pd.DataFrame([row])
+
+        return None
 
     def _fallback_signals(self, d: Dict[str, Any]) -> list:
         """Simple rule-based fallback when TitanStrategyEngine is unavailable."""

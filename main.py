@@ -106,6 +106,7 @@ _fetcher = None
 try:
     from src.data.fetch import DataFetcher
     _fetcher = DataFetcher(_cfg)
+    _cfg['data_fetcher'] = _fetcher
     FETCHER_OK = True
 except Exception as e:
     logger.warning("DataFetcher failed: %s", e)
@@ -303,12 +304,28 @@ def _write_state():
             "audit_active":_audit is not None,
             "shadow_active":_shadow_mgr is not None,
         }
-        with open("logs/status.json", "w") as f:
-            json.dump(status, f, indent=2, default=_safe_serialize)
-        with open("logs/signals.json", "w") as f:
-            json.dump(_state.get("latest_signals", []), f, indent=2, default=_safe_serialize)
+        # Heartbeat for SENTINEL
+        status["heartbeat"] = datetime.now(IST).isoformat()
+        status["timestamp"] = time.time()
         
-        # Notify Dashboard
+        # Atomic Safe-Write (Prevents dashboard from reading partial files)
+        def safe_json_write(path, data):
+            tmp_path = path + ".tmp"
+            try:
+                with open(tmp_path, "w") as f:
+                    json.dump(data, f, indent=2, default=_safe_serialize)
+                if os.path.exists(path):
+                    os.remove(path)
+                os.rename(tmp_path, path)
+            except Exception as e:
+                if os.path.exists(tmp_path): os.remove(tmp_path)
+                raise e
+
+        # Write files robustly
+        safe_json_write("logs/status.json", status)
+        safe_json_write("logs/signals.json", _state.get("latest_signals", []))
+        
+        # Notify Dashboard via EventBus
         if eb:
             eb.publish(EventType.STATE_UPDATED, {
                 "status": status,
@@ -316,7 +333,7 @@ def _write_state():
                 "agents": {k: {"alive": v.is_active, "status": getattr(v, "status", "running"), "activity": v.last_activity} for k, v in active_agents.items()}
             })
     except Exception as exc:
-        logger.warning("State write: %s", exc)
+        logger.warning("State write failure: %s", exc)
 
 
 # ── Market timing helpers ─────────────────────────────────────────────────────
@@ -395,9 +412,9 @@ def _fetch_candles(symbol: str, interval: str = "1d", bars: int = 250) -> List[D
     return []
 
 
-def _enrich_with_indicators(symbol: str, candles: List[Dict]) -> Optional[Dict]:
-    """Build a full indicator dict for one symbol from its candle history."""
-    if len(candles) < 30:
+def _enrich_with_indicators(symbol: str, candles: List[Dict], return_df: bool = False) -> Optional[Any]:
+    """Build a full indicator dict or DataFrame for one symbol from its candle history."""
+    if len(candles) < 15:
         return None
     try:
         import pandas as pd
@@ -409,11 +426,15 @@ def _enrich_with_indicators(symbol: str, candles: List[Dict]) -> Optional[Dict]:
                 df[col] = df.get('close', 0)
             df[col] = pd.to_numeric(df[col], errors='coerce')
         df = df.dropna(subset=['close'])
-        if len(df) < 20:
+        if len(df) < 5:
             return None
         enriched = add_all_indicators(df)
         if enriched.empty:
             return None
+            
+        if return_df:
+            return enriched
+            
         row = enriched.iloc[-1].to_dict()
         row['price'] = row.get('close', 0)
         return row
@@ -827,32 +848,43 @@ def _run_iteration():
     mdata_5m:  Dict[str, Any] = {}
 
     def process_sym_data(sym):
-        res_15 = None
-        res_5 = None
+        res_15 = None; hist_15 = None
+        res_5 = None;  hist_5 = None
         
         # Process 15m
         c15 = all_c15.get(sym)
         if c15:
             c15_list = [asdict(b) for b in c15]
             if prices.get(sym, 0) > 0: c15_list[-1]['close'] = prices[sym]
-            res_15 = _enrich_with_indicators(sym, c15_list)
+            hist_15 = _enrich_with_indicators(sym, c15_list, return_df=True)
+            if hist_15 is not None:
+                res_15 = hist_15.iloc[-1].to_dict()
+                res_15['price'] = res_15.get('close', prices.get(sym))
             
         # Process 5m
         c5 = all_c5.get(sym)
         if c5:
             c5_list = [asdict(b) for b in c5]
             if prices.get(sym, 0) > 0: c5_list[-1]['close'] = prices[sym]
-            res_5 = _enrich_with_indicators(sym, c5_list)
+            hist_5 = _enrich_with_indicators(sym, c5_list, return_df=True)
+            if hist_5 is not None:
+                res_5 = hist_5.iloc[-1].to_dict()
+                res_5['price'] = res_5.get('close', prices.get(sym))
             
-        return sym, res_15, res_5
+        return sym, res_15, hist_15, res_5, hist_5
 
     # Parallel enrichment
     with ThreadPoolExecutor(max_workers=10) as tp_executor:
         results = list(tp_executor.map(process_sym_data, universe))
         
-    for sym, res_15, res_5 in results:
+    mdata_15m_history: Dict[str, pd.DataFrame] = {}
+    mdata_5m_history:  Dict[str, pd.DataFrame] = {}
+
+    for sym, res_15, h15, res_5, h5 in results:
         if res_15: mdata_15m[sym] = res_15
+        if h15 is not None: mdata_15m_history[sym] = h15
         if res_5:  mdata_5m[sym] = res_5
+        if h5 is not None:  mdata_5m_history[sym] = h5
 
     mdata = mdata_15m # fallback for legacy code
     _state['market_data'] = {s: {'ltp': prices.get(s, 0)} for s in universe}
@@ -993,15 +1025,17 @@ def _run_iteration():
     if market_hours and agents.get('TITAN'):
         try:
             # Pass multi-agent scores to TITAN for internal boosting
+            # CRITICAL FIX: Pass the historical DataFrames (mdata_15m_history) rather than snapshots
+            # This unlocks the 45-strategy engine in src/titan.py
             raw_15m = agents['TITAN'].generate_signals(
-                mdata_15m, regime, 
+                mdata_15m_history, regime, 
                 hermes_scores=sentiment_scores,
                 sigma_scores=sigma_scores,
                 atlas_scores=atlas_scores,
                 timeframe="15m"
             )
             raw_5m  = agents['TITAN'].generate_signals(
-                mdata_5m,  regime, 
+                mdata_5m_history,  regime, 
                 hermes_scores=sentiment_scores,
                 sigma_scores=sigma_scores,
                 atlas_scores=atlas_scores,
@@ -1167,7 +1201,7 @@ def _run_iteration():
                     f"Confidence: {sig.get('confidence',0):.0%}\n"
                     f"R:R: {sig.get('rr', 0):.1f}"
                 )
-        except Exception as exc:
+            except Exception as exc:
                 logger.error("Execution error %s: %s", sig.get('symbol'), exc)
 
     # ── Step 10b: Hedge Portfolio if Risk is Extreme ──────────────────────────

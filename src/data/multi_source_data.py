@@ -138,6 +138,7 @@ _YF_MAP: Dict[str, str] = {}  # auto-generated below
 
 
 def _to_yf(sym: str) -> str:
+    sym = sym.split(":")[0]
     if sym in _YF_MAP:
         return _YF_MAP[sym]
     if sym.endswith(".NS") or sym.startswith("^"):

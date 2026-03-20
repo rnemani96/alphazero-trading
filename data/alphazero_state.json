@@ -1,19 +1,578 @@
 {
-  "active_portfolio": {},
-  "iteration": 1,
-  "regime": "NEUTRAL",
-  "sentiment": 0.0,
-  "sentiment_scores": {},
-  "selected_stocks": [],
+  "active_portfolio": {
+    "open_positions": [
+      {
+        "symbol": "LLOYDSME",
+        "entry_price": 1258.38,
+        "quantity": 26,
+        "target": 1284.53,
+        "stop_loss": 1243.98,
+        "current_price": 1246.0,
+        "unrealised_pnl": -321.88,
+        "pnl_pct": -0.98,
+        "strategy": "T5",
+        "trade_type": "SWING",
+        "status": "OPEN",
+        "opened_at": "2026-03-20T12:55:04.489369+05:30",
+        "closed_at": null,
+        "close_reason": null,
+        "max_days": 30,
+        "days_open": 0,
+        "highest_price": 1259.2,
+        "trailing_stop": 1243.98,
+        "target_pct": 2.08,
+        "sl_pct": 1.14,
+        "atr": 9.01,
+        "sector": "",
+        "confidence": 0.687,
+        "invested_amount": 32717.88
+      },
+      {
+        "symbol": "CANBK",
+        "entry_price": 137.55,
+        "quantity": 241,
+        "target": 139.67,
+        "stop_loss": 136.25,
+        "current_price": 137.55,
+        "unrealised_pnl": 0.0,
+        "pnl_pct": 0.0,
+        "strategy": "M1",
+        "trade_type": "SWING",
+        "status": "OPEN",
+        "opened_at": "2026-03-20T13:05:05.975541+05:30",
+        "closed_at": null,
+        "close_reason": null,
+        "max_days": 30,
+        "days_open": 0,
+        "highest_price": 137.55,
+        "trailing_stop": 136.25,
+        "target_pct": 1.54,
+        "sl_pct": 0.95,
+        "atr": 0.76,
+        "sector": "",
+        "confidence": 0.656,
+        "invested_amount": 33149.55
+      },
+      {
+        "symbol": "INOXWIND",
+        "entry_price": 82.43,
+        "quantity": 410,
+        "target": 84.43,
+        "stop_loss": 81.24,
+        "current_price": 81.7,
+        "unrealised_pnl": -299.3,
+        "pnl_pct": -0.89,
+        "strategy": "T5",
+        "trade_type": "SWING",
+        "status": "OPEN",
+        "opened_at": "2026-03-20T13:25:51.907280+05:30",
+        "closed_at": null,
+        "close_reason": null,
+        "max_days": 30,
+        "days_open": 0,
+        "highest_price": 82.43,
+        "trailing_stop": 81.24,
+        "target_pct": 2.43,
+        "sl_pct": 1.44,
+        "atr": 0.71,
+        "sector": "",
+        "confidence": 0.689,
+        "invested_amount": 33796.3
+      }
+    ],
+    "total_open": 3,
+    "max_positions": 10,
+    "slots_available": 7,
+    "total_invested": 99663.73,
+    "total_unrealised_pnl": -621.18,
+    "total_realised_pnl": -312.34,
+    "win_rate_pct": 0.0,
+    "total_trades": 2,
+    "winning_trades": 0,
+    "losing_trades": 2,
+    "near_target": [
+      "CANBK"
+    ],
+    "near_sl": [
+      "LLOYDSME",
+      "CANBK",
+      "INOXWIND"
+    ],
+    "history": [
+      {
+        "symbol": "OLECTRA",
+        "entry_price": 1074.99,
+        "quantity": 27,
+        "target": 1031.47,
+        "stop_loss": 1099.02,
+        "current_price": 1069.25,
+        "unrealised_pnl": -154.98,
+        "pnl_pct": -0.53,
+        "strategy": "M1",
+        "trade_type": "SWING",
+        "status": "TARGET_HIT",
+        "opened_at": "2026-03-20T12:18:14.563401+05:30",
+        "closed_at": "2026-03-20T12:22:51.246480+05:30",
+        "close_reason": "Target \u20b91031.47 reached! P&L: \u20b9-155 (-0.53%)",
+        "max_days": 30,
+        "days_open": 0,
+        "highest_price": 1074.99,
+        "trailing_stop": 1099.02,
+        "target_pct": -4.05,
+        "sl_pct": -2.24,
+        "atr": 15.01,
+        "sector": "",
+        "confidence": 0.505,
+        "invested_amount": 29024.73,
+        "realised_pnl": -154.98,
+        "realised_pct": -0.53
+      },
+      {
+        "symbol": "OLECTRA",
+        "entry_price": 1065.92,
+        "quantity": 28,
+        "target": 1016.58,
+        "stop_loss": 1091.23,
+        "current_price": 1060.3,
+        "unrealised_pnl": -157.36,
+        "pnl_pct": -0.53,
+        "strategy": "M1",
+        "trade_type": "SWING",
+        "status": "TARGET_HIT",
+        "opened_at": "2026-03-20T12:28:26.094937+05:30",
+        "closed_at": "2026-03-20T12:53:52.983854+05:30",
+        "close_reason": "Target \u20b91016.58 reached! P&L: \u20b9-157 (-0.53%)",
+        "max_days": 30,
+        "days_open": 0,
+        "highest_price": 1065.92,
+        "trailing_stop": 1091.23,
+        "target_pct": -4.63,
+        "sl_pct": -2.37,
+        "atr": 16.59,
+        "sector": "",
+        "confidence": 0.505,
+        "invested_amount": 29845.76,
+        "realised_pnl": -157.36,
+        "realised_pct": -0.53
+      }
+    ],
+    "last_updated": "2026-03-20T21:07:06.393252+05:30",
+    "blocked_symbols": [
+      "LLOYDSME",
+      "CANBK",
+      "INOXWIND"
+    ]
+  },
+  "iteration": 5,
+  "regime": "SIDEWAYS",
+  "sentiment": 0.0294,
+  "sentiment_scores": {
+    "FORCEMOT": 0.0,
+    "DOMS": 0.5835,
+    "ABFRL": 0.2267125,
+    "INOXWIND": 0.5318875000000001,
+    "HONASA": 0.4119625,
+    "ESCORTS": 0.40111874999999997,
+    "IDEA": 0.04784375,
+    "MAHABANK": 0.46359453124999994,
+    "HINDCOPPER": -0.346,
+    "HAPPSTMNDS": 0.3587,
+    "SAGILITY": 0.58255,
+    "CCL": 0.5814,
+    "BAYERCROP": 0.37760000000000005,
+    "LAURUSLABS": 0.2575515625,
+    "TRIVENI": 0.0,
+    "GPIL": 0.0,
+    "RPOWER": 0.003575000000000002,
+    "LLOYDSME": 0.36975,
+    "IOB": 0.32277500000000003,
+    "JINDALSTEL": 0.276985546875
+  },
+  "selected_stocks": [
+    {
+      "symbol": "IOB",
+      "momentum": 0.7216311595834197,
+      "trend_strength": 0.9178684239907016,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.822148845114748,
+      "news_sentiment": 0.822775,
+      "volume_confirm": 0.853100400448407,
+      "volatility": 0.21958043725478885,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6922,
+      "capital_weight": 0.1006,
+      "capital_amount": 100600.0
+    },
+    {
+      "symbol": "CCL",
+      "momentum": 0.5515461658697758,
+      "trend_strength": 0.5266413997866527,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.6924788737096308,
+      "news_sentiment": 1.0,
+      "volume_confirm": 1.0,
+      "volatility": 0.15269028848648214,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6875,
+      "capital_weight": 0.1005,
+      "capital_amount": 100500.0
+    },
+    {
+      "symbol": "ESCORTS",
+      "momentum": 0.6490182527686401,
+      "trend_strength": 1.0,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.6408716140843671,
+      "news_sentiment": 0.90111875,
+      "volume_confirm": 0.8768419847248105,
+      "volatility": 0.2199224210810789,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6759,
+      "capital_weight": 0.1003,
+      "capital_amount": 100300.0
+    },
+    {
+      "symbol": "SAGILITY",
+      "momentum": 0.5334450917642282,
+      "trend_strength": 0.6782909362112316,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.71889398027548,
+      "news_sentiment": 1.0,
+      "volume_confirm": 0.9702952617720353,
+      "volatility": 0.2862548228098304,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6742,
+      "capital_weight": 0.1002,
+      "capital_amount": 100200.0
+    },
+    {
+      "symbol": "HONASA",
+      "momentum": 0.4999995782680684,
+      "trend_strength": 1.0,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.8153857990986009,
+      "news_sentiment": 0.9119625,
+      "volume_confirm": 0.5726827442277642,
+      "volatility": 0.15744453371779363,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6678,
+      "capital_weight": 0.1001,
+      "capital_amount": 100100.0
+    },
+    {
+      "symbol": "ATHERENERG",
+      "momentum": 0.6877365909195072,
+      "trend_strength": 0.6977720295501507,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.8913334593448764,
+      "news_sentiment": 0.5,
+      "volume_confirm": 0.9966963125628762,
+      "volatility": 0.16502061199081752,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6623,
+      "capital_weight": 0.1,
+      "capital_amount": 100000.0
+    },
+    {
+      "symbol": "OLAELEC",
+      "momentum": 0.8205918942621722,
+      "trend_strength": 0.5991429851362454,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.7990653372000875,
+      "news_sentiment": 0.5,
+      "volume_confirm": 1.0,
+      "volatility": 0.27367597338868555,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6408,
+      "capital_weight": 0.0996,
+      "capital_amount": 99600.0
+    },
+    {
+      "symbol": "LAURUSLABS",
+      "momentum": 0.4939242978639243,
+      "trend_strength": 0.585664829152706,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.6313566660593698,
+      "news_sentiment": 0.7575515625,
+      "volume_confirm": 0.9135385787422008,
+      "volatility": 0.0902737535309321,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6398,
+      "capital_weight": 0.0996,
+      "capital_amount": 99600.0
+    },
+    {
+      "symbol": "AARTIIND",
+      "momentum": 0.5175626326769707,
+      "trend_strength": 1.0,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.8785386475050154,
+      "news_sentiment": 0.5,
+      "volume_confirm": 0.7268692265058626,
+      "volatility": 0.11072812911872346,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6396,
+      "capital_weight": 0.0996,
+      "capital_amount": 99600.0
+    },
+    {
+      "symbol": "BAYERCROP",
+      "momentum": 0.514705360499867,
+      "trend_strength": 1.0,
+      "earnings_quality": 0.5,
+      "relative_strength": 0.7587033221455658,
+      "news_sentiment": 0.8776,
+      "volume_confirm": 0.4797485314036789,
+      "volatility": 0.2076578579247174,
+      "fii_interest": 0.5,
+      "sigma_score": 0.6387,
+      "capital_weight": 0.0996,
+      "capital_amount": 99600.0
+    }
+  ],
   "latest_signals": [],
   "capital_alloc": {},
   "portfolio": {},
-  "market_data": {},
+  "market_data": {
+    "FORCEMOT": {
+      "ltp": 21750.0
+    },
+    "DOMS": {
+      "ltp": 2275.0
+    },
+    "ABFRL": {
+      "ltp": 60.2
+    },
+    "INOXWIND": {
+      "ltp": 0.0
+    },
+    "HONASA": {
+      "ltp": 289.45
+    },
+    "ESCORTS": {
+      "ltp": 3092.0
+    },
+    "IDEA": {
+      "ltp": 0.0
+    },
+    "MAHABANK": {
+      "ltp": 65.37
+    },
+    "HINDCOPPER": {
+      "ltp": 489.2
+    },
+    "HAPPSTMNDS": {
+      "ltp": 400.1
+    },
+    "SAGILITY": {
+      "ltp": 39.0
+    },
+    "CCL": {
+      "ltp": 1092.0
+    },
+    "BAYERCROP": {
+      "ltp": 4699.0
+    },
+    "LAURUSLABS": {
+      "ltp": 0.0
+    },
+    "TRIVENI": {
+      "ltp": 360.0
+    },
+    "GPIL": {
+      "ltp": 262.0
+    },
+    "RPOWER": {
+      "ltp": 22.6
+    },
+    "LLOYDSME": {
+      "ltp": 1246.0
+    },
+    "IOB": {
+      "ltp": 34.59
+    },
+    "JINDALSTEL": {
+      "ltp": 0.0
+    },
+    "ATHERENERG": {
+      "ltp": 795.0
+    },
+    "SCHAEFFLER": {
+      "ltp": 4175.0
+    },
+    "AARTIIND": {
+      "ltp": 427.8
+    },
+    "BHEL": {
+      "ltp": 0.0
+    },
+    "AUROPHARMA": {
+      "ltp": 0.0
+    },
+    "HEXT": {
+      "ltp": 440.0
+    },
+    "IDBI": {
+      "ltp": 73.13
+    },
+    "GLENMARK": {
+      "ltp": 0.0
+    },
+    "MRPL": {
+      "ltp": 191.0
+    },
+    "TARIL": {
+      "ltp": 286.0
+    },
+    "TATAELXSI": {
+      "ltp": 0.0
+    },
+    "CHENNPETRO": {
+      "ltp": 1058.0
+    },
+    "HINDPETRO": {
+      "ltp": 0.0
+    },
+    "ANANTRAJ": {
+      "ltp": 468.0
+    },
+    "MAPMYINDIA": {
+      "ltp": 917.5
+    },
+    "OLECTRA": {
+      "ltp": 1084.9
+    },
+    "OLAELEC": {
+      "ltp": 25.11
+    },
+    "GMDCLTD": {
+      "ltp": 0.0
+    },
+    "FIRSTCRY": {
+      "ltp": 252.07
+    },
+    "AWL": {
+      "ltp": 189.44
+    },
+    "LLOYDSME:SWING": {
+      "ltp": 1246.0
+    },
+    "CANBK:SWING": {
+      "ltp": 0.0
+    },
+    "INOXWIND:SWING": {
+      "ltp": 0.0
+    }
+  },
   "net_pnl": 0.0,
   "daily_trades": 0,
   "running": false,
   "last_backtest_date": null,
-  "last_training_date": null,
+  "last_training_date": "2026-03-20",
   "last_wf_date": null,
-  "last_trade_time": {}
+  "last_trade_time": {},
+  "macro": {
+    "macro_bias": "BULLISH",
+    "risk_level": "MEDIUM",
+    "size_mult": 0.9,
+    "regime_hint": "TRENDING",
+    "vix": 15.0,
+    "fii_flow_cr": 0.0,
+    "usdinr": 0.0,
+    "spx_ret_pct": 0.0,
+    "crude_ret_pct": 0.0,
+    "status": "FFILL",
+    "timestamp": "2026-03-20T21:07:07.548032"
+  },
+  "macro_status": "FFILL",
+  "sigma_scores": {
+    "IOB": 0.6922,
+    "CCL": 0.6875,
+    "ESCORTS": 0.6759,
+    "SAGILITY": 0.6742,
+    "HONASA": 0.6678,
+    "ATHERENERG": 0.6623,
+    "OLAELEC": 0.6408,
+    "LAURUSLABS": 0.6398,
+    "AARTIIND": 0.6396,
+    "BAYERCROP": 0.6387,
+    "TRIVENI": 0.6332,
+    "MAHABANK": 0.6287,
+    "JINDALSTEL": 0.6286,
+    "SCHAEFFLER": 0.625,
+    "GLENMARK": 0.6239,
+    "DOMS": 0.6216,
+    "HINDPETRO": 0.6147,
+    "AUROPHARMA": 0.6118,
+    "HEXT": 0.6098,
+    "IDEA": 0.5977,
+    "FORCEMOT": 0.5953,
+    "ANANTRAJ": 0.5926,
+    "LLOYDSME": 0.5893,
+    "TARIL": 0.5809,
+    "FIRSTCRY": 0.5808,
+    "INOXWIND": 0.5785,
+    "MAPMYINDIA": 0.5684,
+    "AWL": 0.5658,
+    "HAPPSTMNDS": 0.5649,
+    "CHENNPETRO": 0.5591,
+    "CANBK:SWING": 0.5582,
+    "TATAELXSI": 0.5549,
+    "IDBI": 0.5548,
+    "BHEL": 0.5351,
+    "LLOYDSME:SWING": 0.5338,
+    "ABFRL": 0.5265,
+    "HINDCOPPER": 0.5179,
+    "OLECTRA": 0.5117,
+    "GPIL": 0.5095,
+    "RPOWER": 0.5089,
+    "MRPL": 0.5065,
+    "INOXWIND:SWING": 0.5035,
+    "GMDCLTD": 0.4998
+  },
+  "atlas_scores": {
+    "IOB": 0.751,
+    "ESCORTS": 0.7317,
+    "ATHERENERG": 0.7091,
+    "HONASA": 0.705,
+    "AARTIIND": 0.6969,
+    "OLAELEC": 0.6965,
+    "TRIVENI": 0.6889,
+    "SAGILITY": 0.6847,
+    "BAYERCROP": 0.6817,
+    "SCHAEFFLER": 0.6796,
+    "CCL": 0.6779,
+    "HEXT": 0.6741,
+    "HINDPETRO": 0.66,
+    "GLENMARK": 0.6599,
+    "FIRSTCRY": 0.6458,
+    "AUROPHARMA": 0.6455,
+    "MAPMYINDIA": 0.6405,
+    "LAURUSLABS": 0.6394,
+    "JINDALSTEL": 0.6301,
+    "MAHABANK": 0.6191,
+    "AWL": 0.6134,
+    "FORCEMOT": 0.6105,
+    "ANANTRAJ": 0.6083,
+    "IDEA": 0.6077,
+    "TARIL": 0.6048,
+    "DOMS": 0.6034,
+    "LLOYDSME": 0.583,
+    "CHENNPETRO": 0.5753,
+    "CANBK:SWING": 0.5734,
+    "OLECTRA": 0.5616,
+    "HAPPSTMNDS": 0.5596,
+    "IDBI": 0.5558,
+    "TATAELXSI": 0.5542,
+    "HINDCOPPER": 0.5533,
+    "ABFRL": 0.5486,
+    "LLOYDSME:SWING": 0.5461,
+    "BHEL": 0.5441,
+    "INOXWIND": 0.544,
+    "RPOWER": 0.5242,
+    "GPIL": 0.5122,
+    "GMDCLTD": 0.5082,
+    "INOXWIND:SWING": 0.494,
+    "MRPL": 0.4929
+  }
 }
