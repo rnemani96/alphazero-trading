@@ -156,14 +156,14 @@
         "realised_pct": -0.53
       }
     ],
-    "last_updated": "2026-03-21T01:45:12.862910+05:30",
+    "last_updated": "2026-03-21T01:59:25.049016+05:30",
     "blocked_symbols": [
       "LLOYDSME",
       "CANBK",
       "INOXWIND"
     ]
   },
-  "iteration": 37,
+  "iteration": 40,
   "regime": "SIDEWAYS",
   "sentiment": 0.0,
   "sentiment_scores": {

@@ -14,7 +14,7 @@ logger = logging.getLogger("DashboardBackend")
 
 # ── Safe imports ──────────────────────────────────────────────────────────────
 try:
-    from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+    from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
     from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.staticfiles import StaticFiles
@@ -81,7 +81,13 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
     _data_fetcher_ref = data_fetcher
     _event_bus_ref = event_bus
     app = FastAPI(title="AlphaZero Capital Dashboard", version="4.0")
-    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:8001", "http://127.0.0.1:8001"],
+        allow_methods=["GET", "POST"],
+        allow_headers=["*"],
+        allow_credentials=False,
+    )
 
     # ── Mount Static Files ────────────────────────────────────────────────────
     if _STATIC_DIR.exists():
@@ -143,6 +149,10 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
 
     @app.post("/api/command")
     async def command(payload: dict):
+        # Security: require DASHBOARD_SECRET token in every command payload
+        _secret = os.getenv("DASHBOARD_SECRET", "")
+        if _secret and payload.get("auth_token", "") != _secret:
+            raise HTTPException(status_code=403, detail="Unauthorized — invalid auth_token")
         cmd = payload.get("command", "").strip().lower()
         guardian = _agents_ref.get('GUARDIAN')
         if cmd in ("pause", "/pause"): 
@@ -241,4 +251,6 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
 
 def run_dashboard(port: int = 8000, agents: Dict = None, data_fetcher=None, event_bus=None):
     app = create_app(agents, data_fetcher, event_bus)
-    if app: uvicorn.run(app, host="0.0.0.0", port=port, log_level="warning")
+    if app:
+        # Bind to 127.0.0.1 only — prevents LAN/network exposure
+        uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
