@@ -84,12 +84,13 @@ from src.data.sentiment.storage import SentimentStorage, SentimentAggregator
 
 class NewsSentimentAgent(BaseAgent):
 
-    def __init__(self, event_bus, config: Dict):
+    def __init__(self, event_bus, config: Dict, data_fetcher: Optional[Any] = None):
         super().__init__(event_bus=event_bus, config=config, name="HERMES")
         self._lock  = threading.Lock()
         
         # Initialise Pipeline Components
         self.ingestor = NewsIngestor()
+        self.fetcher  = data_fetcher
         self.processor = SentimentProcessor(batch_size=config.get('FINBERT_BATCH_SIZE', 32))
         self.storage = SentimentStorage()
         self.aggregator = SentimentAggregator(self.storage)
@@ -99,7 +100,7 @@ class NewsSentimentAgent(BaseAgent):
         self._ttl   = config.get('HERMES_CACHE_TTL', 900)
         
         self._headlines_processed = 0
-        logger.info(f"HERMES Agent initialised with Production Sentiment Pipeline.")
+        logger.info(f"HERMES Agent initialised with 4-Layer Hybrid Sentiment Pipeline.")
 
     def get_sentiment(self, symbols: List[str]) -> Dict[str, Any]:
         """
@@ -115,8 +116,8 @@ class NewsSentimentAgent(BaseAgent):
             # 1. Ingest News
             raw_news = self.ingestor.ingest_all(symbols)
             
-            # 2. Process with FinBERT (Batch)
-            processed_news = self.processor.process_batch(raw_news)
+            # 2. Process with 4-Layer Hybrid System
+            processed_news = self.processor.process_batch(raw_news, fetcher=self.fetcher)
             
             # 3. Store for persistence and aggregation
             self.storage.save_headlines(processed_news)
@@ -129,15 +130,22 @@ class NewsSentimentAgent(BaseAgent):
             for n in processed_news:
                 s = n.get('symbol')
                 if s in sym_scores and 'sentiment_score' in n:
-                    # Very simple average for symbols in this current batch
-                    sym_scores[s] = (sym_scores[s] + n['sentiment_score']) / 2
+                    # Rolling average for multi-source headlines
+                    sym_scores[s] = (sym_scores[s] + n['sentiment_score']) / 2 if sym_scores[s] != 0 else n['sentiment_score']
             
-            overall = 'POSITIVE' if metrics.get('sentiment_score', 0.0) >= 0.15 else 'NEGATIVE' if metrics.get('sentiment_score', 0.0) <= -0.15 else 'NEUTRAL'
+            # Final threshold logic
+            overall_score = metrics.get('sentiment_score', 0.0)
+            if overall_score > 0.2:
+                overall = 'BUY'
+            elif overall_score < -0.2:
+                overall = 'SELL'
+            else:
+                overall = 'NEUTRAL'
             
             result = {
                 'overall':       overall,
-                'overall_score': metrics.get('sentiment_score', 0.0),
-                'score':         metrics.get('sentiment_score', 0.0), # deprecated alias
+                'overall_score': round(overall_score, 4),
+                'score':         round(overall_score, 4),
                 'momentum':      metrics.get('sentiment_momentum', 0.0),
                 'volatility':    metrics.get('sentiment_volatility', 0.0),
                 'volume':        metrics.get('news_volume', 0),
@@ -146,14 +154,17 @@ class NewsSentimentAgent(BaseAgent):
                 'metrics':       metrics,
                 'timestamp':     datetime.now().isoformat(),
             }
-
             
             with self._lock:
                 self._cache = result
                 self._cache_ts = datetime.now()
                 self._headlines_processed += len(processed_news)
 
-            logger.info(f"HERMES → score={result['overall_score']:+.3f} | mom={result['momentum']:+.3f} | vol={result['volume']} | regime_hint={metrics.get('regime_hint', 'NEUTRAL')}")
+            logger.info(f"HERMES → score={result['overall_score']:+.3f} | bias={overall} | vol={result['volume']} | regime_hint={metrics.get('regime_hint', 'NEUTRAL')}")
+            if processed_news:
+                top = processed_news[0]
+                logger.debug(f"HERMES Top Signal: {top.get('headline')} | Score: {top.get('sentiment_score')} | Layers: {top.get('layer_scores')}")
+                
             return result
 
         except Exception as e:

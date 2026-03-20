@@ -94,6 +94,7 @@ except ImportError:
 # Paths
 # ---------------------------------------------------------------------------
 ROOT       = Path(__file__).resolve().parents[1]
+sys.path.append(str(ROOT))
 CACHE_DIR  = ROOT / "data" / "cache" / "nexus"
 MODEL_PATH = str(ROOT / "models" / "nexus_regime.json")
 META_PATH  = str(ROOT / "models" / "nexus_meta.json")
@@ -451,11 +452,19 @@ def build_causal_features(prices: "pd.DataFrame",
     import pandas as pd
     import numpy as np
 
-    print(f"\n  Building rich causal dataset from {len(prices.columns.levels[0])} stocks...")
+    num_stocks = len(prices.columns.levels[0]) if hasattr(prices.columns, 'levels') else len(prices.columns.unique())
+    print(f"\n  Building rich causal dataset from {num_stocks} stocks...")
     
     # 1. Day-level Macro Features
     # NIFTY technicals
-    nifty_close = macro.get("nifty", prices.xs("close", axis=1, level=1).mean(axis=1))
+    if hasattr(prices.columns, 'levels'):
+        n_close = prices.xs("close", axis=1, level=1).mean(axis=1)
+    else:
+        # Fallback for flat columns like ("RELIANCE", "close") -> "RELIANCE_close" or similar
+        close_cols = [c for c in prices.columns if "close" in str(c).lower()]
+        n_close = prices[close_cols].mean(axis=1) if close_cols else pd.Series(0, index=prices.index)
+        
+    nifty_close = macro.get("nifty", n_close)
     ind         = _nifty_indicators(nifty_close)
     
     # VIX and VIX Delta
@@ -470,15 +479,34 @@ def build_causal_features(prices: "pd.DataFrame",
                        .pct_change().reindex(prices.index).ffill().fillna(0) * 100
     
     # Advance/Decline Ratio (Day level)
-    closes = prices.xs("close", axis=1, level=1)
+    if hasattr(prices.columns, 'levels'):
+        closes = prices.xs("close", axis=1, level=1)
+    else:
+        # Flattened or simple index (e.g. RELIANCE_close)
+        close_cols = [c for c in prices.columns if "close" in str(c).lower()]
+        closes = prices[close_cols]
+        # Rename columns to just symbol if they are like SYMBOL_close
+        closes.columns = [str(c).replace("_close", "").replace("_Close", "") for c in closes.columns]
+
     daily_ret = closes.pct_change()
     adv_decl = (daily_ret > 0).sum(axis=1) / (daily_ret < 0).sum(axis=1).clip(lower=1)
     
     # Sector Variance (Day level)
-    sector_map = {sym: get_sector(sym) for sym in prices.columns.levels[0]}
+    if hasattr(prices.columns, 'levels'):
+        symbols = prices.columns.levels[0]
+    else:
+        symbols = closes.columns
+        
+    sector_map = {sym: get_sector(sym) for sym in symbols}
     
     # 2. Stock-level Features
-    opens = prices.xs("open", axis=1, level=1)
+    if hasattr(prices.columns, 'levels'):
+        opens = prices.xs("open", axis=1, level=1)
+    else:
+        open_cols = [c for c in prices.columns if "open" in str(c).lower()]
+        opens = prices[open_cols]
+        opens.columns = [str(c).replace("_open", "").replace("_Open", "") for c in opens.columns]
+
     prev_closes = closes.shift(1)
     gap_pct = (opens / prev_closes - 1) * 100
     

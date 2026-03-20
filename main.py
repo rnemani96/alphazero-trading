@@ -164,12 +164,12 @@ def _load_agent(name: str, module: str, cls: str, *args) -> Optional[Any]:
         return None
 
 agents['ZEUS']     = _load_agent('ZEUS',    'src.agents.zeus_agent',            'ZeusAgent',              eb, _cfg)
-agents['ORACLE']   = _load_agent('ORACLE',  'src.agents.oracle_agent',          'OracleAgent',            eb, _cfg)
+agents['ORACLE']   = _load_agent('ORACLE',  'src.agents.oracle_agent',          'OracleAgent',            eb, _cfg, _fetcher)
 agents['ATLAS']    = _load_agent('ATLAS',   'src.agents.sector_agent',          'SectorAgent',            eb, _cfg)
 agents['SIGMA']    = _load_agent('SIGMA',   'src.agents.sigma_agent',           'SigmaAgent',             eb, _cfg)
 agents['APEX']     = _load_agent('APEX',    'src.agents.chief_agent',           'ChiefAgent',             eb, _cfg)
 agents['NEXUS']    = _load_agent('NEXUS',   'src.agents.intraday_regime_agent', 'IntradayRegimeAgent',    eb, _cfg)
-agents['HERMES']   = _load_agent('HERMES',  'src.agents.news_sentiment_agent',  'NewsSentimentAgent',     eb, _cfg)
+agents['HERMES']   = _load_agent('HERMES',  'src.agents.news_sentiment_agent',  'NewsSentimentAgent',     eb, _cfg, _fetcher)
 agents['TITAN']    = _load_agent('TITAN',   'src.agents.titan_agent',           'TitanAgent',             eb, _cfg)
 agents['GUARDIAN'] = _load_agent('GUARDIAN','src.agents.guardian_agent',        'GuardianAgent',          eb, _cfg)
 agents['MERCURY']  = _load_agent('MERCURY', 'src.agents.mercury_agent',         'MercuryAgent',           eb, _cfg, executor)
@@ -257,8 +257,9 @@ except ImportError:
 
 # ── System state ──────────────────────────────────────────────────────────────
 _state: Dict[str, Any] = {
+    'active_portfolio':  {},
     "iteration":         0,
-    "regime":            "TRENDING",
+    'regime':            'NEUTRAL',
     "sentiment":         0.0,
     "sentiment_scores":  {},
     "selected_stocks":   [],
@@ -272,6 +273,7 @@ _state: Dict[str, Any] = {
     "last_backtest_date": None,
     "last_training_date": None,
     "last_wf_date":       None,
+    "last_trade_time":    {},   # Per-symbol cooldown tracking
 }
 _state_lock = threading.Lock()
 STATE_FILE  = "data/alphazero_state.json"
@@ -279,8 +281,13 @@ STATE_FILE  = "data/alphazero_state.json"
 
 def _write_state():
     try:
+        def _safe_serialize(obj):
+            if hasattr(obj, 'isoformat'):
+                return obj.isoformat()
+            return str(obj)
+
         with open(STATE_FILE, "w") as f:
-            json.dump(_state, f, indent=2, default=str)
+            json.dump(_state, f, indent=2, default=_safe_serialize)
         status = {
             "picks":       _state.get("selected_stocks", []),
             "regime":      _state.get("regime", "TRENDING"),
@@ -297,9 +304,9 @@ def _write_state():
             "shadow_active":_shadow_mgr is not None,
         }
         with open("logs/status.json", "w") as f:
-            json.dump(status, f, indent=2, default=str)
+            json.dump(status, f, indent=2, default=_safe_serialize)
         with open("logs/signals.json", "w") as f:
-            json.dump(_state.get("latest_signals", []), f, indent=2, default=str)
+            json.dump(_state.get("latest_signals", []), f, indent=2, default=_safe_serialize)
         
         # Notify Dashboard
         if eb:
@@ -433,22 +440,53 @@ def _aggregate_signals(
       min_confidence = 0.45 (was 0.55)
       min_agreement  = 1    (was 2+)
     """
+    # Dynamic thresholds based on regime (AlphaZero v5.0)
+    if regime == 'TRENDING':
+        MIN_AGG_CONF = 0.60   # Be more aggressive in strong trends
+        MIN_AGREEMENT = 2
+    elif regime == "SIDEWAYS":
+        MIN_AGG_CONF = 0.75   # High conviction required to trade ranges
+        MIN_AGREEMENT = 3
+    elif regime == "VOLATILE":
+        MIN_AGG_CONF = 0.72   # Safety first in high choppiness
+        MIN_AGREEMENT = 2
+    else:
+        MIN_AGG_CONF = 0.65
+        MIN_AGREEMENT = 2
+
     TITAN_W  = 0.45
     NEXUS_W  = 0.30
     HERMES_W = 0.25
-    MIN_AGG_CONF = 0.45  # Relaxed from 0.55
-    MIN_AGREEMENT = 1     # Relaxed
+
+    # Boost confidence for high agreement (AlphaZero v5.0)
+    agg_conf_boost = 1.0
 
     logger.info("AGGREGATE: processing %d candidate signals from TITAN", len(titan_signals))
     
+    # Cross-Sector Correlation Filter (AlphaZero v5.0)
+    bullish_signals = sum(1 for s in titan_signals if s.get('action', 'BUY') == 'BUY')
+    total_signals = len(titan_signals)
+    bullish_pct = bullish_signals / total_signals if total_signals > 0 else 0.5
+    logger.info("Cross-Sector Breadth: %.0f%% bullish (%d/%d)", bullish_pct * 100, bullish_signals, total_signals)
+    
     # Stats for logging
-    rejections = {"low_confidence": 0, "regime_incompat": 0, "nexus_veto": 0}
+    rejections = {"low_confidence": 0, "regime_incompat": 0, "nexus_veto": 0, "market_breadth": 0}
     approved = []
     
     for sig in titan_signals:
         sym   = sig.get('symbol', '')
         tc    = float(sig.get('confidence', 0.5))
         act   = sig.get('action', 'BUY')
+        
+        # Market Breadth check (Cross-Sector Correlation)
+        if act == 'BUY':
+            if bullish_pct < 0.40:
+                rejections["market_breadth"] += 1
+                logger.debug("AGGREGATE: %s rejected due to weak market breadth (%.0f%% bullish)", sym, bullish_pct * 100)
+                continue
+            elif bullish_pct < 0.50:
+                # Reduce confidence if alignment is weak
+                tc = tc * 0.90 
 
         # NEXUS: regime compatibility
         regime_compat = _regime_compatible(act, regime)
@@ -472,9 +510,10 @@ def _aggregate_signals(
         # Weighted aggregate
         agg_conf = TITAN_W * tc + NEXUS_W * nexus_conf + HERMES_W * hermes_conf
 
-        # Logic for 'agreement': signals from 3 agents are always present here,
-        # but we check how many are > 0.5 (positive bias)
+        # Logic for 'agreement' (AlphaZero v5.0 Aggression Scaling)
         agreement_count = sum([1 for c in [tc, nexus_conf, hermes_conf] if c >= 0.5])
+        if agreement_count >= 3:
+            agg_conf = min(0.99, agg_conf * 1.1)  # 10% boost for unanimous agreement
 
         # Hard rejections
         if regime == 'RISK_OFF':
@@ -575,6 +614,18 @@ def _update_positions(prices: Dict[str, float]):
         pnl    = pos.get('realised_pnl', 0)
         status = pos.get('status', '')
         logger.info("🔔 CLOSED %s | %s | P&L ₹%+,.0f", sym, status, pnl)
+
+        # ── Trigger LLM Post Mortem ──
+        if "Stop-loss" in pos.get("close_reason", "") or status == "STOPPED":
+            try:
+                from src.agents.llm_postmortem import analyze_stopped_out_trade
+                import threading
+                vix = _state.get('market_data', {}).get('^INDIAVIX', {}).get('price', 15.0)
+                regime = _state.get('regime', 'UNKNOWN')
+                market_ctx = {'vix': vix, 'regime': regime}
+                threading.Thread(target=analyze_stopped_out_trade, args=(pos, market_ctx), daemon=True).start()
+            except Exception as e:
+                logger.error(f"Failed to submit postmortem: {e}")
 
         # Feed to KARMA for learning
         if agents.get('KARMA'):
@@ -796,8 +847,8 @@ def _run_iteration():
         return sym, res_15, res_5
 
     # Parallel enrichment
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        results = list(executor.map(process_sym_data, universe))
+    with ThreadPoolExecutor(max_workers=10) as tp_executor:
+        results = list(tp_executor.map(process_sym_data, universe))
         
     for sym, res_15, res_5 in results:
         if res_15: mdata_15m[sym] = res_15
@@ -810,12 +861,26 @@ def _run_iteration():
     _update_positions({s: float(d.get('close', d.get('price', 0))) for s, d in mdata.items()})
 
     # ── Step 3: ORACLE macro analysis ─────────────────────────────────────────
-    vix = 15.0
+    vix = _state.get('macro', {}).get('vix', 15.0)
+    if not vix or vix == 0:
+        vix = 15.0
+        
+    macro_status = _state.get('macro_status', 'LIVE')
     if agents.get('ORACLE') and hasattr(agents['ORACLE'], 'analyze'):
         try:
             macro = agents['ORACLE'].analyze(mdata)
             _state['macro'] = macro
-            vix = float(macro.get('vix', 15.0))
+            new_vix = float(macro.get('vix', 0))
+            if new_vix > 0:
+                vix = new_vix
+            else:
+                macro['vix'] = vix
+                
+            macro_status = macro.get('status', 'LIVE')
+            if macro_status == 'MISSING':
+                macro_status = 'FFILL'
+            _state['macro_status'] = macro_status
+            
             if agents.get('GUARDIAN'):
                 agents['GUARDIAN'].set_vix(vix)
         except Exception as exc:
@@ -944,6 +1009,15 @@ def _run_iteration():
             )
 
             raw_signals = raw_15m + raw_5m
+            # Deduplicate signals by symbol (highest confidence wins)
+            dedup_signals = {}
+            for s in raw_signals:
+                sym = s.get('symbol')
+                if not sym: continue
+                if sym not in dedup_signals or float(s.get('confidence', 0)) > float(dedup_signals[sym].get('confidence', 0)):
+                    dedup_signals[sym] = s
+            raw_signals = list(dedup_signals.values())
+            
             # Multi-agent aggregation
             signals = _aggregate_signals(raw_signals, regime, sentiment_scores, vix)
             _state['latest_signals'] = signals
@@ -964,9 +1038,22 @@ def _run_iteration():
             strat  = sig.get('top_strategy', 'general')
 
             # Size position
-            size_result = _sizer.size(strat, price, atr, vix)
+            macro_status = _state.get('macro_status', 'LIVE')
+            size_result = _sizer.size(strat, price, atr, vix, macro_status)
             qty         = size_result['qty']
-
+            
+            # Risk-based Exposure Control
+            current_exposure_pct = 0.0
+            if AP and current_capital > 0:
+                total_invested = sum(p.get('entry_price', 0) * p.get('quantity', 0) for p in AP.open_positions.values())
+                current_exposure_pct = total_invested / current_capital
+                
+            if vix > 22 and current_exposure_pct > 0.60:
+                logger.info("🛡️ EXPOSURE CONTROL: VIX > 22 and Exposure > 60%%. Reducing size by 30%% for %s", sym)
+                qty = int(qty * 0.70)
+                if qty == 0:
+                    qty = 1  # Minimum 1 share if price permits
+            
             sig['quantity'] = qty
             sig['qty']      = qty
 
@@ -1009,50 +1096,98 @@ def _run_iteration():
     # ── Step 10: Execution ────────────────────────────────────────────────────
     executed = 0
     if final_signals and executor and market_hours:
+        executed_in_batch = set()
         for sig in final_signals:
-            if sig.get('quantity', 0) <= 0:
-                continue
             try:
+                sym = sig.get('symbol')
+                # Protect against multiple signals for same symbol executing in one cycle
+                if sym in executed_in_batch:
+                    continue
+                
+                # Double check ActivePortfolio to prevent duplicate open positions
+                if AP and sym in AP.open_positions:
+                    logger.info("🔒 BLOCKED (already invested): %s", sym)
+                    continue
+
                 result = executor.execute_trade(sig) if hasattr(executor, 'execute_trade') else \
                          executor.execute(sig)
+                
                 if result and (result.get('success') or result.get('status') in ('COMPLETE', 'filled')):
                     fill_price = result.get('fill_price', sig.get('price', 0))
+                    _state['last_trade_time'][sym] = time.time()  # Record execution time
                     _register_trade(sig, fill_price)
+                    executed_in_batch.add(sym)
                     executed += 1
-                    # Audit log every executed trade (SEBI compliance)
-                    if _audit:
-                        try:
-                            _audit.log_trade(
-                                symbol    = sig.get('symbol', ''),
-                                action    = sig.get('action', sig.get('signal', 'BUY')),
-                                quantity  = sig.get('quantity', 0),
-                                price     = fill_price,
-                                strategy  = sig.get('strategy', 'TITAN'),
-                                regime    = _state.get('regime', 'UNKNOWN'),
-                                confidence= sig.get('confidence', 0),
-                                mode      = settings.MODE,
-                                agents_voted={
-                                    'titan':  sig.get('titan_confidence', 0),
-                                    'nexus':  sig.get('nexus_confidence', 0),
-                                    'hermes': sig.get('hermes_confidence', 0),
-                                },
-                            )
-                        except Exception as _ae:
-                            logger.debug("AuditLog: %s", _ae)
-                    logger.info("✅ EXECUTED %s ×%d @ ₹%.2f [%s conf=%.2f]",
-                                sig.get('symbol'), sig.get('quantity', 0),
-                                sig.get('price', 0), sig.get('action', ''),
-                                sig.get('confidence', 0))
-                    _send_telegram(
-                        f"📈 *TRADE EXECUTED*\n"
-                        f"Symbol: {sig.get('symbol')}\n"
-                        f"Action: {sig.get('action')} ×{sig.get('quantity')}\n"
-                        f"Price: ₹{sig.get('price',0):.2f}\n"
-                        f"Confidence: {sig.get('confidence',0):.0%}\n"
-                        f"R:R: {sig.get('rr', 0):.1f}"
-                    )
-            except Exception as exc:
+                else:
+                    reason = result.get('error') or result.get('reason') or 'Unknown error'
+                    logger.error("❌ Execution FAILED for %s: %s", sym, reason)
+                    continue
+                
+                # Audit log every executed trade (SEBI compliance)
+                if _audit:
+                    try:
+                        _audit.log_trade(
+                            symbol    = sig.get('symbol', ''),
+                            action    = sig.get('action', sig.get('signal', 'BUY')),
+                            quantity  = sig.get('quantity', 0),
+                            price     = fill_price,
+                            strategy  = sig.get('strategy', 'TITAN'),
+                            regime    = _state.get('regime', 'UNKNOWN'),
+                            confidence= sig.get('confidence', 0),
+                            mode      = settings.MODE,
+                            agents_voted={
+                                'titan':  sig.get('titan_confidence', 0),
+                                'nexus':  sig.get('nexus_confidence', 0),
+                                'hermes': sig.get('hermes_confidence', 0),
+                            },
+                        )
+                        # Structured JSON logging for future LLM training (AlphaZero v5.0)
+                        _audit.log_structured_trade({
+                            "symbol": sig.get('symbol', ''),
+                            "action": sig.get('action', 'BUY'),
+                            "entry_price": fill_price,
+                            "stop_loss": sig.get('stop_loss', 0),
+                            "target": sig.get('target', 0),
+                            "confidence": sig.get('confidence', 0),
+                            "sentiment_score": sig.get('hermes_confidence', 0),
+                            "indicator_state": "TODO_full_state", 
+                            "strategy": sig.get('top_strategy', 'general')
+                        })
+                    except Exception as _ae:
+                        logger.debug("AuditLog: %s", _ae)
+                logger.info("✅ EXECUTED %s ×%d @ ₹%.2f [%s conf=%.2f]",
+                            sig.get('symbol'), sig.get('quantity', 0),
+                            sig.get('price', 0), sig.get('action', ''),
+                            sig.get('confidence', 0))
+                _send_telegram(
+                    f"📈 *TRADE EXECUTED*\n"
+                    f"Symbol: {sig.get('symbol')}\n"
+                    f"Action: {sig.get('action')} ×{sig.get('quantity')}\n"
+                    f"Price: ₹{sig.get('price',0):.2f}\n"
+                    f"Confidence: {sig.get('confidence',0):.0%}\n"
+                    f"R:R: {sig.get('rr', 0):.1f}"
+                )
+        except Exception as exc:
                 logger.error("Execution error %s: %s", sig.get('symbol'), exc)
+
+    # ── Step 10b: Hedge Portfolio if Risk is Extreme ──────────────────────────
+    if AP and current_capital > 0:
+        total_inv = sum(p.get('entry_price', 0) * p.get('quantity', 0) for p in AP.open_positions.values())
+        cur_exp_pct = total_inv / current_capital
+        if vix > 22 and cur_exp_pct > 0.60 and agents.get('OPTIONS'):
+            try:
+                hedge_sym = "NIFTYBEES.NS"
+                logger.info("🛡️ HEDGING ROUTINE: Evaluating options hedge for portfolio...")
+                rec = agents['OPTIONS'].get_hedge_recommendation(hedge_sym, 0, vix, cur_exp_pct)
+                if rec:
+                    _send_telegram(
+                        f"🛡️ *HEDGE RECOMMENDATION*\n"
+                        f"{rec['reason']}\n"
+                        f"Action: {rec['action']} {rec['symbol']} *{rec['strike']} PE*\n"
+                        f"Premium: ₹{rec['premium']}"
+                    )
+            except Exception as e:
+                logger.error("Hedge evaluation failed: %s", e)
 
     # ── Step 11: LENS evaluation ──────────────────────────────────────────────
     if agents.get('LENS') and hasattr(agents['LENS'], 'update'):
@@ -1073,8 +1208,7 @@ def _run_iteration():
     _write_state()
 
     logger.info("Done — signals=%d executed=%d regime=%s vix=%.1f",
-                len(final_signals), executed, regime, vix)
-    logger.info("Sleeping %ds...", settings.ITERATION_SLEEP_SEC)
+                len(final_signals), executed, _state['regime'], vix)
 
 
 # ── Dashboard backend ─────────────────────────────────────────────────────────
@@ -1157,20 +1291,19 @@ def main():
 
     # Main loop
     while _state["running"]:
+        iteration_start = time.time()
         try:
             _run_iteration()
         except Exception as exc:
             logger.exception("Iteration error: %s", exc)
         
-        # Dynamic sleep based on market regime and VIX
-        sleep_sec = _get_dynamic_sleep(
-            market_hours = _is_market_hours(),
-            vix          = _state.get('macro', {}).get('vix', 15.0),
-            regime       = _state.get('regime', 'TRENDING')
-        )
-        logger.info("Sleeping %ds...", sleep_sec)
-        time.sleep(sleep_sec)
-
+        # Consistent fixed sleep duration
+        sleep_sec = 180
+        elapsed = time.time() - iteration_start
+        to_sleep = max(10, sleep_sec - elapsed)
+        
+        logger.info("Sleeping %ds...", int(to_sleep))
+        time.sleep(to_sleep)
 
 if __name__ == "__main__":
     main()

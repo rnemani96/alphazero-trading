@@ -345,6 +345,59 @@ class OptionsFlowAgent(BaseAgent):
             
         return fetcher.get_options_chain(symbol)
 
+    def get_hedge_recommendation(self, symbol: str, current_price: float, vix: float, exposure_pct: float) -> Optional[Dict]:
+        """
+        Identify an optimal Out-of-the-Money (OTM) Put option to hedge long portfolio exposure
+        when the market is highly volatile (e.g. VIX > 22). (AlphaZero v5 Phase 29)
+        """
+        if vix <= 22 or exposure_pct <= 0.60:
+            return None
+            
+        logger.info(f"🛡️ HEDGE TRIGGERED: High VIX ({vix:.1f}) and High Exposure ({exposure_pct:.0%}). Searching for protective Puts...")
+        
+        chain = self.get_options_chain(symbol)
+        if not chain or not chain.get('contracts'):
+            logger.warning(f"OPTIONS_FLOW: Cannot construct hedge, no options chain available for {symbol}")
+            return None
+            
+        # Target ~5-10% out of the money
+        target_moneyness = 0.90
+        
+        # Filter for Puts
+        puts = [c for c in chain['contracts'] if c['type'] == 'PUT']
+        if not puts:
+            return None
+            
+        # Sort by proximity to target moneyness, prioritizing liquid contracts
+        # Moneyness < 1 means OTM for Puts.
+        def _score(p):
+            moneyness_dist = abs(p['moneyness'] - target_moneyness)
+            volume_score = p['volume'] / 1000.0  # Encourage liquid strikes
+            return moneyness_dist - (volume_score * 0.05)
+            
+        otm_puts = sorted([p for p in puts if p['moneyness'] < 0.98], key=_score)
+        
+        if not otm_puts:
+            return None
+            
+        best_hedge = otm_puts[0]
+        
+        recommendation = {
+            "symbol": symbol,
+            "action": "BUY",
+            "type": "HEDGE_PUT",
+            "strike": best_hedge['strike'],
+            "expiry": best_hedge['expiry'],
+            "premium": best_hedge['premium'],
+            "moneyness": best_hedge['moneyness'],
+            "reason": f"VIX highly elevated ({vix:.1f}), buying OTM put (strike {best_hedge['strike']}) for portfolio protection.",
+            "confidence": 0.95
+        }
+        
+        logger.info(f"🛡️ HEDGE RECOMMENDATION: Buy {symbol} {best_hedge['strike']} PE expiring {best_hedge['expiry']} @ ₹{best_hedge['premium']}")
+        return recommendation
+
+
 
 # Example usage
 if __name__ == "__main__":

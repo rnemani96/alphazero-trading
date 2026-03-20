@@ -275,13 +275,13 @@ def fine_tune(
         per_device_train_batch_size = batch_size,
         per_device_eval_batch_size  = batch_size,
         learning_rate           = lr,
-        evaluation_strategy     = "epoch",
+        eval_strategy           = "epoch",
         save_strategy           = "epoch",
         load_best_model_at_end  = True,
         metric_for_best_model   = "eval_loss",
         logging_dir             = str(_LOG_DIR / "finbert_tb"),
         logging_steps           = 10,
-        no_cuda                 = not torch.cuda.is_available(),
+        use_cpu                 = not torch.cuda.is_available(),
         fp16                    = torch.cuda.is_available(),
         report_to               = "none" # Avoid wandb etc.
     )

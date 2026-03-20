@@ -97,8 +97,10 @@ class IndicatorEngine:
         self._df = df.copy()
 
     def build(self) -> pd.DataFrame:
-        """Return the DataFrame with all added indicators (drops leading NaN rows)."""
-        return self._df.dropna().reset_index(drop=True)
+        """Return the DataFrame, only dropping rows where core OHLCV data is missing."""
+        # Essential columns required for any meaningful analysis
+        essential = ['open', 'high', 'low', 'close', 'volume']
+        return self._df.dropna(subset=essential).reset_index(drop=True)
 
     # ── Trend ────────────────────────────────────────────────────────────────
 

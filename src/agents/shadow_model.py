@@ -264,23 +264,12 @@ class ShadowModelManager:
 
         if should_promote:
             reason = (
-                f"Challenger {challenger_slot} outperforms: "
+                f"[LOG ONLY] Challenger {challenger_slot} outperforms: "
                 f"Sharpe Δ={sharpe_diff:+.3f}  WR Δ={wr_diff:+.3f}"
             )
-            with self._lock:
-                old_champion = self.champion
-                self.champion = challenger_slot
-                if challenger_slot == "B":
-                    self.model_b.promoted += 1
-                else:
-                    self.model_a.promoted += 1
-
-            self._ledger.record_promotion(old_champion, challenger_slot, reason)
-            self._ledger.save(self)
-
-            logger.info("🏆 SHADOW: Promoted %s → champion! %s",
-                        challenger_slot, reason)
-            return "PROMOTED"
+            # AlphaZero v5.0: Do NOT auto-promote yet (log-only evaluation)
+            logger.info("🛡️ SHADOW EVAL: %s would be promoted! %s", challenger_slot, reason)
+            return None
 
         return None
 

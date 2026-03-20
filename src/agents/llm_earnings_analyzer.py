@@ -14,10 +14,12 @@ from datetime import datetime
 from typing import Dict, List
 import logging
 
+from src.event_bus.event_bus import BaseAgent
+
 logger = logging.getLogger(__name__)
 
 
-class EarningsCallAnalyzer:
+class EarningsCallAnalyzer(BaseAgent):
     """
     LLM-Powered Earnings Analysis
     
@@ -34,8 +36,7 @@ class EarningsCallAnalyzer:
     """
     
     def __init__(self, event_bus, config):
-        self.event_bus = event_bus
-        self.config = config
+        super().__init__(event_bus, config, "EarningsCallAnalyzer")
         api_key = config.get("openrouter_api_key") or os.getenv("OPENROUTER_API_KEY")
 
         if not api_key:

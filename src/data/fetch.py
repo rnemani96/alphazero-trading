@@ -23,13 +23,18 @@ from typing import *
 import pandas as pd
 import numpy as np
 # nsepython is lazy-loaded in methods to prevent import hangs
-NSE_PYTHON_OK = False
+try:
+    import nsepython
+    NSE_PYTHON_OK = True
+except ImportError:
+    NSE_PYTHON_OK = False
+
 def _get_nse_fn(fn_name):
     """Lazy-load nsepython functions to prevent startup hangs."""
+    if not NSE_PYTHON_OK: return None
     try:
-        import nsepython
         return getattr(nsepython, fn_name)
-    except (ImportError, AttributeError):
+    except AttributeError:
         return None
 
 # yfinance as fallback
@@ -70,6 +75,7 @@ NSE_TO_YAHOO: Dict[str, str] = {
     "NIFTYBANK":    "^NSEBANK",
     "VIX":          "^INDIAVIX",
     "INDIAVIX":     "^INDIAVIX",
+    "NIFTY_FALLBACK": "NIFTYBEES.NS",
 }
 
 
@@ -101,6 +107,10 @@ _YF_PERIOD: Dict[str, str] = {
 def _to_yahoo(symbol: str) -> str:
     """Convert NSE symbol to Yahoo Finance ticker."""
     s = str(symbol).strip().upper()
+    
+    # ── CLEAN SYMBOL (Remove :SWING, :INTRADAY, etc) ──────────────────────
+    s = s.split(":")[0] 
+    
     if s in NSE_TO_YAHOO:
         return NSE_TO_YAHOO[s]
     if s.endswith(".NS") or s.startswith("^"):
@@ -183,6 +193,10 @@ class DataFetcher:
                 entry = batch.get(sym) or self._fetch_single_quote(sym)
                 if entry:
                     self._cache[sym]    = entry
+                    self._cache_ts[sym] = now
+                else:
+                    # Cache failure for 5 minutes
+                    self._cache[sym]    = None
                     self._cache_ts[sym] = now
 
             if entry:
@@ -674,7 +688,87 @@ class DataFetcher:
         except Exception:
             return pd.Series([20.0] * len(df))
 
-    # ── VIX ───────────────────────────────────────────────────────────────────
+    # ── Macro Data Reliability (ffill, fallbacks) ────────────────────────────
+
+    def get_macro_data(self) -> Dict[str, Any]:
+        """
+        Fetch global macro indicators with high reliability.
+        Implement ffill (limit=5) and fallback symbol (^NSEI -> NIFTYBEES).
+        Returns {
+            'nifty': float, 'vix': float, 'spx_ret': float, 
+            'usdinr': float, 'crude_ret': float,
+            'status': 'LIVE'|'FFILL'|'MISSING',
+            'timestamp': datetime
+        }
+        """
+        now = datetime.now()
+        status = "LIVE"
+        
+        # 1. Fetch Nifty (with fallback)
+        nifty = None
+        for ticker in ["^NSEI", "NIFTYBEES.NS"]:
+            try:
+                df = yf.download(ticker, period="5d", interval="1d", 
+                                  auto_adjust=True, progress=False, timeout=10)
+                if not df.empty:
+                    val = float(df['Close'].iloc[-1])
+                    if ticker == "NIFTYBEES.NS":
+                        nifty = val * 100 if val < 500 else val 
+                    else:
+                        nifty = val
+                    break
+            except Exception:
+                continue
+        
+        # 2. Fetch VIX, SPX, USDINR, Crude
+        results = {}
+        for key, ticker in [("vix", "^INDIAVIX"), ("spx", "^GSPC"), ("usdinr", "USDINR=X"), ("crude", "BZ=F")]:
+            try:
+                df = yf.download(ticker, period="5d", interval="1d", 
+                                  auto_adjust=True, progress=False, timeout=10)
+                if not df.empty:
+                    results[key] = float(df['Close'].iloc[-1])
+                    if key in ("spx", "crude") and len(df) > 1:
+                        # Calculate 1d return for momentum indicators
+                        results[f"{key}_ret"] = (df['Close'].iloc[-1] / df['Close'].iloc[-2] - 1) * 100
+                else:
+                    results[key] = None
+            except Exception:
+                results[key] = None
+
+        # 3. Fallback / ffill logic (limit 5)
+        if nifty is None or any(v is None for v in [results.get('vix'), results.get('usdinr')]):
+            # Check cache/history
+            if hasattr(self, '_macro_history') and not self._macro_history.empty:
+                last = self._macro_history.iloc[-1]
+                nifty = nifty or last.get('nifty')
+                for k in ["vix", "spx_ret", "usdinr", "crude_ret"]:
+                    if results.get(k) is None: results[k] = last.get(k)
+                status = "FFILL"
+                logger.warning(f"Macro: Partial fetch failure, using ffill (status={status})")
+            else:
+                nifty = nifty or 22000.0
+                results.setdefault('vix', 15.0)
+                results.setdefault('usdinr', 83.0)
+                results.setdefault('spx_ret', 0.0)
+                results.setdefault('crude_ret', 0.0)
+                status = "MISSING"
+                logger.error(f"Macro: fetch failure and no history (status={status})")
+
+        # Update history
+        if not hasattr(self, '_macro_history'):
+            self._macro_history = pd.DataFrame()
+        
+        row_data = {'nifty': nifty, **results, 'timestamp': now}
+        new_row = pd.DataFrame([row_data]).set_index('timestamp')
+        self._macro_history = pd.concat([self._macro_history, new_row]).tail(10)
+        
+        return {
+            'nifty': round(nifty, 2),
+            **{k: round(v, 4) if v else 0.0 for k, v in results.items()},
+            'status': status,
+            'timestamp': now
+        }
 
     _vix_cache: float = 15.0
     _vix_fetched_at: Optional[datetime] = None
@@ -688,7 +782,7 @@ class DataFetcher:
         ):
             try:
                 df = yf.download("^INDIAVIX", period="2d", interval="1d",
-                                  auto_adjust=True, progress=False)
+                                  auto_adjust=True, progress=False, timeout=10)
                 if not df.empty:
                     DataFetcher._vix_cache      = round(float(df['Close'].iloc[-1]), 2)
                     DataFetcher._vix_fetched_at = now

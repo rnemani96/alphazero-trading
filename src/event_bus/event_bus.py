@@ -171,17 +171,35 @@ class EventBus:
             event = heapq.heappop(self._pq)
             self._dispatch(event)
 
-    def publish(self, event: Event):
+    def publish(self, event_or_type: Any, payload: Optional[Dict] = None, priority: int = 5):
+        """
+        Publish an event to the bus.
+        Supports both publish(Event(...)) and publish(EventType.TYPE, payload_dict).
+        """
         with self._lock:
+            if isinstance(event_or_type, Event):
+                event = event_or_type
+            else:
+                # Type check to ensure event_or_type is indeed an EventType
+                if not isinstance(event_or_type, EventType):
+                    logger.error(f"EventBus: Invalid event type: {event_or_type}")
+                    return
+                event = Event(
+                    type=event_or_type,
+                    source_agent="SYSTEM",  # Default if not specified
+                    payload=payload or {},
+                    priority=priority
+                )
+
             heapq.heappush(self._pq, event)
             self.events.append(event)
             if len(self.events) > self.max_history:
                 self.events = self.events[-self.max_history:]
+        
         # Synchronous dispatch of highest-priority pending event
         self._dispatch_top()
         logger.debug(
-            f"Event: {event.type.value} from {event.source_agent} "
-            f"(priority={event.priority})"
+            f"Event: {event.type.value} published (priority={event.priority})"
         )
 
     def _dispatch_top(self):

@@ -27,9 +27,11 @@ except ImportError:
 
 try:
     from src.data.market_data import is_market_open, next_market_open
+    from src.data.universe import get_nifty500_symbols
 except ImportError:
     def is_market_open():    return False
     def next_market_open():  return datetime.now()
+    def get_nifty500_symbols(): return []
 
 try:
     from src.infra.ops import get_health_status
@@ -115,6 +117,22 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
 
     @app.get("/api/portfolio")
     async def portfolio(): return JSONResponse(_load_json("status.json", {"positions": {}, "pnl": 0}))
+
+    @app.get("/api/universe")
+    async def universe():
+        symbols = get_nifty500_symbols()
+        # Format for frontend: {s: symbol, n: name, sec: sector, base: price}
+        # For now just return symbols, or more metadata if available
+        from src.data.universe import get_sector
+        universe_data = []
+        for s in symbols[:100]: # Limit to top 100 for dashboard performance
+            universe_data.append({
+                "s": s,
+                "n": s.replace("-", " ").title(),
+                "sec": get_sector(s),
+                "base": 1000 # Default base price
+            })
+        return JSONResponse(universe_data)
 
     @app.get("/api/signals")
     async def signals(): return JSONResponse(_load_json("signals.json", []))

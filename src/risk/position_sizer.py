@@ -142,6 +142,7 @@ class PositionSizer:
         entry_price: float,
         atr:         float,
         vix:         float = 15.0,
+        macro_status: str = "LIVE",
     ) -> Dict:
         """
         Compute position size for a strategy.
@@ -161,6 +162,15 @@ class PositionSizer:
 
         result       = optimal_size(self.capital, entry_price, atr, wp, aw, al, self.risk_per_trade)
         result['qty'] = scale_by_vix(result['qty'], vix)
+        
+        # Apply Macro Reliability discounts
+        if macro_status == "FFILL":
+            result['qty'] = max(1, int(result['qty'] * 0.8)) # 20% reduction
+            logger.info(f"PositionSizer: Applied 20% discount due to macro_status=FFILL")
+        elif macro_status == "MISSING":
+            result['qty'] = max(1, int(result['qty'] * 0.6)) # 40% reduction
+            logger.info(f"PositionSizer: Applied 40% discount due to macro_status=MISSING")
+            
         return result
 
     def record_trade(self, strategy: str, pnl: float):

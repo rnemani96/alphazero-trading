@@ -226,10 +226,11 @@ class EvaluationEngine:
         return evaluated
 
     def _check_outcome(self, rec: SignalRecord, price: float) -> Optional[str]:
-        """Determine if a signal has resolved (WIN/LOSS/SCRATCH)."""
+        """Determine if a signal has resolved (WIN/LOSS/HOLD)."""
         emitted = datetime.fromisoformat(rec.emitted_at)
         age_hours = (datetime.now() - emitted).total_seconds() / 3600
 
+        # Primary Exit: Target or Stop Loss hit
         if rec.direction == 1:  # BUY
             if price >= rec.target:   return "WIN"
             if price <= rec.stop_loss: return "LOSS"
@@ -237,8 +238,13 @@ class EvaluationEngine:
             if price <= rec.target:   return "WIN"
             if price >= rec.stop_loss: return "LOSS"
 
+        # Secondary Exit: 24h Window Expiration
         if age_hours >= 24:
-            return "SCRATCH"
+            pnl = self._calc_pnl(rec, price)
+            if pnl > 0.2:   return "WIN"   # Production-grade: WIN > +0.2%
+            if pnl < -0.2:  return "LOSS"  # Production-grade: LOSS < -0.2%
+            return "HOLD"                  # Otherwise HOLD (Scratch)
+        
         return None
 
     def _calc_pnl(self, rec: SignalRecord, exit_price: float) -> float:

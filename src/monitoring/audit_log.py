@@ -520,6 +520,17 @@ def _new_id() -> str:
         except Exception:
             pass
 
+    def log_structured_trade(self, data: Dict[str, Any]) -> None:
+        """Log structured JSON payload for future LLM training."""
+        jsonl_path = _LOG_DIR / "audit_structured.jsonl"
+        payload = {
+            "ts": _ts(),
+            **data
+        }
+        import json as _json
+        with self._lock:
+            with open(jsonl_path, "a", encoding="utf-8") as f:
+                f.write(_json.dumps(payload, default=str) + "\n")
 
 _AUDIT_INSTANCE: Optional[AuditLog] = None
 _AUDIT_LOCK = threading.Lock()

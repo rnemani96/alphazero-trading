@@ -105,10 +105,11 @@ _DEFAULTS = {
 
 class OracleAgent(BaseAgent):
 
-    def __init__(self, event_bus, config: Dict):
+    def __init__(self, event_bus, config: Dict, fetcher=None):
         super().__init__(event_bus, config, name="ORACLE")
 
         self._cfg = {**_DEFAULTS, **config}
+        self.fetcher = fetcher
 
         self._macro: Dict[str, Any] = self._empty_macro()
         self._lock = threading.Lock()
@@ -149,32 +150,42 @@ class OracleAgent(BaseAgent):
     # ─────────────────────────────────────────────────────────
 
     def _refresh(self):
-
-        vix = self._fetch_vix()
-        fii = self._fetch_fii_flow()
-        usdinr = self._fetch_usdinr()
-        spx = self._fetch_spx_return()
-        crude = self._fetch_crude_return()
+        if self.fetcher:
+            m_data = self.fetcher.get_macro_data()
+            vix = m_data.get('vix', 15.0)
+            usdinr = m_data.get('usdinr', 83.3)
+            spx = m_data.get('spx_ret', 0.0)
+            crude = m_data.get('crude_ret', 0.0)
+            status = m_data.get('status', 'LIVE')
+            
+            # FII flow still needs nsepython (fetcher doesn't have it yet)
+            fii = self._fetch_fii_flow()
+        else:
+            vix = self._fetch_vix()
+            fii = self._fetch_fii_flow()
+            usdinr = self._fetch_usdinr()
+            spx = self._fetch_spx_return()
+            crude = self._fetch_crude_return()
+            status = "LIVE"
 
         macro = self._compute_macro(vix, fii, usdinr, spx, crude)
+        macro["status"] = status
         macro["timestamp"] = datetime.now().isoformat()
 
         with self._lock:
-
             self._macro = macro
-
             self._history.append(macro)
-
             if len(self._history) > 30:
                 self._history.pop(0)
 
         self._last_fetch = datetime.now()
 
         logger.info(
-            "ORACLE ▶ bias=%s risk=%s size_mult=%.2f",
+            "ORACLE ▶ bias=%s risk=%s size_mult=%.2f status=%s",
             macro["macro_bias"],
             macro["risk_level"],
             macro["size_mult"],
+            status
         )
 
     # ─────────────────────────────────────────────────────────

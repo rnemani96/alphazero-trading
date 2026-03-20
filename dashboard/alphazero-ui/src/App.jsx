@@ -165,7 +165,7 @@ function computeVolumeAnalysis(candles) {
   const price5chg=Math.abs(c[n-1]-c[Math.max(0,n-5)])/(c[Math.max(0,n-5)]||1);
   const accumulation=price5chg<0.02&&volRatio>1.3&&obvTrend==="RISING";
   const distribution=price5chg<0.02&&volRatio>1.3&&obvTrend==="FALLING";
-  return {volRatio:+volRatio.toFixed(2),obvTrend,pvConfirm,accumulation,distribution,
+  return {volRatio:+(volRatio||0).toFixed(2),obvTrend,pvConfirm,accumulation,distribution,
     lastVol:Math.round(lastVol),v20avg:Math.round(v20avg),priceUp,volUp};
 }
 
@@ -184,10 +184,10 @@ function titanSignals(candles, regime) {
   else if(e9[i]<e20[i]&&e20[i]<e50[i])   push("T2","Trend",-1,0.80,"Triple EMA bear stack 9<20<50");
   if(mh[i]>0&&mh[p]<=0)                  push("T4","Trend",1,0.75,"MACD histogram turned positive");
   else if(mh[i]<0&&mh[p]>=0)             push("T4","Trend",-1,0.75,"MACD histogram turned negative");
-  if(adx[i]>25)                           push("T5","Trend",macd[i]>0?1:-1,Math.min(0.90,0.54+adx[i]/100),`ADX=${adx[i].toFixed(0)} strong trend`);
+  if(adx[i]>25)                           push("T5","Trend",macd[i]>0?1:-1,Math.min(0.90,0.54+adx[i]/100),`ADX=${(adx[i]||0).toFixed(0)} strong trend`);
   const hi20=Math.max(...h.slice(Math.max(0,i-19),i+1)),lo20=Math.min(...l.slice(Math.max(0,i-19),i+1));
-  if(c[i]>=hi20*0.998)        push("T7","Trend",1,0.82,`20-bar Donchian high ${hi20.toFixed(0)}`);
-  else if(c[i]<=lo20*1.002)   push("T7","Trend",-1,0.82,`20-bar Donchian low ${lo20.toFixed(0)}`);
+  if(c[i]>=hi20*0.998)        push("T7","Trend",1,0.82,`20-bar Donchian high ${(hi20||0).toFixed(0)}`);
+  else if(c[i]<=lo20*1.002)   push("T7","Trend",-1,0.82,`20-bar Donchian low ${(lo20||0).toFixed(0)}`);
   if(rsi[i]<30&&rsi[p]>=30)   push("M1","MeanRev",1,0.72,"RSI crossed below 30 — oversold");
   else if(rsi[i]>70&&rsi[p]<=70) push("M1","MeanRev",-1,0.72,"RSI crossed above 70 — overbought");
   if(c[i]<bbl[i]&&c[p]>=bbl[p]) push("M2","MeanRev",1,0.68,"Price crossed below lower Bollinger Band — bounce likely");
@@ -196,8 +196,8 @@ function titanSignals(candles, regime) {
   if(c[i]>vwap[i]&&c[p]<=vwap[p]) push("V1","VWAP",1,0.71,"Price reclaimed VWAP — institutional buy zone");
   else if(c[i]<vwap[i]&&c[p]>=vwap[p]) push("V1","VWAP",-1,0.71,"Price lost VWAP — institutional sell pressure");
   const zscore=(c[i]-(ind.sma20?.[i]??c[i]))/(atr[i]||1);
-  if(zscore<-2) push("S1","Statistical",1,0.70,`Z-score ${zscore.toFixed(2)} — statistically oversold`);
-  else if(zscore>2) push("S1","Statistical",-1,0.70,`Z-score ${zscore.toFixed(2)} — statistically overbought`);
+  if(zscore<-2) push("S1","Statistical",1,0.70,`Z-score ${(zscore||0).toFixed(2)} — statistically oversold`);
+  else if(zscore>2) push("S1","Statistical",-1,0.70,`Z-score ${(zscore||0).toFixed(2)} — statistically overbought`);
   const ok=["Trend","Breakout","MeanRev","VWAP","Statistical"];
   return out.filter(s=>ok.includes(s.category)).sort((a,b)=>b.confidence-a.confidence);
 }
@@ -229,6 +229,31 @@ const NSE_UNIVERSE=[
   {s:"HCLTECH",n:"HCL Technologies",sec:"IT",base:1372},
   {s:"JSWSTEEL",n:"JSW Steel",sec:"Metal",base:842},
   {s:"TATASTEEL",n:"Tata Steel",sec:"Metal",base:164},
+];
+
+// ─── NSE Universe ────────────────────────────────────────────────────────────
+// Default liquid universe for dashboard
+const DEFAULT_NSE_UNIVERSE = [
+  {s:"RELIANCE",n:"Reliance Industries",sec:"Energy",base:2847},
+  {s:"TCS",n:"Tata Consultancy",sec:"IT",base:3642},
+  {s:"HDFCBANK",n:"HDFC Bank",sec:"Banking",base:1678},
+  {s:"INFY",n:"Infosys",sec:"IT",base:1482},
+  {s:"ICICIBANK",n:"ICICI Bank",sec:"Banking",base:1124},
+  {s:"SBIN",n:"State Bank",sec:"Banking",base:789},
+  {s:"BHARTIARTL",n:"Bharti Airtel",sec:"Telecom",base:1642},
+  {s:"LICI",n:"LIC India",sec:"Finance",base:950},
+  {s:"ITC",n:"ITC Limited",sec:"FMCG",base:440},
+  {s:"HINDUNILVR",n:"Hindustan Unilever",sec:"FMCG",base:2450},
+  {s:"LT",n:"Larsen & Toubro",sec:"Infra",base:3500},
+  {s:"BAJFINANCE",n:"Bajaj Finance",sec:"Finance",base:6800},
+  {s:"HCLTECH",n:"HCL Tech",sec:"IT",base:1450},
+  {s:"ADANIENT",n:"Adani Ent",sec:"Metals",base:3100},
+  {s:"MARUTI",n:"Maruti Suzuki",sec:"Auto",base:11000},
+  {s:"SUNPHARMA",n:"Sun Pharma",sec:"Pharma",base:1600},
+  {s:"AXISBANK",n:"Axis Bank",sec:"Banking",base:1120},
+  {s:"KOTAKBANK",n:"Kotak Bank",sec:"Banking",base:1800},
+  {s:"TITAN",n:"Titan Company",sec:"Consumer",base:3300},
+  {s:"ONGC",n:"ONGC",sec:"Energy",base:270},
 ];
 
 // ─── Demo news generator ──────────────────────────────────────────────────
@@ -394,7 +419,7 @@ function TabBar({active,setActive,counts}) {
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: OVERVIEW
 // ═══════════════════════════════════════════════════════════════════════════
-function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news,onStock}) {
+function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news,onStock,NSE_UNIVERSE=[]}) {
   const open=positions.filter(p=>p.status==="OPEN");
   const netPnl=open.reduce((s,p)=>s+calcNetPnl(p).netPnl,0);
   const grossPnl=open.reduce((s,p)=>s+calcNetPnl(p).grossPnl,0);
@@ -408,7 +433,7 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
           {label:"Open Positions",val:open.length,sub:`${10-open.length} slots free`,color:G.blue},
           {label:"Gross P&L",val:`${grossPnl>=0?"+":""}₹${Math.abs(grossPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"before charges",color:grossPnl>=0?G.green:G.red},
           {label:"Net P&L (after charges)",val:`${netPnl>=0?"+":""}₹${Math.abs(netPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"STT+Brok+GST+DP incl.",color:netPnl>=0?G.teal:G.red},
-          {label:"Agent Win Rate",val:`${(wr*100).toFixed(1)}%`,sub:`${evalStats?.total_evaluated??0} evaluated`,color:wr>=0.55?G.green:wr>=0.40?G.yellow:G.red},
+          {label:"Agent Win Rate",val: `${((wr||0)*100).toFixed(1)}%`,sub:`${evalStats?.total_evaluated??0} evaluated`,color:wr>=0.55?G.green:wr>=0.40?G.yellow:G.red},
         ].map(({label,val,sub,color})=>(
           <div key={label} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
             <div style={{color:G.textSec,fontSize:11,marginBottom:8}}>{label}</div>
@@ -452,9 +477,9 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
                     <span style={{color:G.textMut,fontSize:9,fontFamily:"monospace"}}>#{i+1}</span>
                     <span style={{color:G.blue,fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{s.s}</span>
                   </div>
-                  <span style={{color:chg>=0?G.green:G.red,fontSize:10,fontFamily:"monospace"}}>{chg>=0?"+":""}{chg.toFixed(2)}%</span>
+                  <span style={{color:chg>=0?G.green:G.red,fontSize:10,fontFamily:"monospace"}}>{chg>=0?"+":""}{(chg||0).toFixed(2)}%</span>
                 </div>
-                <div style={{color:G.text,fontSize:17,fontWeight:700,fontFamily:"monospace",marginBottom:2}}>₹{price.toFixed(0)}</div>
+                <div style={{color:G.text,fontSize:17,fontWeight:700,fontFamily:"monospace",marginBottom:2}}>₹{(price||0).toFixed(0)}</div>
                 <div style={{marginBottom:8}}><RatingBadge rating={rating}/></div>
                 <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
                   <Tag label={s.sid??"-"} color={G.yellow}/>
@@ -503,8 +528,8 @@ function OverviewTab({picks,positions,allSigs,evalStats,indices,candleCache,news
                   onMouseEnter={e=>e.currentTarget.style.background=G.blue+"24"}
                   onMouseLeave={e=>e.currentTarget.style.background=G.blue+"14"}>
                   <div style={{color:G.blue,fontSize:10,fontWeight:700,fontFamily:"monospace"}}>{st.s}</div>
-                  <div style={{color:G.text,fontSize:11,fontWeight:600,fontFamily:"monospace"}}>₹{price.toFixed(0)}</div>
-                  <div style={{color:chg>=0?G.green:G.red,fontSize:9,fontFamily:"monospace"}}>{chg>=0?"+":""}{chg.toFixed(2)}%</div>
+                  <div style={{color:G.text,fontSize:11,fontWeight:600,fontFamily:"monospace"}}>₹{(price||0).toFixed(0)}</div>
+                  <div style={{color:chg>=0?G.green:G.red,fontSize:9,fontFamily:"monospace"}}>{chg>=0?"+":""}{(chg||0).toFixed(2)}%</div>
                 </div>
               );
             })}
@@ -613,14 +638,14 @@ function PositionsTab({positions,mode,apData={}}) {
                               </div>
                               <div style={{color:G.textMut,fontSize:9,cursor:"pointer"}}
                                 onClick={()=>setShowCharges(showCharges===pos.id?null:pos.id)}>
-                                charges ₹{ch.totalCharges.toFixed(0)} {showCharges===pos.id?"▲":"▼"}
+                                charges ₹{(ch.totalCharges||0).toFixed(0)} {showCharges===pos.id?"▲":"▼"}
                               </div>
                               {showCharges===pos.id&&(
                                 <div style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:6,
                                   padding:"8px 10px",marginTop:4,fontSize:10,color:G.textSec,minWidth:160}}>
-                                  {[["Brokerage",ch.brok],["STT",ch.stt],["Exchange",ch.exc],["SEBI",ch.sebi],["Stamp",ch.stamp],["DP",ch.dp],["GST",ch.gst]].map(([l,v])=>(
+                                  {0 && [["Brokerage",ch.brok],["STT",ch.stt],["Exchange",ch.exc],["SEBI",ch.sebi],["Stamp",ch.stamp],["DP",ch.dp],["GST",ch.gst]].map(([l,v])=>(
                                     <div key={l} style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
-                                      <span>{l}</span><span style={{fontFamily:"monospace"}}>₹{v.toFixed(2)}</span>
+                                      <span>{l}</span><span style={{fontFamily:"monospace"}}>₹{(v||0).toFixed(2)}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -666,13 +691,13 @@ function PositionsTab({positions,mode,apData={}}) {
                         onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                         <td style={{padding:"10px 14px",color:G.text,fontWeight:700,fontSize:12,fontFamily:"monospace"}}>{pos.symbol}</td>
                         <td style={{padding:"10px 14px",color:G.textSec,fontSize:12,fontFamily:"monospace"}}>{(pos.entryPrice??0).toFixed(2)}</td>
-                        <td style={{padding:"10px 14px",color:G.text,fontSize:12,fontFamily:"monospace"}}>{exit.toFixed(2)}</td>
+                        <td style={{padding:"10px 14px",color:G.text,fontSize:12,fontFamily:"monospace"}}>{(exit||0).toFixed(2)}</td>
                         <td style={{padding:"10px 14px",color:G.textSec,fontSize:12,fontFamily:"monospace"}}>{pos.qty}</td>
                         <td style={{padding:"10px 14px",fontFamily:"monospace",fontWeight:700,
                           color:ch.netPnl>=0?G.teal:G.red,fontSize:12}}>
                           {ch.netPnl>=0?"+":""}₹{Math.abs(ch.netPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}
                         </td>
-                        <td style={{padding:"10px 14px",color:G.textMut,fontSize:11,fontFamily:"monospace"}}>₹{ch.totalCharges.toFixed(0)}</td>
+                        <td style={{padding:"10px 14px",color:G.textMut,fontSize:11,fontFamily:"monospace"}}>₹{(ch.totalCharges||0).toFixed(0)}</td>
                         <td style={{padding:"10px 14px"}}>
                           <Tag label={ch.netPnl>=0?"✓ WIN":"✗ LOSS"} color={ch.netPnl>=0?G.green:G.red}/>
                         </td>
@@ -712,7 +737,7 @@ function PositionsTab({positions,mode,apData={}}) {
                 const color=!pos?G.textMut:isNT?G.yellow:isNS?G.red:G.green;
                 const pct=pos?.pnl_pct??pos?.pnlPct;
                 return (
-                  <div key={idx} title={sym?`${sym}${pct!=null?` · ${pct>=0?"+":""}${pct.toFixed(1)}%`:""}`:  "Empty slot"}
+                  <div key={idx} title={sym?`${sym}${pct!=null?` · ${pct>=0?"+":""}${(pct||0).toFixed(1)}%`:""}`:  "Empty slot"}
                     style={{width:40,height:40,borderRadius:7,border:`1.5px solid ${border}`,background:bg,
                       display:"flex",alignItems:"center",justifyContent:"center",
                       fontSize:8,fontWeight:700,color,transition:"transform .1s",cursor:pos?"default":"default"}}
@@ -800,9 +825,9 @@ function PositionsTab({positions,mode,apData={}}) {
                   {tgt>0&&(
                     <>
                       <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:G.textMut,marginBottom:3}}>
-                        <span>SL ₹{sl.toFixed(0)}</span>
-                        <span style={{color:barColor,fontWeight:700}}>{pct.toFixed(0)}% to target</span>
-                        <span>Target ₹{tgt.toFixed(0)}</span>
+                        <span>SL ₹{(sl||0).toFixed(0)}</span>
+                        <span style={{color:barColor,fontWeight:700}}>{(pct||0).toFixed(0)}% to target</span>
+                        <span>Target ₹{(tgt||0).toFixed(0)}</span>
                       </div>
                       <div style={{height:6,background:G.border,borderRadius:3,overflow:"hidden",marginBottom:10}}>
                         <div style={{width:`${Math.max(0,pct)}%`,height:"100%",background:barColor,borderRadius:3,transition:"width .6s ease"}}/>
@@ -812,9 +837,9 @@ function PositionsTab({positions,mode,apData={}}) {
 
                   {/* Key prices row */}
                   <div style={{display:"flex",gap:18,flexWrap:"wrap",fontSize:11,alignItems:"center"}}>
-                    <span style={{color:G.textSec}}>Entry <span style={{color:G.text,fontFamily:"monospace",fontWeight:600}}>₹{ep.toFixed(2)}</span></span>
-                    <span style={{color:G.textSec}}>CMP <span style={{color:pnlColor,fontFamily:"monospace",fontWeight:700}}>₹{curr.toFixed(2)}</span></span>
-                    <span style={{color:G.textSec}}>Target <span style={{color:G.yellow,fontFamily:"monospace"}}>₹{tgt.toFixed(2)}</span></span>
+                    <span style={{color:G.textSec}}>Entry <span style={{color:G.text,fontFamily:"monospace",fontWeight:600}}>₹{(ep||0).toFixed(2)}</span></span>
+                    <span style={{color:G.textSec}}>CMP <span style={{color:pnlColor,fontFamily:"monospace",fontWeight:700}}>₹{(curr||0).toFixed(2)}</span></span>
+                    <span style={{color:G.textSec}}>Target <span style={{color:G.yellow,fontFamily:"monospace"}}>₹{(tgt||0).toFixed(2)}</span></span>
                     <span style={{color:G.textSec}}>Qty <span style={{color:G.text,fontFamily:"monospace"}}>{pos.quantity||pos.qty||0}</span></span>
                     {maxDays>0&&(
                       <span style={{marginLeft:"auto",color:daysOpen/maxDays>0.8?G.red:G.textMut,fontSize:10,display:"flex",alignItems:"center",gap:5}}>
@@ -881,7 +906,7 @@ function PositionsTab({positions,mode,apData={}}) {
                             {rpnl>=0?"+":""}₹{Math.abs(rpnl).toLocaleString("en-IN",{maximumFractionDigits:0})}
                           </td>
                           <td style={{padding:"10px 14px",fontFamily:"monospace",fontSize:12,color:rpct>=0?G.teal:G.red}}>
-                            {rpct>=0?"+":""}{rpct.toFixed(2)}%
+                            {rpct>=0?"+":""}{(rpct||0).toFixed(2)}%
                           </td>
                           <td style={{padding:"10px 14px"}}>
                             <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,
@@ -1020,11 +1045,11 @@ function NewsTab({news,picks}) {
                         <div style={{display:"flex",alignItems:"center",gap:6}}>
                           <span style={{color:G.textMut,fontSize:10}}>Sentiment score:</span>
                           <div style={{width:60,height:4,background:G.border,borderRadius:2,overflow:"hidden"}}>
-                            <div style={{width:`${Math.abs(item.sentiment_score)*100}%`,height:"100%",
+                            <div style={{width:`${Math.abs(item.sentiment_score || 0)*100}%`,height:"100%",
                               background:item.sentiment_score>=0?G.green:G.red,borderRadius:2}}/>
                           </div>
                           <span style={{color:item.sentiment_score>=0?G.green:G.red,fontSize:10,fontFamily:"monospace",fontWeight:700}}>
-                            {item.sentiment_score>=0?"+":""}{(item.sentiment_score*100).toFixed(0)}%
+                            {item.sentiment_score>=0?"+":""}{((item.sentiment_score||0)*100).toFixed(0)}%
                           </span>
                         </div>
                       )}
@@ -1057,8 +1082,8 @@ function PerformanceTab({evalStats,positions,agentKpi,systemState}) {
   const wr=evalStats?.win_rate??0;
   const uptime=systemState?.uptime_s??0;
   const uptimeStr=uptime>3600?`${Math.floor(uptime/3600)}h ${Math.floor((uptime%3600)/60)}m`:`${Math.floor(uptime/60)}m`;
-  const sharpe=(evalStats?.total_points??0)>0?((wr-0.5)*4).toFixed(2):"—";
-  const maxDD=evalStats?.max_drawdown_pct!=null?`${(evalStats.max_drawdown_pct*100).toFixed(1)}%`:"—";
+  const sharpe=(evalStats?.total_points??0)>0?(((wr||0)-0.5)*4).toFixed(2):"—";
+  const maxDD=evalStats?.max_drawdown_pct!=null?`${((evalStats.max_drawdown_pct||0)*100).toFixed(1)}%`:"—";
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20}}>
       <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:12}}>
@@ -1088,7 +1113,7 @@ function PerformanceTab({evalStats,positions,agentKpi,systemState}) {
           <div style={{marginTop:8,borderTop:`1px solid ${G.border}`,paddingTop:8}}>
             <div style={{display:"flex",justifyContent:"space-between"}}>
               <span style={{color:G.textSec,fontSize:11}}>Total Charges Paid</span>
-              <span style={{color:G.textMut,fontFamily:"monospace",fontSize:11}}>₹{totalCharges.toFixed(0)}</span>
+              <span style={{color:G.textMut,fontFamily:"monospace",fontSize:11}}>₹{(totalCharges||0).toFixed(0)}</span>
             </div>
           </div>
         </div>
@@ -1515,16 +1540,16 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
               <div style={{color:G.textSec,fontSize:12}}>{stock.n} · {stock.sec}</div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{color:G.text,fontSize:24,fontWeight:700,fontFamily:"monospace"}}>₹{price.toFixed(2)}</div>
-              <div style={{color:change24h>=0?G.green:G.red,fontSize:12,fontFamily:"monospace"}}>{change24h>=0?"+":""}{change24h.toFixed(2)}%</div>
+              <div style={{color:G.text,fontSize:24,fontWeight:700,fontFamily:"monospace"}}>₹{(price||0).toFixed(2)}</div>
+              <div style={{color:change24h>=0?G.green:G.red,fontSize:12,fontFamily:"monospace"}}>{change24h>=0?"+":""}{(change24h||0).toFixed(2)}%</div>
             </div>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}}>
             {[
-              {label:"Entry",val:stock.entry?`₹${stock.entry.toFixed(2)}`:"—",color:G.text,sub:"Suggested entry"},
-              {label:"Target",val:stock.target?`₹${stock.target.toFixed(2)}`:"—",color:G.green,sub:stock.target?`+${((stock.target-price)/price*100).toFixed(1)}% upside`:""},
-              {label:"Stop Loss",val:stock.sl?`₹${stock.sl.toFixed(2)}`:"—",color:G.red,sub:stock.sl?`${((price-stock.sl)/price*100).toFixed(1)}% risk`:""},
-              {label:"R:R",val:stock.entry&&stock.sl&&stock.target?`1:${((stock.target-stock.entry)/(stock.entry-stock.sl)).toFixed(2)}`:"—",color:G.purple,sub:"Reward-to-risk"},
+              {label:"Entry",val:stock.entry?`₹${(stock.entry||0).toFixed(2)}`:"—",color:G.text,sub:"Suggested entry"},
+              {label:"Target",val:stock.target?`₹${(stock.target||0).toFixed(2)}`:"—",color:G.green,sub:stock.target?`+${(((stock.target-price)/price)*100||0).toFixed(1)}% upside`:""},
+              {label:"Stop Loss",val:stock.sl?`₹${(stock.sl||0).toFixed(2)}`:"—",color:G.red,sub:stock.sl?`${(((price-stock.sl)/price)*100||0).toFixed(1)}% risk`:""},
+              {label:"R:R",val:stock.entry&&stock.sl&&stock.target?`1:${((stock.target-stock.entry)/(stock.entry-stock.sl)||0).toFixed(2)}`:"—",color:G.purple,sub:"Reward-to-risk"},
             ].map(({label,val,color,sub})=>(
               <div key={label}>
                 <div style={{color:G.textMut,fontSize:9,fontFamily:"monospace"}}>{label}</div>
@@ -1648,6 +1673,7 @@ export default function App() {
   const [candleCache,setCaches]    = useState({});
   const [allSigs,setAllSigs]       = useState([]);
   const [evalStats,setEvalStats]   = useState({});
+  const [NSE_UNIVERSE,setNseUniverse] = useState(DEFAULT_NSE_UNIVERSE);
   const [evalHistory,setHistory]   = useState([]);
   const [agentScores,setAgtScores] = useState([]);
   const [agentKpi,setAgentKpi]     = useState({});
@@ -1813,7 +1839,7 @@ export default function App() {
       const entry=price,target=+(price*(1+atr/price*2.5)).toFixed(2),sl=+(price*(1-atr/price*1.2)).toFixed(2);
       return {...st,price,chgPct:chg,score,confidence,tt,sid,sname:sname.join(" "),
         entry,target,sl,regime:cr,mtfVotes,
-        selectionReason:`SIGMA Score ${score.toFixed(3)}. ${topReason}. MTF: ${mtfVotes}/5 aligned. R:R ${((target-entry)/(entry-sl)).toFixed(2)}.`};
+        selectionReason:`SIGMA Score ${(score||0).toFixed(3)}. ${topReason}. MTF: ${mtfVotes}/5 aligned. R:R ${((target-entry)/(entry-sl)||0).toFixed(2)}.`};
     }));
     const top5=results.sort((a,b)=>b.score-a.score).slice(0,5);
     setPicks(top5);
@@ -1891,7 +1917,7 @@ export default function App() {
         {tab==="overview"&&
           <OverviewTab picks={picks} positions={positions} allSigs={allSigs}
             evalStats={evalStats} indices={indices} candleCache={candleCache}
-            news={news} onStock={setSelected}/>}
+            news={news} onStock={setSelected} NSE_UNIVERSE={NSE_UNIVERSE}/>}
         {tab==="positions"&&
           <PositionsTab positions={positions} mode={systemState.mode} apData={apData}/>}
         {tab==="signals"&&

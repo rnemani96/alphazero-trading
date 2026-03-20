@@ -59,7 +59,9 @@ class StrategyGenerator:
         # Backtester - if not provided in config, use a dummy or simulate
         self.backtester = config.get("backtester")
         
-        # Track discovered strategies
+        # State
+        self.is_active = True
+        self.last_activity = datetime.now().isoformat()
         self.discovered_strategies = []
         self.successful_strategies = []
         
