@@ -21,6 +21,10 @@ logger = logging.getLogger("Discovery")
 
 from src.data.universe import get_nifty500_symbols
 
+def _clean_symbol(s: str) -> str:
+    if not s: return ""
+    return str(s).split(":")[0].split(".")[0].strip()
+
 def fetch_nse_symbols(index: str = "NIFTY 500") -> List[str]:
     """
     Downloads the latest constituent list using centralized data module.
@@ -50,16 +54,34 @@ def get_best_performing_stocks(limit: int = 40) -> List[Dict]:
         
     perf_data = []
     # Remove any unwanted symbols or handle formatting
-    symbols = [str(s).strip() for s in symbols if s]
+    symbols = [_clean_symbol(s) for s in symbols if s]
     yf_symbols = [f"{s}.NS" for s in symbols]
     
-    logger.info(f"Downloading data for {len(yf_symbols)} stocks via yfinance...")
+    # Chunk the download to avoid yfinance timeouts/limitations
+    CHUNK_SIZE = 100
+    all_data = []
+    
+    logger.info(f"Downloading data for {len(yf_symbols)} stocks via yfinance (chunks of {CHUNK_SIZE})...")
+    
     try:
-        # Fetch 5 days to compute change relative to yesterday
-        # progress=False to keep logs clean
-        data = yf.download(yf_symbols, period="5d", interval="1d", progress=False, group_by='ticker')
-        if data.empty:
+        for i in range(0, len(yf_symbols), CHUNK_SIZE):
+            chunk = yf_symbols[i:i + CHUNK_SIZE]
+            try:
+                chunk_data = yf.download(chunk, period="5d", interval="1d", progress=False, group_by='ticker')
+                if not chunk_data.empty:
+                    all_data.append(chunk_data)
+                # Small throttle between chunks
+                time.sleep(1)
+            except Exception as chunk_err:
+                logger.warning(f"Chunk download failed for {len(chunk)} symbols: {chunk_err}")
+                continue
+
+        if not all_data:
+            logger.warning("No data returned from any yfinance chunks. Falling back to default list.")
             return [{"symbol": s, "sector": "AUTO"} for s in symbols[:limit]]
+            
+        # Merge all dataframes
+        data = pd.concat(all_data, axis=1)
             
         for sym_ns in yf_symbols:
             try:
@@ -114,13 +136,30 @@ def get_market_movers(limit: int = 10, index: str = "NIFTY 100") -> Dict[str, Li
     if not symbols:
         return {"gainers": [], "losers": []}
         
+    symbols = [_clean_symbol(s) for s in symbols if s]
     yf_symbols = [f"{s}.NS" for s in symbols]
     movers = []
+    CHUNK_SIZE = 100
+    all_chunks = []
+    
+    logger.info(f"Downloading data for {len(yf_symbols)} stocks via yfinance (chunks of {CHUNK_SIZE})...")
     
     try:
-        data = yf.download(yf_symbols, period="2d", interval="1d", progress=False, group_by='ticker')
-        if data.empty:
+        for i in range(0, len(yf_symbols), CHUNK_SIZE):
+            chunk = yf_symbols[i:i + CHUNK_SIZE]
+            try:
+                chunk_data = yf.download(chunk, period="2d", interval="1d", progress=False, group_by='ticker')
+                if not chunk_data.empty:
+                    all_chunks.append(chunk_data)
+                time.sleep(1)
+            except Exception as e:
+                logger.warning(f"Movers chunk failed: {e}")
+                continue
+
+        if not all_chunks:
             return {"gainers": [], "losers": []}
+            
+        data = pd.concat(all_chunks, axis=1)
             
         for sym_ns in yf_symbols:
             try:

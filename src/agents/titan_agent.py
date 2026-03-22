@@ -22,8 +22,20 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
-
-from ..event_bus.event_bus import BaseAgent, EventType
+try:
+    from src.event_bus.event_bus import BaseAgent, EventType
+except ImportError:
+    try:
+        from ..event_bus.event_bus import BaseAgent, EventType
+    except ImportError:
+        # Fallback for static analysis tools
+        class BaseAgent:
+            def __init__(self, event_bus=None, config=None, name=""):
+                self.event_bus = event_bus; self.config = config or {}; self.name = name
+                self.is_active = True; self.last_activity = "Initialised"
+            def publish_event(self, *a, **k): pass
+        class EventType:
+            SIGNAL_GENERATED = "signal_generated"
 
 logger = logging.getLogger(__name__)
 
@@ -171,9 +183,9 @@ class TitanAgent(BaseAgent):
             try:
                 sig = self._process_symbol(
                     symbol, ind_data, effective_regime, weights,
-                    hermes_scores.get(symbol, 0.0) if hermes_scores else 0.0,
-                    sigma_scores.get(symbol, 0.5) if sigma_scores else 0.5,
-                    atlas_scores.get(symbol, 0.5) if atlas_scores else 0.5,
+                    float(hermes_scores.get(symbol, 0.0)) if hermes_scores else 0.0,
+                    float(sigma_scores.get(symbol, 0.5)) if sigma_scores else 0.5,
+                    float(atlas_scores.get(symbol, 0.5)) if atlas_scores else 0.5,
                     dyn_conf, dyn_aggr,
                     timeframe,
                 )
@@ -186,6 +198,14 @@ class TitanAgent(BaseAgent):
         self.signals_generated += len(market_data)
 
         if signals:
+            # Publish individual events for LENS to track each signal's performance
+            for sig in signals:
+                self.publish_event(EventType.SIGNAL_GENERATED, {
+                    **sig,
+                    'source': 'TITAN',
+                    'agent': 'TITAN'
+                })
+
             self.publish_event(EventType.SIGNAL_GENERATED, {
                 'source':   'TITAN',
                 'regime':   effective_regime,
@@ -203,14 +223,15 @@ class TitanAgent(BaseAgent):
 
     def _get_dynamic_thresholds(self, regime: str) -> Tuple[float, int]:
         """Logic: TRENDING -> strict; SIDEWAYS -> loose; VOLATILE -> moderate."""
-        if regime == "TRENDING":
-            return 0.60, 3
-        elif regime == "SIDEWAYS":
-            # Loose for PAPER mode to allow monitoring newly unlocked strategies
-            return 0.35, 1
-        elif regime == "VOLATILE":
-            return 0.48, 2
-        return self._min_confidence, self._min_agreement
+        r = str(regime).upper().strip()
+        if r == "TRENDING":
+            return 0.50, 2
+        elif r == "SIDEWAYS" or r == "NEUTRAL":
+            # Loose — mean reversion strategies dominate; conf is inherently lower
+            return 0.25, 1
+        elif r == "VOLATILE":
+            return 0.40, 1
+        return max(0.28, (getattr(self, '_min_confidence', 0.52) - 0.15)), 1
 
     def _process_symbol(
         self,
@@ -227,12 +248,12 @@ class TitanAgent(BaseAgent):
     ) -> Optional[Dict[str, Any]]:
         """Run strategies for one symbol and aggregate into a single signal."""
 
-        # Handle both dict (legacy) and DataFrame (modern) inputs
+        price: float = 0.0
         if isinstance(ind_data, pd.DataFrame):
             if ind_data.empty: return None
             price = float(ind_data['close'].iloc[-1])
-        else:
-            price = float(ind_data.get('close') or ind_data.get('price') or 0)
+        elif isinstance(ind_data, dict):
+            price = float(ind_data.get('close') or ind_data.get('price') or 0.0)
 
         if price <= 0:
             return None
@@ -255,8 +276,8 @@ class TitanAgent(BaseAgent):
             return None
 
         # ── Aggregate by regime weights ───────────────────────────────────────
-        buy_score  = 0.0
-        sell_score = 0.0
+        buy_score: float  = 0.0
+        sell_score: float = 0.0
         total_w    = 0.0
         reasons: List[str] = []
         top_strategy: str  = ''
@@ -279,65 +300,79 @@ class TitanAgent(BaseAgent):
                 top_strategy = getattr(sig, 'strategy_id', '')
                 reasons.append(getattr(sig, 'reason', ''))
 
+        # If no weight contributed at all (all zero-weight categories), give equal weight
         if total_w < 1e-9:
-            return None
+            total_w = max(1e-9, len([s for s in raw_signals if getattr(s, 'signal', 0) != 0]) * 0.15)
+            if total_w < 1e-9:
+                return None
 
         buy_conf  = buy_score  / total_w
         sell_conf = sell_score / total_w
 
         # ── Signal Boosting Logic ─────────────────────────────────────────────
-        # conviction_score boosts the signal's confidence
         conviction = 0.0
-        if sentiment > 0.3:       conviction += 0.05   # HERMES Bullish
-        if momentum > 0.7:        conviction += 0.05   # SIGMA Momentum
-        if sector_strength > 0.6: conviction += 0.05   # ATLAS Sector
+        if sentiment > 0.2:       conviction += 0.05   # HERMES Bullish
+        if momentum > 0.6:        conviction += 0.05   # SIGMA Momentum
+        if sector_strength > 0.5: conviction += 0.05   # ATLAS Sector
         
         buy_conf  = min(1.0, buy_conf + conviction)
         sell_conf = min(1.0, sell_conf + conviction)
 
         # ── Agreement check ───────────────────────────────────────────────────
         buy_count  = sum(1 for s in raw_signals if getattr(s, 'signal', 0) > 0
-                         and getattr(s, 'confidence', 0) >= 0.5)
+                         and getattr(s, 'confidence', 0) >= 0.45)
         sell_count = sum(1 for s in raw_signals if getattr(s, 'signal', 0) < 0
-                         and getattr(s, 'confidence', 0) >= 0.5)
+                         and getattr(s, 'confidence', 0) >= 0.45)
 
-        if buy_conf >= sell_conf:
+        if buy_conf >= sell_conf and buy_count >= sell_count:
             if buy_conf  < min_conf: return None
-            if buy_count  < min_aggr:  return None
+            if buy_count  < min_aggr: return None
             action = 'BUY'
             confidence = buy_conf
         else:
             if sell_conf < min_conf: return None
-            if sell_count < min_aggr:  return None
+            if sell_count < min_aggr: return None
             action = 'SELL'
             confidence = sell_conf
 
         # ── Position sizing inputs ────────────────────────────────────────────
-        atr = float(ind_data.get('atr') or price * 0.02)
+        atr_val = ind_data.get('atr') if isinstance(ind_data, dict) else (ind_data['atr'].iloc[-1] if hasattr(ind_data, 'columns') and 'atr' in ind_data.columns else None)
+        atr: float = float(atr_val) if atr_val is not None else float(price * 0.02)
+        if atr <= 0:
+            atr = float(price * 0.02)
+        
+        # BUY: target above entry, SL below; SELL: target below entry, SL above
         if action == 'BUY':
-            stop_loss = round(price - 1.5 * atr, 2)
-            target    = round(price + 3.0 * atr, 2)
+            stop_loss: float = round(float(price - 1.5 * atr), 2)
+            target: float    = round(float(price + 3.0 * atr), 2)
         else:
-            stop_loss = round(price + 1.5 * atr, 2)
-            target    = round(price - 3.0 * atr, 2)
+            stop_loss: float = round(float(price + 1.5 * atr), 2)
+            target: float    = round(float(price - 3.0 * atr), 2)
 
-        risk   = abs(price - stop_loss)
-        reward = abs(target - price)
-        rr     = round(reward / risk, 2) if risk > 0 else 0
+        # Sanity check: ensure target is on the right side of entry price
+        if action == 'BUY' and target <= price:
+            target = round(price * 1.06, 2)   # default 6% target
+        if action == 'SELL' and target >= price:
+            target = round(price * 0.94, 2)   # default 6% short target
 
-        # Minimum R:R filter
-        if rr < 1.8:
+        risk: float   = abs(price - stop_loss)
+        reward: float = abs(target - price)
+        rr: float     = round(float(reward / risk), 2) if risk > 0 else 0.0
+
+        # Minimum R:R filter — relax to 1.5 in low-volatility/sideways
+        min_rr = 1.5 if regime in ('SIDEWAYS', 'NEUTRAL') else 1.8
+        if rr < min_rr:
             return None
 
         return {
             'symbol':         symbol,
             'action':         action,
             'signal':         action,
-            'confidence':     round(confidence, 3),
-            'signal_strength': round(confidence, 3),
+            'confidence':     round(float(confidence), 3),
+            'signal_strength': round(float(confidence), 3),
             'price':          price,
             'entry_price':    price,
-            'atr':            round(atr, 2),
+            'atr':            round(float(atr), 2),
             'stop_loss':      stop_loss,
             'target':         target,
             'rr':             rr,

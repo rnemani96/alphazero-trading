@@ -133,8 +133,11 @@ class NewsSentimentAgent(BaseAgent):
                     # Rolling average for multi-source headlines
                     sym_scores[s] = (sym_scores[s] + n['sentiment_score']) / 2 if sym_scores[s] != 0 else n['sentiment_score']
             
-            # Final threshold logic
             overall_score = metrics.get('sentiment_score', 0.0)
+            if not isinstance(overall_score, (int, float)):
+                try: overall_score = float(overall_score)
+                except: overall_score = 0.0
+
             if overall_score > 0.2:
                 overall = 'BUY'
             elif overall_score < -0.2:
@@ -160,7 +163,7 @@ class NewsSentimentAgent(BaseAgent):
                 self._cache_ts = datetime.now()
                 self._headlines_processed += len(processed_news)
 
-            logger.info(f"HERMES → score={result['overall_score']:+.3f} | bias={overall} | vol={result['volume']} | regime_hint={metrics.get('regime_hint', 'NEUTRAL')}")
+            logger.info(f"HERMES → score={result.get('overall_score', 0.0):+.3f} | bias={overall} | vol={result.get('volume', 0)} | regime_hint={metrics.get('regime_hint', 'NEUTRAL')}")
             if processed_news:
                 top = processed_news[0]
                 logger.debug(f"HERMES Top Signal: {top.get('headline')} | Score: {top.get('sentiment_score')} | Layers: {top.get('layer_scores')}")
@@ -168,7 +171,9 @@ class NewsSentimentAgent(BaseAgent):
             return result
 
         except Exception as e:
-            logger.error(f"HERMES full pipeline error: {e}")
+            logger.error(f"HERMES full pipeline error: {type(e).__name__} - {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
             return {
                 'overall': 'NEUTRAL',
                 'overall_score': 0.0,

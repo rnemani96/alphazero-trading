@@ -14,7 +14,21 @@ import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-from ..event_bus.event_bus import BaseAgent, EventType
+try:
+    from src.event_bus.event_bus import BaseAgent, EventType
+except ImportError:
+    try:
+        from ..event_bus.event_bus import BaseAgent, EventType
+    except ImportError:
+        # Fallback for static analysis tools
+        class BaseAgent:
+            def __init__(self, event_bus=None, config=None, name=""):
+                self.event_bus = event_bus; self.config = config or {}; self.name = name
+                self.is_active = True; self.last_activity = "Initialised"
+            def publish_event(self, *a, **k): pass
+            def subscribe(self, *a, **k): pass
+        class EventType:
+            SIGNAL_GENERATED = "signal_generated"
 
 logger = logging.getLogger(__name__)
 

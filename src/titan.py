@@ -167,7 +167,7 @@ class TitanStrategyEngine:
             loss = np.where(delta < 0, -delta, 0)
             avg_g = ema(gain, rsi_per)
             avg_l = ema(loss, rsi_per)
-            rs = np.where(avg_l != 0, avg_g / avg_l, 100)
+            rs = np.divide(avg_g, avg_l, out=np.full_like(avg_g, 100), where=avg_l != 0)
             r["rsi"] = 100 - 100 / (1 + rs)
 
         # Bollinger Bands
@@ -175,7 +175,7 @@ class TitanStrategyEngine:
             ma20 = np.array([np.mean(c[max(0, i-19):i+1]) for i in range(len(c))])
             std20 = np.array([np.std(c[max(0, i-19):i+1]) for i in range(len(c))])
             r["bb_mid"] = ma20; r["bb_up"] = ma20 + 2*std20; r["bb_lo"] = ma20 - 2*std20
-            r["bb_width"] = (r["bb_up"] - r["bb_lo"]) / ma20
+            r["bb_width"] = np.divide((r["bb_up"] - r["bb_lo"]), ma20, out=np.zeros_like(ma20), where=ma20 != 0)
 
         # MACD
         if len(c) >= 26:
@@ -192,7 +192,7 @@ class TitanStrategyEngine:
             atr14 = ema(tr, 14)
             pdi = 100 * ema(pdm, 14) / np.where(atr14 != 0, atr14, 1)
             ndi = 100 * ema(ndm, 14) / np.where(atr14 != 0, atr14, 1)
-            dx = 100 * abs(pdi - ndi) / np.where(pdi + ndi != 0, pdi + ndi, 1)
+            dx = 100 * np.divide(abs(pdi - ndi), (pdi + ndi), out=np.zeros_like(pdi), where=(pdi + ndi) != 0)
             r["adx"] = ema(dx, 14); r["pdi"] = pdi; r["ndi"] = ndi
 
         # Stochastic
@@ -200,7 +200,7 @@ class TitanStrategyEngine:
             lo14 = np.array([np.min(l[max(0,i-13):i+1]) for i in range(len(c))])
             hi14 = np.array([np.max(h[max(0,i-13):i+1]) for i in range(len(c))])
             denom = hi14 - lo14
-            r["stoch_k"] = 100 * np.where(denom != 0, (c - lo14) / denom, 0.5)
+            r["stoch_k"] = 100 * np.divide((c - lo14), denom, out=np.full_like(c, 0.5), where=denom != 0)
             r["stoch_d"] = ema(r["stoch_k"], 3)
 
         # VWAP
@@ -208,7 +208,7 @@ class TitanStrategyEngine:
             tp = (h + l + c) / 3
             cum_vol = np.cumsum(v)
             cum_tpv = np.cumsum(tp * v)
-            r["vwap"] = np.where(cum_vol > 0, cum_tpv / cum_vol, tp)
+            r["vwap"] = np.divide(cum_tpv, cum_vol, out=tp.copy(), where=cum_vol > 0)
 
         # OBV
         obv = np.zeros(len(c))

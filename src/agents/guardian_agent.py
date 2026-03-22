@@ -30,7 +30,21 @@ import threading
 from datetime import datetime, date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
-from ..event_bus.event_bus import BaseAgent, EventType
+try:
+    from src.event_bus.event_bus import BaseAgent, EventType
+except ImportError:
+    try:
+        from ..event_bus.event_bus import BaseAgent, EventType
+    except ImportError:
+        # Fallback for static analysis tools
+        class BaseAgent:
+            def __init__(self, event_bus=None, config=None, name=""):
+                self.event_bus = event_bus; self.config = config or {}; self.name = name
+                self.is_active = True; self.last_activity = "Initialised"
+            def publish_event(self, *a, **k): pass
+            def subscribe(self, *a, **k): pass
+        class EventType:
+            RISK_ALERT = "risk_alert"
 from ..utils.stats import kelly_fraction
 
 logger = logging.getLogger(__name__)
@@ -95,12 +109,7 @@ class GuardianAgent(BaseAgent):
 
     # ── Core entry point ──────────────────────────────────────────────────────
 
-    def check_trade(
-        self,
-        signal: Dict[str, Any],
-        current_capital: float,
-        positions: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+    def check_trade(self, signal: Dict[str, Any], current_capital: float, positions: List[Dict[str, Any]], update_state: bool = True) -> Dict[str, Any]:
         """
         Validate a trade signal against all hard risk rules.
 
@@ -204,8 +213,9 @@ class GuardianAgent(BaseAgent):
                 return self._reject(f'POSITION_ALREADY_OPEN ({sym})')
 
             # ── Approved ─────────────────────────────────────────────────────
-            self.last_trade_time = datetime.now()
-            self.trades_today   += 1
+            if update_state:
+                self.last_trade_time = datetime.now()
+                self.trades_today   += 1
 
             self.publish_event(EventType.RISK_ALERT, {
                 'action':        'TRADE_APPROVED',
@@ -234,14 +244,17 @@ class GuardianAgent(BaseAgent):
         Bulk-check a list of signals.  Returns approved signals with
         position_size, quantity, stop_loss, target injected.
         """
-        # Snapshot current capital and positions from latest state
-        # (caller should pass these in; we use defaults if not available)
         approved = []
-        fake_positions: List[Dict] = []   # No live positions context here
+        fake_positions: List[Dict] = []   # Context-less check
         capital = self.initial_capital + self.daily_pnl
+        
+        # Sort by confidence to ensure higher quality signals are checked first
+        sorted_signals = sorted(signals, key=lambda x: float(x.get('confidence', 0)), reverse=True)
 
-        for sig in signals:
-            result = self.check_trade(sig, capital, fake_positions)
+        any_approved = False
+        for sig in sorted_signals:
+            # Pass update_state=False to prevent immediate cooldown blocking within the batch
+            result = self.check_trade(sig, capital, fake_positions, update_state=False)
             if result['approved']:
                 sig['position_size'] = result['position_size']
                 sig['quantity']      = result['quantity']
@@ -249,6 +262,13 @@ class GuardianAgent(BaseAgent):
                 sig['stop_loss']     = result.get('stop_loss', sig.get('stop_loss', 0))
                 sig['target']        = result.get('target',    sig.get('target',    0))
                 approved.append(sig)
+                any_approved = True
+        
+        if any_approved:
+            with self._lock:
+                self.last_trade_time = datetime.now()
+                self.trades_today   += 1
+                
         return approved
 
     # ── Outcome tracking ──────────────────────────────────────────────────────

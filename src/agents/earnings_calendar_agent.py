@@ -9,14 +9,26 @@ Provides signals for the pre-earnings momentum buildup and post-earnings gap eve
 import logging
 from datetime import datetime, timedelta
 import random
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 try:
     import yfinance as yf
 except ImportError:
     yf = None
 
-from ..event_bus.event_bus import BaseAgent
+try:
+    from src.event_bus.event_bus import BaseAgent, EventType
+except ImportError:
+    try:
+        from ..event_bus.event_bus import BaseAgent, EventType
+    except ImportError:
+        # Fallback for static analysis tools
+        class BaseAgent:
+            def __init__(self, event_bus=None, config=None, name=""):
+                self.event_bus = event_bus; self.config = config or {}; self.name = name
+                self.is_active = True; self.last_activity = "Initialised"
+            def publish_event(self, *a, **k): pass
+        class EventType: SIGNAL_GENERATED = "signal_generated"
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +36,14 @@ class EarningsCalendarAgent(BaseAgent):
     def __init__(self, event_bus, config):
         super().__init__(event_bus, config, "EARNINGS_CALENDAR")
         self.earnings_dates: Dict[str, datetime] = {}
-        self.last_update = None
+        self.last_update: Optional[datetime] = None
         logger.info("EarningsCalendarAgent initialized")
 
     def _fetch_earnings(self, symbols: List[str]):
         """Fetch or simulate upcoming earnings dates."""
         now = datetime.now()
-        if self.last_update and (now - self.last_update).days < 1:
+        lu = self.last_update
+        if lu is not None and (now - lu).days < 1:
             return  # Update once a day
 
         for sym in symbols:
@@ -75,12 +88,20 @@ class EarningsCalendarAgent(BaseAgent):
             
         days_until = (self.earnings_dates[symbol].date() - datetime.now().date()).days
         if 0 < days_until <= 3 and sigma_score >= 0.75:
-            return {
+            res = {
                 'signal': 'BUY',
                 'confidence': 0.85,
                 'reasons': [f"Pre-earnings momentum: High SIGMA ({sigma_score}) + Earnings in {days_until} days"],
                 'strategy': 'S44_PreEarningsRunup'
             }
+            # Publish event for LENS to track
+            self.publish_event(EventType.SIGNAL_GENERATED, {
+                **res,
+                'symbol': symbol,
+                'source': self.name,
+                'agent': self.name
+            })
+            return res
         return None
 
     def check_post_earnings_gap(self, symbol: str, current_price: float, prev_price: float, vol_ratio: float) -> Optional[Dict]:
@@ -95,10 +116,18 @@ class EarningsCalendarAgent(BaseAgent):
                 return None
             gap_pct = (current_price - prev_price) / prev_price * 100
             if gap_pct >= 3.0 and vol_ratio >= 1.5:
-                return {
+                res = {
                     'signal': 'BUY',
                     'confidence': 0.90,
                     'reasons': [f"Post-earnings gap up: +{gap_pct:.1f}% on volume {vol_ratio:.1f}x"],
                     'strategy': 'S45_PostEarningsGap'
                 }
+                # Publish event for LENS to track
+                self.publish_event(EventType.SIGNAL_GENERATED, {
+                    **res,
+                    'symbol': symbol,
+                    'source': self.name,
+                    'agent': self.name
+                })
+                return res
         return None

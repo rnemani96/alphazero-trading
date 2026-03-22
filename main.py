@@ -58,7 +58,7 @@ class JsonFormatter(logging.Formatter):
             log_record["exception"] = self.formatException(record.exc_info)
         return json.dumps(log_record)
 
-LOG_FMT = "%(asctime)s │ %(name)-10s │ %(levelname)-5s │ %(message)s"
+LOG_FMT = "%(asctime)s | %(name)-10s | %(levelname)-5s | %(message)s"
 stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setFormatter(logging.Formatter(LOG_FMT, datefmt="%H:%M:%S"))
 
@@ -158,10 +158,10 @@ def _load_agent(name: str, module: str, cls: str, *args) -> Optional[Any]:
         mod   = __import__(module, fromlist=[cls])
         klass = getattr(mod, cls)
         obj   = klass(*args)
-        logger.info("✓ Agent %-10s loaded", name)
+        logger.info("[OK] Agent %-10s loaded", name)
         return obj
     except Exception as exc:
-        logger.warning("✗ Agent %-10s failed — %s", name, exc)
+        logger.warning("[FAIL] Agent %-10s failed - %s", name, exc)
         return None
 
 agents['ZEUS']     = _load_agent('ZEUS',    'src.agents.zeus_agent',            'ZeusAgent',              eb, _cfg)
@@ -468,16 +468,16 @@ def _aggregate_signals(
     # Dynamic thresholds based on regime (AlphaZero v5.0)
     # RELAXED FOR PAPER MODE/TESTING (USER REQUEST #4)
     if regime == 'TRENDING':
-        MIN_AGG_CONF = 0.55   # (was 0.60)
-        MIN_AGREEMENT = 1     # (was 2)
+        MIN_AGG_CONF = 0.50   # Strict enough for trending momentum
+        MIN_AGREEMENT = 1
     elif regime == "SIDEWAYS":
-        MIN_AGG_CONF = 0.45   # (was 0.75 - very high)
-        MIN_AGREEMENT = 1     # (was 3)
+        MIN_AGG_CONF = 0.32   # Same relaxed values as TITAN SIDEWAYS threshold
+        MIN_AGREEMENT = 1
     elif regime == "VOLATILE":
-        MIN_AGG_CONF = 0.52   # (was 0.72)
-        MIN_AGREEMENT = 1     # (was 2)
+        MIN_AGG_CONF = 0.45
+        MIN_AGREEMENT = 1
     else:
-        MIN_AGG_CONF = 0.50
+        MIN_AGG_CONF = 0.40
         MIN_AGREEMENT = 1
 
     TITAN_W  = 0.45
@@ -737,8 +737,10 @@ def _build_universe() -> List[str]:
 
     # Always include open positions
     if AP:
-        syms += list(AP.open_positions.keys())
-    return list(dict.fromkeys(syms))  # deduplicate, preserve order
+        syms += [str(k).split(':')[0] for k in AP.open_positions.keys()]
+        
+    cleaned_syms = [str(s).split(':')[0].strip() for s in syms if s]
+    return list(dict.fromkeys(cleaned_syms))  # deduplicate, preserve order
 
 
 
@@ -1006,7 +1008,13 @@ def _run_iteration():
         try:
             sent_result = agents['HERMES'].get_sentiment(list(mdata.keys())[:20])
             sentiment_scores = sent_result.get('scores', {})
-            overall_sentiment = float(sent_result.get('overall_score', sent_result.get('score', 0.0)))
+            # Robust key lookup — different HERMES versions use different keys
+            overall_sentiment = float(
+                sent_result.get('overall_score',
+                sent_result.get('score',
+                sent_result.get('sentiment',
+                sent_result.get('compound', 0.0))))
+            )
             _state['sentiment'] = overall_sentiment
             _state['sentiment_scores'] = sentiment_scores
         except Exception as exc:
@@ -1176,6 +1184,7 @@ def _run_iteration():
             }
             signals.insert(0, put_signal)
 
+    any_approved = False
     for sig in signals:
         try:
             sym    = sig.get('symbol', '')
@@ -1205,7 +1214,8 @@ def _run_iteration():
 
             # GUARDIAN hard check
             if agents.get('GUARDIAN'):
-                result = agents['GUARDIAN'].check_trade(sig, current_capital, open_positions)
+                # CRITICAL: Use update_state=False to avoid blocking other signals in the same batch
+                result = agents['GUARDIAN'].check_trade(sig, current_capital, open_positions, update_state=False)
                 if result.get('approved'):
                     sig['quantity']     = result.get('quantity', qty)
                     sig['qty']          = sig['quantity']
@@ -1213,15 +1223,24 @@ def _run_iteration():
                     sig['target']       = result.get('target',    sig.get('target', 0))
                     sig['position_size']= result.get('position_size', 0)
                     approved.append(sig)
+                    any_approved = True
                 else:
                     logger.info("🛡️ REJECTED: %-10s | reason: %s", sym, result.get('reason', 'Unknown risk'))
             else:
-                # Fallback: if GUARDIAN not loaded, allow trade with original quantity (risky but better than crash)
-                # Alternatively: skip trade. Let's skip to be safe.
+                # Fallback: if GUARDIAN not loaded, allow trade with original quantity
                 logger.warning("GUARDIAN offline — skipping trade for %s", sym)
 
         except Exception as exc:
             logger.debug("GUARDIAN check %s: %s", sig.get('symbol'), exc)
+
+    # Update Guardian state once if batch was approved
+    if any_approved and agents.get('GUARDIAN'):
+        try:
+            from datetime import datetime
+            agents['GUARDIAN'].last_trade_time = datetime.now()
+            agents['GUARDIAN'].trades_today   += 1
+        except Exception:
+            pass
 
     logger.info("Risk gate: %d / %d signals approved", len(approved), len(signals))
     if signals and not approved:
@@ -1416,9 +1435,9 @@ signal.signal(signal.SIGTERM, _shutdown)
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    logger.info("═" * 70)
+    logger.info("=" * 70)
     logger.info("AlphaZero Capital v4.0")
-    logger.info("MODE: %s | Capital: ₹%s | Agents: %d/17",
+    logger.info("MODE: %s | Capital: ₹%s | Agents: %d/18",
                 settings.MODE, f"{settings.INITIAL_CAPITAL:,.0f}", len(active_agents))
     if AP:
         summ = AP.get_summary()
@@ -1447,10 +1466,13 @@ def main():
     # Main loop
     while _state["running"]:
         iteration_start = time.time()
+        _write_state()
         try:
             _run_iteration()
         except Exception as exc:
             logger.exception("Iteration error: %s", exc)
+        
+        _write_state()
         
         # Consistent fixed sleep duration
         sleep_sec = 180

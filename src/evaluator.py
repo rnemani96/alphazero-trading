@@ -85,7 +85,9 @@ class EvaluationEngine:
     # ── DB setup ──────────────────────────────────────────────────────────
 
     def _init_db(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=30)
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
         conn.execute("""CREATE TABLE IF NOT EXISTS signals (
             id TEXT PRIMARY KEY, symbol TEXT, strategy_id TEXT,
             strategy_name TEXT, agent TEXT, direction INTEGER,

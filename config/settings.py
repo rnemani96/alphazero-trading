@@ -128,7 +128,7 @@ class Settings:
         active = [k for k, v in self.data_source_summary().items() if v]
         import logging
         logging.getLogger("Settings").info(
-            "AlphaZero v3.0 | MODE=%s | Capital=₹%s | Data sources: %s",
+            "AlphaZero v4.0 | MODE=%s | Capital=₹%s | Data sources: %s",
             self.MODE, f"{self.INITIAL_CAPITAL:,.0f}", ", ".join(active)
         )
 

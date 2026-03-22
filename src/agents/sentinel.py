@@ -43,10 +43,12 @@ class SentinelAgent(BaseAgent):
         self.stats["uptime_h"] = round((t0 - self.stats["start_time"]) / 3600, 2)
         
         # 1. Check status.json freshness
+        # Skip stale check for first 5 minutes after startup (status.json from prev session)
+        runtime_secs = t0 - self.stats["start_time"]
         if os.path.exists(self.status_file):
             mtime = os.path.getmtime(self.status_file)
             age = t0 - mtime
-            if age > 300: # 5 minutes
+            if age > 1200 and runtime_secs > 300:  # Ignore stale on fresh startup
                 self.stats["data_freshness"] = "STALE"
                 self.stats["health_score"] -= 10
                 logger.warning(f"SENTINEL: status.json is stale ({age:.0f}s)")

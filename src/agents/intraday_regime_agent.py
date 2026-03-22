@@ -46,19 +46,20 @@ except ImportError:
     logger.info("NEXUS: xgboost not installed — using rule-based regime detection")
 
 try:
-    from ..event_bus.event_bus import BaseAgent, EventType
+    from src.event_bus.event_bus import BaseAgent, EventType
 except ImportError:
     try:
-        from src.event_bus.event_bus import BaseAgent, EventType
+        from ..event_bus.event_bus import BaseAgent, EventType
     except ImportError:
+        # Fallback for static analysis tools
         class BaseAgent:
-            def __init__(self, event_bus, config, name=""):
-                self.event_bus = event_bus; self.config = config
-                self.name = name; self.is_active = True
+            def __init__(self, event_bus=None, config=None, name=""):
+                self.event_bus = event_bus; self.config = config or {}; self.name = name
+                self.is_active = True
             def publish_event(self, *a, **k): pass
         class EventType:
-            REGIME_CHANGE    = "REGIME_CHANGE"
-            SIGNAL_GENERATED = "SIGNAL_GENERATED"
+            REGIME_CHANGE    = "regime_change"
+            SIGNAL_GENERATED = "signal_generated"
 
 
 # ── Thresholds (all configurable via config dict) ─────────────────────────────
@@ -128,10 +129,11 @@ class IntradayRegimeAgent(BaseAgent):
         # Cache: don't recompute more often than NEXUS_CACHE_SECS
         cache_secs = self._cfg["NEXUS_CACHE_SECS"]
         with self._lock:
-            if self._last_detect_ts is not None:
-                elapsed = (datetime.now() - self._last_detect_ts).total_seconds()
-                if elapsed < cache_secs:
-                    return self._last_regime
+                ts = self._last_detect_ts
+                if ts is not None:
+                    elapsed = (datetime.now() - ts).total_seconds()
+                    if elapsed < cache_secs:
+                        return self._last_regime
 
         # Extract aggregated indicators across all symbols
         features = self._extract_features(market_data)
@@ -183,9 +185,11 @@ class IntradayRegimeAgent(BaseAgent):
             self._correct += 1
 
     def get_stats(self) -> Dict[str, Any]:
-        accuracy = round(self._correct / self._predictions, 4) if self._predictions else 0.0
+        accuracy: float = round(float(self._correct / self._predictions), 4) if self._predictions else 0.0
         with self._lock:
-            hist = list(self._regime_history[-10:])
+            # Using max logic for safer indexing in strict type checkers
+            start_idx = max(0, len(self._regime_history) - 10)
+            hist = list(self._regime_history[start_idx:])
         return {
             'name':       "NEXUS",
             'active':     self.is_active,
@@ -261,17 +265,41 @@ class IntradayRegimeAgent(BaseAgent):
         uoa_flag      = float(market_data.get('uoa_flag', 0.0))
 
         # 5. Macro & News (from main.py / market_data)
+        # Advance/Decline Ratio
+        adv_decl = len([r for r in returns if r > 0]) / len([r for r in returns if r < 0]) if len([r for r in returns if r < 0]) > 0 else 1.0
+        
+        # VIX Delta
+        vix_delta = 0.0
+        # For delta we'd need previous state, but we can proxy it or use a default
+        
+        # Rolling Vol Proxies (since we don't have historical series here easily)
+        vol5  = _safe(np.std(returns)) if len(returns) > 1 else 0.0
+        vol10 = vol5 # proxy
+        
+        # Sector Rotation Strength
+        sector_rot = sector_disp * 10 # scale it
+        
+        # Gap Pct
+        gaps = [_safe(sym_data.get('gap_pct')) for sym_data in symbol_data.values() if isinstance(sym_data, dict)]
+        avg_gap = _mean(gaps)
+
+        # 5. Macro & News (from main.py / market_data)
         return {
             'adx':            _mean(adx_vals) or 25.0,
             'rsi':            _mean(rsi_vals) or 50.0,
             'vix':            vix if vix > 0 else 15.0,
+            'vix_delta':      vix_delta,
             'atr_norm':       _mean(atr_vals) or 0.5,
             'cev':            _mean(cev_vals) or 0.0,
             'gainer_pct':     gainer_pct,
             'loser_pct':      loser_pct,
+            'adv_decl_ratio': adv_decl,
+            'gap_pct':        avg_gap,
             'avg_top50_ret':  avg_top50,
             'avg_bot50_ret':  avg_bot50,
-            'sector_disp':    sector_disp,
+            'rolling_vol_5d': vol5,
+            'rolling_vol_10d':vol10,
+            'sector_rot_strength': sector_rot,
             'spx_prev_ret':   float(market_data.get('spx_prev_ret', 0.0)),
             'usdinr_change':  float(market_data.get('usdinr_change', 0.0)),
             'news_sentiment': float(market_data.get('news_sentiment', 0.0)),
@@ -293,7 +321,7 @@ class IntradayRegimeAgent(BaseAgent):
         rsi    = f['rsi']
         vix    = f['vix']
         breadth = f.get('breadth', 0.5)   # 0–1
-        cev     = f.get('close_vs_ema', f.get('cev', 0.0))  % price deviation from ema20
+        cev     = f.get('close_vs_ema', f.get('cev', 0.0))  # price deviation from ema20
         fii     = f.get('fii_flow', 0.0)
         pc_ratio = f.get('pc_ratio', 1.0)
         uoa      = f.get('uoa_flag', 0.0)
@@ -370,26 +398,42 @@ class IntradayRegimeAgent(BaseAgent):
         if not _NP or not _XGB or self._xgb_model is None:
             return self._rule_detect(f)
         try:
-            # Ensure exact order as metadata: adx, rsi, vix, atr_norm, cev...
-            feat_list = [
-                f['adx'], f['rsi'], f['vix'], f['atr_norm'], f['cev'],
-                f['gainer_pct'], f['loser_pct'],
+            # Full v5.0 feature set (22 features)
+            feat_22 = [
+                f['adx'], f['rsi'], f['vix'], f.get('vix_delta', 0.0), f['atr_norm'], f['cev'],
+                f['gainer_pct'], f['loser_pct'], f.get('adv_decl_ratio', 1.0), f.get('gap_pct', 0.0),
                 f['avg_top50_ret'], f['avg_bot50_ret'],
-                f['sector_disp'], f['spx_prev_ret'],
-                f['usdinr_change'], f['news_sentiment'], f['event_flag']
+                f.get('rolling_vol_5d', 0.0), f.get('rolling_vol_10d', 0.0),
+                f.get('sector_rot_strength', 0.0), f['spx_prev_ret'],
+                f['usdinr_change'], f['news_sentiment'], f['event_flag'],
+                f['pc_ratio'], f['max_pain_diff'], f['uoa_flag']
             ]
             
-            if len(feat_list) != 14:
-                logger.warning(f"NEXUS Feature mismatch: expected 14, got {len(feat_list)}")
-                return self._rule_detect(f)
-                
-            feat = np.array([feat_list], dtype=np.float32)
-            pred = self._xgb_model.predict(feat)[0]
+            # Legacy v4.0 feature set (14 features)
+            feat_14 = [
+                f['adx'], f['rsi'], f['vix'], f['atr_norm'], f['cev'],
+                f['gainer_pct'], f['loser_pct'],
+                f['avg_top50_ret'], f['avg_bot50_ret'], f.get('sector_disp', 0.0),
+                f['spx_prev_ret'], f['usdinr_change'], f['news_sentiment'], f['event_flag']
+            ]
+
+            # Try 22 features first, fallback to 14 if it fails
+            try:
+                feat = np.array([feat_22], dtype=np.float32)
+                pred = self._xgb_model.predict(feat)[0]
+            except Exception:
+                try:
+                    feat = np.array([feat_14], dtype=np.float32)
+                    pred = self._xgb_model.predict(feat)[0]
+                except Exception as e2:
+                    logger.warning(f"NEXUS models failed (22/14 features): {e2}")
+                    return self._rule_detect(f)
+
             regime_idx = int(pred)
             if 0 <= regime_idx < len(self.REGIMES):
                 return self.REGIMES[regime_idx]
         except Exception as e:
-            logger.warning("NEXUS XGBoost predict failed: %s — falling back to rules", e)
+            logger.warning("NEXUS XGBoost predict failed: %s - falling back to rules", e)
         return self._rule_detect(f)
 
     def load_xgb_model(self, model_path: str):

@@ -60,9 +60,9 @@
       "quantity": 241,
       "target": 139.67,
       "stop_loss": 136.25,
-      "current_price": 137.55,
-      "unrealised_pnl": 0.0,
-      "pnl_pct": 0.0,
+      "current_price": 136.55,
+      "unrealised_pnl": -241.0,
+      "pnl_pct": -0.73,
       "strategy": "M1",
       "trade_type": "SWING",
       "status": "OPEN",
@@ -165,5 +165,5 @@
       "realised_pct": -0.53
     }
   ],
-  "last_updated": "2026-03-21T03:52:01.606974+05:30"
+  "last_updated": "2026-03-21T07:57:41.403892+05:30"
 }

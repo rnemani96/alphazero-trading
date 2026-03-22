@@ -33,9 +33,9 @@
         "quantity": 241,
         "target": 139.67,
         "stop_loss": 136.25,
-        "current_price": 137.55,
-        "unrealised_pnl": 0.0,
-        "pnl_pct": 0.0,
+        "current_price": 136.55,
+        "unrealised_pnl": -241.0,
+        "pnl_pct": -0.73,
         "strategy": "M1",
         "trade_type": "SWING",
         "status": "OPEN",
@@ -84,15 +84,13 @@
     "max_positions": 10,
     "slots_available": 7,
     "total_invested": 99663.73,
-    "total_unrealised_pnl": -621.18,
+    "total_unrealised_pnl": -862.18,
     "total_realised_pnl": -312.34,
     "win_rate_pct": 0.0,
     "total_trades": 2,
     "winning_trades": 0,
     "losing_trades": 2,
-    "near_target": [
-      "CANBK"
-    ],
+    "near_target": [],
     "near_sl": [
       "LLOYDSME",
       "CANBK",
@@ -156,37 +154,37 @@
         "realised_pct": -0.53
       }
     ],
-    "last_updated": "2026-03-21T03:52:01.606974+05:30",
+    "last_updated": "2026-03-21T07:56:25.239640+05:30",
     "blocked_symbols": [
       "LLOYDSME",
       "CANBK",
       "INOXWIND"
     ]
   },
-  "iteration": 67,
+  "iteration": 8,
   "regime": "SIDEWAYS",
   "sentiment": 0.0,
   "sentiment_scores": {
-    "BAYERCROP": 0.0,
-    "IOB": 0.0,
-    "IDEA": 0.0,
-    "JINDALSTEL": 0.0,
-    "IDBI": 0.0,
-    "MAPMYINDIA": 0.0,
-    "HINDPETRO": 0.0,
-    "LAURUSLABS": 0.0,
-    "TATAELXSI": 0.0,
-    "MAHABANK": 0.0,
-    "TRIVENI": 0.0,
-    "HAPPSTMNDS": 0.0,
-    "ATHERENERG": 0.0,
     "MRPL": 0.0,
-    "TARIL": 0.0,
     "ANANTRAJ": 0.0,
+    "OLAELEC": 0.0,
+    "HAPPSTMNDS": 0.0,
+    "BHEL": 0.0,
+    "GLENMARK": 0.0,
+    "GMDCLTD": 0.0,
+    "CHENNPETRO": 0.0,
+    "TRIVENI": 0.0,
+    "INOXWIND": 0.0,
+    "FORCEMOT": 0.0,
+    "AARTIIND": 0.0,
+    "MAPMYINDIA": 0.0,
     "SAGILITY": 0.0,
-    "SCHAEFFLER": 0.0,
-    "GPIL": 0.0,
-    "HEXT": 0.0
+    "HINDCOPPER": 0.0,
+    "ABFRL": 0.0,
+    "FIRSTCRY": 0.0,
+    "CCL": 0.0,
+    "RPOWER": 0.0,
+    "DOMS": 0.0
   },
   "selected_stocks": [
     {
@@ -198,8 +196,10 @@
       "news_sentiment": 0.5,
       "volume_confirm": 0.9966963125628762,
       "volatility": 0.16502061199081752,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6623,
+      "fii_interest": 0.3,
+      "delivery_pct": 0.45,
+      "historical_sharpe": 0.5,
+      "sigma_score": 0.618,
       "capital_weight": 0.1006,
       "capital_amount": 100600.0
     },
@@ -212,10 +212,12 @@
       "news_sentiment": 0.5,
       "volume_confirm": 0.853100400448407,
       "volatility": 0.21958043725478885,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6438,
-      "capital_weight": 0.1002,
-      "capital_amount": 100200.0
+      "fii_interest": 0.3,
+      "delivery_pct": 0.45,
+      "historical_sharpe": 0.5,
+      "sigma_score": 0.6022,
+      "capital_weight": 0.1003,
+      "capital_amount": 100300.0
     },
     {
       "symbol": "OLAELEC",
@@ -226,10 +228,12 @@
       "news_sentiment": 0.5,
       "volume_confirm": 1.0,
       "volatility": 0.27367597338868555,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6408,
-      "capital_weight": 0.1002,
-      "capital_amount": 100200.0
+      "fii_interest": 0.3,
+      "delivery_pct": 0.45,
+      "historical_sharpe": 0.5,
+      "sigma_score": 0.602,
+      "capital_weight": 0.1003,
+      "capital_amount": 100300.0
     },
     {
       "symbol": "AARTIIND",
@@ -240,10 +244,12 @@
       "news_sentiment": 0.5,
       "volume_confirm": 0.7268692265058626,
       "volatility": 0.11072812911872346,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6396,
-      "capital_weight": 0.1002,
-      "capital_amount": 100200.0
+      "fii_interest": 0.3,
+      "delivery_pct": 0.45,
+      "historical_sharpe": 0.5,
+      "sigma_score": 0.5927,
+      "capital_weight": 0.1001,
+      "capital_amount": 100100.0
     },
     {
       "symbol": "TRIVENI",
@@ -254,8 +260,10 @@
       "news_sentiment": 0.5,
       "volume_confirm": 1.0,
       "volatility": 0.12047149275491051,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6332,
+      "fii_interest": 0.3,
+      "delivery_pct": 0.45,
+      "historical_sharpe": 0.5,
+      "sigma_score": 0.5867,
       "capital_weight": 0.1,
       "capital_amount": 100000.0
     },
@@ -268,8 +276,10 @@
       "news_sentiment": 0.5,
       "volume_confirm": 0.9391357178679375,
       "volatility": 0.17077599553157904,
-      "fii_interest": 0.5,
-      "sigma_score": 0.625,
+      "fii_interest": 0.3,
+      "delivery_pct": 0.45,
+      "historical_sharpe": 0.5,
+      "sigma_score": 0.581,
       "capital_weight": 0.0999,
       "capital_amount": 99900.0
     },
@@ -282,10 +292,12 @@
       "news_sentiment": 0.5,
       "volume_confirm": 1.0,
       "volatility": 0.08527631456858162,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6239,
-      "capital_weight": 0.0999,
-      "capital_amount": 99900.0
+      "fii_interest": 0.3,
+      "delivery_pct": 0.45,
+      "historical_sharpe": 0.5,
+      "sigma_score": 0.5757,
+      "capital_weight": 0.0998,
+      "capital_amount": 99800.0
     },
     {
       "symbol": "ESCORTS",
@@ -296,8 +308,10 @@
       "news_sentiment": 0.5,
       "volume_confirm": 0.8768419847248105,
       "volatility": 0.2199224210810789,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6157,
+      "fii_interest": 0.3,
+      "delivery_pct": 0.45,
+      "historical_sharpe": 0.5,
+      "sigma_score": 0.5742,
       "capital_weight": 0.0997,
       "capital_amount": 99700.0
     },
@@ -310,8 +324,10 @@
       "news_sentiment": 0.5,
       "volume_confirm": 0.9009217037777644,
       "volatility": 0.15083811919722495,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6147,
+      "fii_interest": 0.3,
+      "delivery_pct": 0.45,
+      "historical_sharpe": 0.5,
+      "sigma_score": 0.5697,
       "capital_weight": 0.0997,
       "capital_amount": 99700.0
     },
@@ -324,143 +340,1522 @@
       "news_sentiment": 0.5,
       "volume_confirm": 1.0,
       "volatility": 0.15269028848648214,
-      "fii_interest": 0.5,
-      "sigma_score": 0.6125,
+      "fii_interest": 0.3,
+      "delivery_pct": 0.45,
+      "historical_sharpe": 0.5,
+      "sigma_score": 0.5676,
       "capital_weight": 0.0996,
       "capital_amount": 99600.0
     }
   ],
-  "latest_signals": [],
+  "latest_signals": [
+    {
+      "symbol": "MRPL",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.52,
+      "signal_strength": 0.439,
+      "price": 191.0,
+      "entry_price": 191.0,
+      "atr": 0.88,
+      "stop_loss": 192.32,
+      "target": 188.36,
+      "rr": 2.01,
+      "strategy_count": 13,
+      "buy_count": 5,
+      "sell_count": 8,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 below EMA50 (no fresh cross)",
+        "Full bearish EMA alignment: 9<20<50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "INTRADAY",
+      "timestamp": "07:56:47",
+      "titan_confidence": 0.439,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 1,
+      "quantity": 159,
+      "qty": 159,
+      "position_size": 30400.0
+    },
+    {
+      "symbol": "ANANTRAJ",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.536,
+      "signal_strength": 0.474,
+      "price": 468.0,
+      "entry_price": 468.0,
+      "atr": 2.34,
+      "stop_loss": 471.51,
+      "target": 460.99,
+      "rr": 2.0,
+      "strategy_count": 17,
+      "buy_count": 10,
+      "sell_count": 7,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.171%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "INTRADAY",
+      "timestamp": "07:56:48",
+      "titan_confidence": 0.474,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 1,
+      "quantity": 106,
+      "qty": 106
+    },
+    {
+      "symbol": "OLAELEC",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.636,
+      "signal_strength": 0.695,
+      "price": 25.11,
+      "entry_price": 25.11,
+      "atr": 0.34,
+      "stop_loss": 25.63,
+      "target": 24.08,
+      "rr": 1.98,
+      "strategy_count": 14,
+      "buy_count": 7,
+      "sell_count": 7,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 below EMA50 (no fresh cross)",
+        "Price above Supertrend support",
+        "HMA rising",
+        "Positive slope=0.201%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:28",
+      "titan_confidence": 0.695,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 2,
+      "quantity": 1991,
+      "qty": 1991
+    },
+    {
+      "symbol": "HAPPSTMNDS",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.767,
+      "signal_strength": 0.764,
+      "price": 400.1,
+      "entry_price": 400.1,
+      "atr": 8.13,
+      "stop_loss": 387.91,
+      "target": 424.49,
+      "rr": 2.0,
+      "strategy_count": 10,
+      "buy_count": 8,
+      "sell_count": 2,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.313%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:28",
+      "titan_confidence": 0.764,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 124,
+      "qty": 124
+    },
+    {
+      "symbol": "BHEL",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.665,
+      "signal_strength": 0.559,
+      "price": 261.5,
+      "entry_price": 261.5,
+      "atr": 0.81,
+      "stop_loss": 260.28,
+      "target": 263.94,
+      "rr": 2.0,
+      "strategy_count": 14,
+      "buy_count": 6,
+      "sell_count": 6,
+      "top_strategy": "VL4",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Price above Supertrend support",
+        "RSI=27.7 oversold \u2014 reversal buy",
+        "Price at lower BB band \u2014 bounce expected. %B=0.02"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "INTRADAY",
+      "timestamp": "07:56:50",
+      "titan_confidence": 0.559,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 191,
+      "qty": 191
+    },
+    {
+      "symbol": "GLENMARK",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.64,
+      "signal_strength": 0.507,
+      "price": 2180.0,
+      "entry_price": 2180.0,
+      "atr": 6.73,
+      "stop_loss": 2169.9,
+      "target": 2200.2,
+      "rr": 2.0,
+      "strategy_count": 12,
+      "buy_count": 9,
+      "sell_count": 2,
+      "top_strategy": "VL4",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "CMF=0.23 \u2014 buying pressure"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "INTRADAY",
+      "timestamp": "07:56:50",
+      "titan_confidence": 0.507,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 22,
+      "qty": 22
+    },
+    {
+      "symbol": "GMDCLTD",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.663,
+      "signal_strength": 0.554,
+      "price": 575.7000122070312,
+      "entry_price": 575.7000122070312,
+      "atr": 7.5,
+      "stop_loss": 564.44,
+      "target": 598.21,
+      "rr": 2.0,
+      "strategy_count": 10,
+      "buy_count": 7,
+      "sell_count": 3,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:29",
+      "titan_confidence": 0.554,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 86,
+      "qty": 86
+    },
+    {
+      "symbol": "CHENNPETRO",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.643,
+      "signal_strength": 0.514,
+      "price": 1058.0,
+      "entry_price": 1058.0,
+      "atr": 5.3,
+      "stop_loss": 1050.05,
+      "target": 1073.9,
+      "rr": 2.0,
+      "strategy_count": 14,
+      "buy_count": 8,
+      "sell_count": 6,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Negative slope=-0.098%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "INTRADAY",
+      "timestamp": "07:56:51",
+      "titan_confidence": 0.514,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 47,
+      "qty": 47
+    },
+    {
+      "symbol": "TRIVENI",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.567,
+      "signal_strength": 0.543,
+      "price": 360.0,
+      "entry_price": 360.0,
+      "atr": 2.17,
+      "stop_loss": 363.25,
+      "target": 353.49,
+      "rr": 2.0,
+      "strategy_count": 15,
+      "buy_count": 9,
+      "sell_count": 6,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.141%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:30",
+      "titan_confidence": 0.543,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 2,
+      "quantity": 138,
+      "qty": 138
+    },
+    {
+      "symbol": "INOXWIND",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.474,
+      "signal_strength": 0.335,
+      "price": 81.69999694824219,
+      "entry_price": 81.69999694824219,
+      "atr": 0.49,
+      "stop_loss": 82.44,
+      "target": 80.22,
+      "rr": 2.0,
+      "strategy_count": 10,
+      "buy_count": 4,
+      "sell_count": 5,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:30",
+      "titan_confidence": 0.335,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 1,
+      "quantity": 611,
+      "qty": 611
+    },
+    {
+      "symbol": "FORCEMOT",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.596,
+      "signal_strength": 0.607,
+      "price": 21750.0,
+      "entry_price": 21750.0,
+      "atr": 107.71,
+      "stop_loss": 21911.56,
+      "target": 21426.87,
+      "rr": 2.0,
+      "strategy_count": 18,
+      "buy_count": 11,
+      "sell_count": 7,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.157%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "INTRADAY",
+      "timestamp": "07:56:54",
+      "titan_confidence": 0.607,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 2,
+      "quantity": 2,
+      "qty": 2
+    },
+    {
+      "symbol": "AARTIIND",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.692,
+      "signal_strength": 0.612,
+      "price": 427.8,
+      "entry_price": 427.8,
+      "atr": 1.35,
+      "stop_loss": 425.78,
+      "target": 431.84,
+      "rr": 2.0,
+      "strategy_count": 13,
+      "buy_count": 11,
+      "sell_count": 1,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "INTRADAY",
+      "timestamp": "07:56:55",
+      "titan_confidence": 0.612,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 116,
+      "qty": 116
+    },
+    {
+      "symbol": "MAPMYINDIA",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.694,
+      "signal_strength": 0.616,
+      "price": 917.5,
+      "entry_price": 917.5,
+      "atr": 11.88,
+      "stop_loss": 899.67,
+      "target": 953.15,
+      "rr": 2.0,
+      "strategy_count": 8,
+      "buy_count": 5,
+      "sell_count": 3,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.259%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:30",
+      "titan_confidence": 0.616,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 54,
+      "qty": 54
+    },
+    {
+      "symbol": "SAGILITY",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.558,
+      "signal_strength": 0.523,
+      "price": 39.0,
+      "entry_price": 39.0,
+      "atr": 0.56,
+      "stop_loss": 39.84,
+      "target": 37.33,
+      "rr": 1.99,
+      "strategy_count": 11,
+      "buy_count": 8,
+      "sell_count": 3,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 crossed above EMA50. Gap=0.06%",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.139%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:31",
+      "titan_confidence": 0.523,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 2,
+      "quantity": 1282,
+      "qty": 1282
+    },
+    {
+      "symbol": "HINDCOPPER",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.565,
+      "signal_strength": 0.538,
+      "price": 489.2,
+      "entry_price": 489.2,
+      "atr": 4.12,
+      "stop_loss": 495.38,
+      "target": 476.83,
+      "rr": 2.0,
+      "strategy_count": 12,
+      "buy_count": 9,
+      "sell_count": 3,
+      "top_strategy": "VL4",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "CMF=0.26 \u2014 buying pressure"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:31",
+      "titan_confidence": 0.538,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 2,
+      "quantity": 102,
+      "qty": 102
+    },
+    {
+      "symbol": "ABFRL",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.523,
+      "signal_strength": 0.445,
+      "price": 60.2,
+      "entry_price": 60.2,
+      "atr": 0.84,
+      "stop_loss": 61.46,
+      "target": 57.67,
+      "rr": 2.01,
+      "strategy_count": 9,
+      "buy_count": 3,
+      "sell_count": 6,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Negative slope=-0.230%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:31",
+      "titan_confidence": 0.445,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 1,
+      "quantity": 830,
+      "qty": 830
+    },
+    {
+      "symbol": "FIRSTCRY",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.525,
+      "signal_strength": 0.449,
+      "price": 252.07,
+      "entry_price": 252.07,
+      "atr": 2.03,
+      "stop_loss": 255.11,
+      "target": 245.99,
+      "rr": 2.0,
+      "strategy_count": 13,
+      "buy_count": 7,
+      "sell_count": 5,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.129%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:31",
+      "titan_confidence": 0.449,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 1,
+      "quantity": 198,
+      "qty": 198
+    },
+    {
+      "symbol": "CCL",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.55,
+      "signal_strength": 0.506,
+      "price": 1092.0,
+      "entry_price": 1092.0,
+      "atr": 5.85,
+      "stop_loss": 1100.78,
+      "target": 1074.45,
+      "rr": 2.0,
+      "strategy_count": 17,
+      "buy_count": 12,
+      "sell_count": 5,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.147%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "INTRADAY",
+      "timestamp": "07:56:58",
+      "titan_confidence": 0.506,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 2,
+      "quantity": 45,
+      "qty": 45
+    },
+    {
+      "symbol": "RPOWER",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.489,
+      "signal_strength": 0.37,
+      "price": 22.6,
+      "entry_price": 22.6,
+      "atr": 0.1,
+      "stop_loss": 22.74,
+      "target": 22.31,
+      "rr": 2.07,
+      "strategy_count": 15,
+      "buy_count": 4,
+      "sell_count": 10,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 below EMA50 (no fresh cross)",
+        "Full bearish EMA alignment: 9<20<50",
+        "Negative slope=-0.112%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "INTRADAY",
+      "timestamp": "07:56:59",
+      "titan_confidence": 0.37,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 1,
+      "quantity": 2212,
+      "qty": 2212
+    },
+    {
+      "symbol": "DOMS",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.726,
+      "signal_strength": 0.681,
+      "price": 2275.0,
+      "entry_price": 2275.0,
+      "atr": 9.89,
+      "stop_loss": 2260.16,
+      "target": 2304.68,
+      "rr": 2.0,
+      "strategy_count": 7,
+      "buy_count": 4,
+      "sell_count": 3,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:32",
+      "titan_confidence": 0.681,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 21,
+      "qty": 21
+    },
+    {
+      "symbol": "ATHERENERG",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.622,
+      "signal_strength": 0.664,
+      "price": 795.0,
+      "entry_price": 795.0,
+      "atr": 6.56,
+      "stop_loss": 804.84,
+      "target": 775.32,
+      "rr": 2.0,
+      "strategy_count": 15,
+      "buy_count": 10,
+      "sell_count": 5,
+      "top_strategy": "M1",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.166%/bar",
+        "RSI=92.4 overbought \u2014 reversal sell"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:32",
+      "titan_confidence": 0.664,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 2,
+      "quantity": 62,
+      "qty": 62
+    },
+    {
+      "symbol": "AUROPHARMA",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.683,
+      "signal_strength": 0.595,
+      "price": 1289.0,
+      "entry_price": 1289.0,
+      "atr": 4.89,
+      "stop_loss": 1281.66,
+      "target": 1303.68,
+      "rr": 2.0,
+      "strategy_count": 7,
+      "buy_count": 5,
+      "sell_count": 1,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:32",
+      "titan_confidence": 0.595,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 38,
+      "qty": 38
+    },
+    {
+      "symbol": "LLOYDSME",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.564,
+      "signal_strength": 0.469,
+      "price": 1246.0,
+      "entry_price": 1246.0,
+      "atr": 9.46,
+      "stop_loss": 1231.8,
+      "target": 1274.39,
+      "rr": 2.0,
+      "strategy_count": 14,
+      "buy_count": 7,
+      "sell_count": 7,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Negative slope=-0.111%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:33",
+      "titan_confidence": 0.469,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 2,
+      "quantity": 40,
+      "qty": 40
+    },
+    {
+      "symbol": "ESCORTS",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.726,
+      "signal_strength": 0.681,
+      "price": 3092.0,
+      "entry_price": 3092.0,
+      "atr": 34.0,
+      "stop_loss": 3041.0,
+      "target": 3194.0,
+      "rr": 2.0,
+      "strategy_count": 9,
+      "buy_count": 6,
+      "sell_count": 3,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:33",
+      "titan_confidence": 0.681,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 16,
+      "qty": 16
+    },
+    {
+      "symbol": "LAURUSLABS",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.669,
+      "signal_strength": 0.567,
+      "price": 986.9000244140625,
+      "entry_price": 986.9000244140625,
+      "atr": 2.77,
+      "stop_loss": 982.74,
+      "target": 995.21,
+      "rr": 2.0,
+      "strategy_count": 13,
+      "buy_count": 7,
+      "sell_count": 5,
+      "top_strategy": "VL4",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "CMF=0.21 \u2014 buying pressure"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "INTRADAY",
+      "timestamp": "07:57:03",
+      "titan_confidence": 0.567,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 50,
+      "qty": 50
+    },
+    {
+      "symbol": "HINDPETRO",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.669,
+      "signal_strength": 0.566,
+      "price": 337.5,
+      "entry_price": 337.5,
+      "atr": 2.55,
+      "stop_loss": 333.68,
+      "target": 345.14,
+      "rr": 2.0,
+      "strategy_count": 10,
+      "buy_count": 5,
+      "sell_count": 4,
+      "top_strategy": "M3",
+      "reasons": [
+        "EMA20 below EMA50 (no fresh cross)",
+        "Positive slope=0.063%/bar",
+        "BB squeeze detected! Width=0.0142 vs avg=0.0538. Breakout imminent"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:33",
+      "titan_confidence": 0.566,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 148,
+      "qty": 148
+    },
+    {
+      "symbol": "IDEA",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.683,
+      "signal_strength": 0.595,
+      "price": 9.34000015258789,
+      "entry_price": 9.34000015258789,
+      "atr": 0.06,
+      "stop_loss": 9.26,
+      "target": 9.51,
+      "rr": 2.12,
+      "strategy_count": 9,
+      "buy_count": 5,
+      "sell_count": 4,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:34",
+      "titan_confidence": 0.595,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 5353,
+      "qty": 5353
+    },
+    {
+      "symbol": "TARIL",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.637,
+      "signal_strength": 0.501,
+      "price": 286.0,
+      "entry_price": 286.0,
+      "atr": 2.54,
+      "stop_loss": 282.19,
+      "target": 293.61,
+      "rr": 2.0,
+      "strategy_count": 9,
+      "buy_count": 7,
+      "sell_count": 2,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 crossed above EMA50. Gap=0.06%",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:34",
+      "titan_confidence": 0.501,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 174,
+      "qty": 174
+    },
+    {
+      "symbol": "GPIL",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.532,
+      "signal_strength": 0.397,
+      "price": 262.0,
+      "entry_price": 262.0,
+      "atr": 1.4,
+      "stop_loss": 259.9,
+      "target": 266.21,
+      "rr": 2.0,
+      "strategy_count": 9,
+      "buy_count": 5,
+      "sell_count": 3,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:34",
+      "titan_confidence": 0.397,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 2,
+      "quantity": 190,
+      "qty": 190
+    },
+    {
+      "symbol": "BAYERCROP",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.752,
+      "signal_strength": 0.735,
+      "price": 4699.0,
+      "entry_price": 4699.0,
+      "atr": 48.79,
+      "stop_loss": 4625.82,
+      "target": 4845.37,
+      "rr": 2.0,
+      "strategy_count": 8,
+      "buy_count": 7,
+      "sell_count": 0,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.414%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:34",
+      "titan_confidence": 0.735,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 10,
+      "qty": 10
+    },
+    {
+      "symbol": "HONASA",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.663,
+      "signal_strength": 0.555,
+      "price": 289.45,
+      "entry_price": 289.45,
+      "atr": 1.42,
+      "stop_loss": 287.32,
+      "target": 293.71,
+      "rr": 2.0,
+      "strategy_count": 14,
+      "buy_count": 10,
+      "sell_count": 3,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "INTRADAY",
+      "timestamp": "07:57:07",
+      "titan_confidence": 0.555,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 172,
+      "qty": 172
+    },
+    {
+      "symbol": "AWL",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.758,
+      "signal_strength": 0.746,
+      "price": 189.44,
+      "entry_price": 189.44,
+      "atr": 2.76,
+      "stop_loss": 185.3,
+      "target": 197.72,
+      "rr": 2.0,
+      "strategy_count": 8,
+      "buy_count": 7,
+      "sell_count": 1,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.223%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:35",
+      "titan_confidence": 0.746,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 263,
+      "qty": 263
+    },
+    {
+      "symbol": "OLECTRA",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.694,
+      "signal_strength": 0.616,
+      "price": 1084.9,
+      "entry_price": 1084.9,
+      "atr": 21.98,
+      "stop_loss": 1051.93,
+      "target": 1150.84,
+      "rr": 2.0,
+      "strategy_count": 8,
+      "buy_count": 5,
+      "sell_count": 3,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.296%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:35",
+      "titan_confidence": 0.616,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 46,
+      "qty": 46
+    },
+    {
+      "symbol": "IDBI",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.703,
+      "signal_strength": 0.636,
+      "price": 73.13,
+      "entry_price": 73.13,
+      "atr": 0.45,
+      "stop_loss": 72.46,
+      "target": 74.48,
+      "rr": 2.01,
+      "strategy_count": 7,
+      "buy_count": 3,
+      "sell_count": 3,
+      "top_strategy": "M3",
+      "reasons": [
+        "EMA20 below EMA50 (no fresh cross)",
+        "BB squeeze detected! Width=0.0208 vs avg=0.0491. Breakout imminent"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:35",
+      "titan_confidence": 0.636,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 683,
+      "qty": 683
+    },
+    {
+      "symbol": "HEXT",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.661,
+      "signal_strength": 0.55,
+      "price": 440.0,
+      "entry_price": 440.0,
+      "atr": 4.51,
+      "stop_loss": 433.23,
+      "target": 453.53,
+      "rr": 2.0,
+      "strategy_count": 9,
+      "buy_count": 6,
+      "sell_count": 2,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.183%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:35",
+      "titan_confidence": 0.55,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 113,
+      "qty": 113
+    },
+    {
+      "symbol": "MAHABANK",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.727,
+      "signal_strength": 0.683,
+      "price": 65.37,
+      "entry_price": 65.37,
+      "atr": 0.4,
+      "stop_loss": 64.76,
+      "target": 66.58,
+      "rr": 1.98,
+      "strategy_count": 8,
+      "buy_count": 6,
+      "sell_count": 2,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:35",
+      "titan_confidence": 0.683,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 764,
+      "qty": 764
+    },
+    {
+      "symbol": "IOB",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.62,
+      "signal_strength": 0.66,
+      "price": 34.59,
+      "entry_price": 34.59,
+      "atr": 0.38,
+      "stop_loss": 35.16,
+      "target": 33.45,
+      "rr": 2.0,
+      "strategy_count": 15,
+      "buy_count": 10,
+      "sell_count": 5,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.242%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:36",
+      "titan_confidence": 0.66,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 2,
+      "quantity": 1445,
+      "qty": 1445
+    },
+    {
+      "symbol": "SCHAEFFLER",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.558,
+      "signal_strength": 0.523,
+      "price": 4175.0,
+      "entry_price": 4175.0,
+      "atr": 35.65,
+      "stop_loss": 4228.47,
+      "target": 4068.05,
+      "rr": 2.0,
+      "strategy_count": 10,
+      "buy_count": 8,
+      "sell_count": 2,
+      "top_strategy": "T10",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50",
+        "Positive slope=0.171%/bar"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:36",
+      "titan_confidence": 0.523,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 2,
+      "quantity": 11,
+      "qty": 11
+    },
+    {
+      "symbol": "TATAELXSI",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.726,
+      "signal_strength": 0.681,
+      "price": 4237.7001953125,
+      "entry_price": 4237.7001953125,
+      "atr": 25.68,
+      "stop_loss": 4199.18,
+      "target": 4314.74,
+      "rr": 2.0,
+      "strategy_count": 7,
+      "buy_count": 4,
+      "sell_count": 2,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:36",
+      "titan_confidence": 0.681,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 11,
+      "qty": 11
+    },
+    {
+      "symbol": "JINDALSTEL",
+      "action": "BUY",
+      "signal": "BUY",
+      "confidence": 0.733,
+      "signal_strength": 0.695,
+      "price": 1186.5,
+      "entry_price": 1186.5,
+      "atr": 5.34,
+      "stop_loss": 1178.49,
+      "target": 1202.53,
+      "rr": 2.0,
+      "strategy_count": 8,
+      "buy_count": 6,
+      "sell_count": 1,
+      "top_strategy": "T2",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Full bullish EMA alignment: 9>20>50"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:37",
+      "titan_confidence": 0.695,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.573,
+      "regime_compat": true,
+      "agreement": 3,
+      "quantity": 42,
+      "qty": 42
+    },
+    {
+      "symbol": "CANBK",
+      "action": "SELL",
+      "signal": "SELL",
+      "confidence": 0.608,
+      "signal_strength": 0.633,
+      "price": 136.5500030517578,
+      "entry_price": 136.5500030517578,
+      "atr": 0.74,
+      "stop_loss": 137.66,
+      "target": 134.33,
+      "rr": 2.0,
+      "strategy_count": 9,
+      "buy_count": 3,
+      "sell_count": 5,
+      "top_strategy": "VL4",
+      "reasons": [
+        "EMA20 above EMA50 (no fresh cross)",
+        "Negative slope=-0.093%/bar",
+        "CMF=-0.20 \u2014 selling pressure"
+      ],
+      "regime": "SIDEWAYS",
+      "sentiment": 0.0,
+      "source": "TITAN",
+      "trade_type": "SWING",
+      "timestamp": "07:56:37",
+      "titan_confidence": 0.633,
+      "nexus_confidence": 0.7,
+      "hermes_confidence": 0.451,
+      "regime_compat": true,
+      "agreement": 2,
+      "quantity": 366,
+      "qty": 366
+    }
+  ],
   "capital_alloc": {},
   "portfolio": {},
   "market_data": {
+    "MRPL": {
+      "ltp": 191.0
+    },
+    "ANANTRAJ": {
+      "ltp": 468.0
+    },
+    "OLAELEC": {
+      "ltp": 25.11
+    },
+    "HAPPSTMNDS": {
+      "ltp": 400.1
+    },
+    "BHEL": {
+      "ltp": 0.0
+    },
+    "GLENMARK": {
+      "ltp": 0.0
+    },
+    "GMDCLTD": {
+      "ltp": 0.0
+    },
+    "CHENNPETRO": {
+      "ltp": 1058.0
+    },
+    "TRIVENI": {
+      "ltp": 360.0
+    },
+    "INOXWIND": {
+      "ltp": 0.0
+    },
+    "FORCEMOT": {
+      "ltp": 21750.0
+    },
+    "AARTIIND": {
+      "ltp": 427.8
+    },
+    "MAPMYINDIA": {
+      "ltp": 917.5
+    },
+    "SAGILITY": {
+      "ltp": 39.0
+    },
+    "HINDCOPPER": {
+      "ltp": 489.2
+    },
+    "ABFRL": {
+      "ltp": 60.2
+    },
+    "FIRSTCRY": {
+      "ltp": 252.07
+    },
+    "CCL": {
+      "ltp": 1092.0
+    },
+    "RPOWER": {
+      "ltp": 22.6
+    },
+    "DOMS": {
+      "ltp": 2275.0
+    },
+    "ATHERENERG": {
+      "ltp": 795.0
+    },
+    "AUROPHARMA": {
+      "ltp": 0.0
+    },
+    "LLOYDSME": {
+      "ltp": 1246.0
+    },
+    "ESCORTS": {
+      "ltp": 3092.0
+    },
+    "LAURUSLABS": {
+      "ltp": 0.0
+    },
+    "HINDPETRO": {
+      "ltp": 0.0
+    },
+    "IDEA": {
+      "ltp": 0.0
+    },
+    "TARIL": {
+      "ltp": 286.0
+    },
+    "GPIL": {
+      "ltp": 262.0
+    },
     "BAYERCROP": {
       "ltp": 4699.0
+    },
+    "HONASA": {
+      "ltp": 289.45
+    },
+    "AWL": {
+      "ltp": 189.44
+    },
+    "OLECTRA": {
+      "ltp": 1084.9
+    },
+    "IDBI": {
+      "ltp": 73.13
+    },
+    "HEXT": {
+      "ltp": 440.0
+    },
+    "MAHABANK": {
+      "ltp": 65.37
     },
     "IOB": {
       "ltp": 34.59
     },
-    "IDEA": {
+    "SCHAEFFLER": {
+      "ltp": 4175.0
+    },
+    "TATAELXSI": {
       "ltp": 0.0
     },
     "JINDALSTEL": {
       "ltp": 0.0
     },
-    "IDBI": {
-      "ltp": 73.13
-    },
-    "MAPMYINDIA": {
-      "ltp": 917.5
-    },
-    "HINDPETRO": {
-      "ltp": 0.0
-    },
-    "LAURUSLABS": {
-      "ltp": 0.0
-    },
-    "TATAELXSI": {
-      "ltp": 0.0
-    },
-    "MAHABANK": {
-      "ltp": 65.37
-    },
-    "TRIVENI": {
-      "ltp": 360.0
-    },
-    "HAPPSTMNDS": {
-      "ltp": 400.1
-    },
-    "ATHERENERG": {
-      "ltp": 795.0
-    },
-    "MRPL": {
-      "ltp": 191.0
-    },
-    "TARIL": {
-      "ltp": 286.0
-    },
-    "ANANTRAJ": {
-      "ltp": 468.0
-    },
-    "SAGILITY": {
-      "ltp": 39.0
-    },
-    "SCHAEFFLER": {
-      "ltp": 4175.0
-    },
-    "GPIL": {
-      "ltp": 262.0
-    },
-    "HEXT": {
-      "ltp": 440.0
-    },
-    "AWL": {
-      "ltp": 189.44
-    },
-    "LLOYDSME": {
-      "ltp": 1246.0
-    },
-    "GLENMARK": {
-      "ltp": 0.0
-    },
-    "HINDCOPPER": {
-      "ltp": 489.2
-    },
-    "FORCEMOT": {
-      "ltp": 21750.0
-    },
-    "CCL": {
-      "ltp": 1092.0
-    },
-    "DOMS": {
-      "ltp": 2275.0
-    },
-    "AUROPHARMA": {
-      "ltp": 0.0
-    },
-    "OLECTRA": {
-      "ltp": 1084.9
-    },
-    "HONASA": {
-      "ltp": 289.45
-    },
-    "INOXWIND": {
-      "ltp": 0.0
-    },
-    "ESCORTS": {
-      "ltp": 3092.0
-    },
-    "ABFRL": {
-      "ltp": 60.2
-    },
-    "BHEL": {
-      "ltp": 0.0
-    },
-    "OLAELEC": {
-      "ltp": 25.11
-    },
-    "RPOWER": {
-      "ltp": 22.6
-    },
-    "GMDCLTD": {
-      "ltp": 0.0
-    },
-    "AARTIIND": {
-      "ltp": 427.8
-    },
-    "CHENNPETRO": {
-      "ltp": 1058.0
-    },
-    "FIRSTCRY": {
-      "ltp": 252.07
-    },
-    "LLOYDSME:SWING": {
-      "ltp": 1246.0
-    },
-    "CANBK:SWING": {
-      "ltp": 0.0
-    },
-    "INOXWIND:SWING": {
+    "CANBK": {
       "ltp": 0.0
     }
   },
@@ -471,108 +1866,1469 @@
   "last_training_date": null,
   "last_wf_date": null,
   "last_trade_time": {},
-  "macro": {
-    "macro_bias": "BULLISH",
-    "risk_level": "MEDIUM",
-    "size_mult": 0.9,
-    "regime_hint": "TRENDING",
-    "vix": 15.0,
-    "fii_flow_cr": 0.0,
-    "usdinr": 0.0,
-    "spx_ret_pct": 0.0,
-    "crude_ret_pct": 0.0,
-    "status": "MISSING",
-    "timestamp": "2026-03-21T03:42:39.942566"
+  "intelligence": {
+    "MRPL": {
+      "fundamentals": {
+        "sector": "Energy",
+        "industry": "Oil & Gas Refining & Marketing",
+        "market_cap": 335454076928,
+        "pe_ratio": 15.381335,
+        "pb_ratio": 2.5157242,
+        "debt_equity": 81.274,
+        "div_yield": 2.09,
+        "beta": 0.384,
+        "rev_growth": 0.13,
+        "profit_margin": 0.024330001,
+        "description": "Mangalore Refinery and Petrochemicals Limited engages in the manufacture and sale of refined petroleum products in India. The company produces and sells bitumen, Xylol, high speed diesel, xylol, pet coke, sulphur, and motor gasoline, as well as polypropylene and other products. It also sells petrochemical products, such as aromatic products comprising paraxylene, benzene, heavy aromatics, paraffinic raffinate, reformate, and toluene. In addition, the company operates retail outlets. It also exports its products. Mangalore Refinery and Petrochemicals Limited was incorporated in 1988 and is based in Mangalore, India. Mangalore Refinery and Petrochemicals Limited is a subsidiary of Oil and Natural Gas Corporation Limited.",
+        "website": "https://www.mrpl.co.in",
+        "employees": 2530,
+        "updated_at": "2026-03-21T07:10:53.928962"
+      },
+      "volume": {
+        "vol_last": 46353076,
+        "vol_avg_20": 24682115,
+        "vol_ratio": 1.88,
+        "vol_profile": {
+          "178.1-183.9": 8462814,
+          "183.9-189.6": 52269413,
+          "189.6-195.3": 206846506,
+          "195.3-201.0": 142086232,
+          "201.0-206.8": 34921630
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057280.1428645
+    },
+    "ANANTRAJ": {
+      "fundamentals": {
+        "sector": "Real Estate",
+        "industry": "Real Estate - Development",
+        "market_cap": 167740571648,
+        "pe_ratio": 30.688406,
+        "pb_ratio": 3.6345694,
+        "debt_equity": 12.727,
+        "div_yield": 0.16,
+        "beta": 0.014,
+        "rev_growth": 0.2,
+        "profit_margin": 0.21916,
+        "description": "Anant Raj Limited is primarily engaged in the real estate and infrastructure development business in India. It develops and constructs residential townships, group housings, commercial developments, information and technology parks, malls, office complexes, affordable housings, data centres, hospitality, and serviced apartments. The company was formerly known as Anant Raj Industries Limited and changed its name to Anant Raj Limited in October 2012. The company was founded in 1969 and is headquartered in New Delhi, India.",
+        "website": "https://www.anantrajlimited.com",
+        "employees": 0,
+        "updated_at": "2026-03-21T07:10:30.005898"
+      },
+      "volume": {
+        "vol_last": 2235930,
+        "vol_avg_20": 1772916,
+        "vol_ratio": 1.26,
+        "vol_profile": {
+          "442.0-466.7": 9865221,
+          "466.7-491.4": 12686993,
+          "491.4-516.1": 4361676,
+          "516.1-540.8": 6140691,
+          "540.8-565.5": 28978273
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057252.2316573
+    },
+    "OLAELEC": {
+      "fundamentals": {
+        "sector": "Consumer Cyclical",
+        "industry": "Auto Manufacturers",
+        "market_cap": 103522533376,
+        "pe_ratio": 0,
+        "pb_ratio": 2.4989865,
+        "debt_equity": 71.879,
+        "div_yield": 0,
+        "beta": 1.0,
+        "rev_growth": -0.55,
+        "profit_margin": -0.84763,
+        "description": "Ola Electric Mobility Limited develops, manufactures, and sells electric vehicles in India. It operates through the Automotive and Cell segments. The company provides electric scooters; and electric vehicle components, such as battery packs, motors and vehicle frames, and cells. It also offers charging solutions, as well as operates service centers. Ola Electric Mobility Limited was incorporated in 2017 and is based in Bengaluru, India.",
+        "website": "https://www.olaelectric.com",
+        "employees": 4037,
+        "updated_at": "2026-03-21T07:10:28.037325"
+      },
+      "volume": {
+        "vol_last": 51110089,
+        "vol_avg_20": 60673128,
+        "vol_ratio": 0.84,
+        "vol_profile": {
+          "23.1-24.8": 734849942,
+          "24.8-26.5": 425260851,
+          "26.5-28.2": 360575376,
+          "28.2-30.0": 85359167,
+          "30.0-31.7": 173322812
+        },
+        "vol_trend": "FALLING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057247.113397
+    },
+    "HAPPSTMNDS": {
+      "fundamentals": {
+        "sector": "Technology",
+        "industry": "Information Technology Services",
+        "market_cap": 61722456064,
+        "pe_ratio": 33.45684,
+        "pb_ratio": 3.7782438,
+        "debt_equity": 0,
+        "div_yield": 1.52,
+        "beta": -0.093,
+        "rev_growth": 0.358,
+        "profit_margin": 0.08222,
+        "description": "Happiest Minds Technologies Limited provides information technology (IT) solutions and services in India, the Americas, Australia, Europe, Asia, the Middle East, and Africa. It operates through three segments: Infrastructure Management and Security Services (IMSS); Product and Digital Engineering Services (PDES); and Generative AI Business Services (GBS). The IMSS segment provides integrated end-to-end infrastructure and security solutions comprising advisory, transformation, and managed operations; end-to-end gen AI-enabled solutions, such as infrastructure assessments and cloud migration, AI-powered threat detection, and continuous security monitoring; cloud and data center, databases and application platforms, digital workplace, enterprise networking, and IT services and operations management tools and platforms; strategy and consulting, and managed security; and identify security, cloud infrastructure protection, threat and vulnerability, and OT security solutions. The GBS segment offers consulting, engineering, testing, infrastructure management and support, and pre-built solutions/companions; and AI services, AI-powered applications, and customized generative AI models. The PDES segment provides business and IT consulting; marketing analytics; digital process automation for front, mid, and back-office operations; analytics and visualization; business-specific application development, maintenance, and support; intelligent test automation and engineering; and digital front door, healthcare enterprises connecting, healthcare data democratization and RWE, operational of DCT/digital trials, medical device engineering, cybersecurity in healthcare, core system modernization, and semantic interoperability services. This segment also offers product engineering, open-source stack, mobility, data analytics and business intelligence, accessibility, edtech compliance, integration, education CRM, Generative AI, digital process automation, cybersecurity, and personalized content services. The company was incorporated in 2011 and is headquartered in Bengaluru, India.",
+        "website": "https://www.happiestminds.com",
+        "employees": 4886,
+        "updated_at": "2026-03-21T07:10:41.162433"
+      },
+      "volume": {
+        "vol_last": 32020288,
+        "vol_avg_20": 7777489,
+        "vol_ratio": 4.12,
+        "vol_profile": {
+          "337.5-352.3": 4227661,
+          "352.3-367.2": 2415095,
+          "367.2-382.0": 7738365,
+          "382.0-396.9": 11580251,
+          "396.9-411.7": 70472947
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057257.564696
+    },
+    "BHEL": {
+      "fundamentals": {
+        "sector": "Industrials",
+        "industry": "Specialty Industrial Machinery",
+        "market_cap": 912474636288,
+        "pe_ratio": 112.46781,
+        "pb_ratio": 3.7280202,
+        "debt_equity": 44.956,
+        "div_yield": 0.19,
+        "beta": 0.544,
+        "rev_growth": 0.164,
+        "profit_margin": 0.026730001,
+        "description": "Bharat Heavy Electricals Limited operates as power plant equipment manufacturer in India and internationally. The company operates in two segments: Power and Industry. It offers equipment supplies; spares and services; and undertakes engineering, procurement, and construction works for coal and lignite, gas, hydro and nuclear power plant, as well as for transportation, transmission, defence, aerospace, captive power plants, process, renewables, upstream and downstream oil and gas, e-mobility and energy storage, and other industries. The company also provides coal based, gas-based, nuclear, and hydro power plants, as well as solar power systems; transportation and transmission systems; defense and aerospace products; industrial systems; energy storage system and e-mobility solutions; and hydrogen power systems. In addition, it offers steam generators and steam generator auxiliaries, soot blowers, valves, piping systems, seamless steel tubes, pressurized fluidized bed gasifiers, steam and gas turbines, turbo generators, industrial sets, castings and forgings, condenser and heat exchangers, pumps, compressors, solar photovoltaics, and automation and control systems. Further, the company provides software system solutions, medium voltage vacuum switchgears, on load tap changers, LT switchgears and bus ducts, transformers and reactors, capacitors, bushings, control gears, insulators and ceramics, and electrical machines. It also provides rail transportation systems and equipment, oil field equipment, and fabricated equipment and mechanical packages. The company was incorporated in 1964 and is based in New Delhi, India.",
+        "website": "https://www.bhel.com",
+        "employees": 41132,
+        "updated_at": "2026-03-21T07:10:52.784137"
+      },
+      "volume": {
+        "vol_last": 19053789,
+        "vol_avg_20": 9761614,
+        "vol_ratio": 1.95,
+        "vol_profile": {
+          "247.9-253.5": 28888732,
+          "253.5-259.2": 118312224,
+          "259.2-264.8": 262837183,
+          "264.8-270.5": 34641638,
+          "270.5-276.1": 5685381
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057278.1401343
+    },
+    "GLENMARK": {
+      "fundamentals": {
+        "sector": "Healthcare",
+        "industry": "Drug Manufacturers - Specialty & Generic",
+        "market_cap": 615437565952,
+        "pe_ratio": 57.796925,
+        "pb_ratio": 6.420254,
+        "debt_equity": 12.776,
+        "div_yield": 0.23,
+        "beta": 0.293,
+        "rev_growth": 0.151,
+        "profit_margin": 0.06451,
+        "description": "Glenmark Pharmaceuticals Limited, together with its subsidiaries, develops, manufactures, and sells generics, specialty medicines, and over the counter (OTC) pharmaceutical products in India, North America, Europe, and internationally. The company provides branded, OTC, and generic formulations in the therapeutic areas of dermatology, respiratory, oncology, immunology, pain management, hypertension, central nervous system, cardiology, diabetes, contraceptives, gynecology, gastroenterology, and anti-infective in the dosage forms of complex injectables and biologics, oral solids, liquids, topical products, and respiratory-metered dose inhaler, dry powder inhaler, and nasal sprays. Its product pipeline includes ISB 2001, a CD38 x BCMA x CD3 TREAT trispecific T cell engager, which is in Phase 1 clinical trial for indication of relapsed/refractory multiple myeloma; ISB 2301, a NK cell engager that is in preclinical trial for solid tumors; and GRC 65327, a Cbl-b inhibitor small molecule for solid tumors. The company's pipeline also comprises ISB 880, an IL-1RAP antagonist monoclonal antibody, which is in Phase 1 clinical trial for the treatment of hidradenitis suppurativa; and ISB 830-X8, a telazorlimab OX40 antagonist antibody that is in Phase 2 clinical trial for the treatment of atopic dermatitis. In addition, the company offers Ryaltris nasal spray for the treatment of seasonal allergic rhinitis. The company was incorporated in 1977 and is based in Mumbai, India.",
+        "website": "https://glenmarkpharma.com",
+        "employees": 15800,
+        "updated_at": "2026-03-21T07:10:53.777132"
+      },
+      "volume": {
+        "vol_last": 596885,
+        "vol_avg_20": 589446,
+        "vol_ratio": 1.01,
+        "vol_profile": {
+          "1934.8-2002.4": 2034090,
+          "2002.4-2070.0": 3835530,
+          "2070.0-2137.5": 3628928,
+          "2137.5-2205.1": 3298792,
+          "2205.1-2272.7": 2550923
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057279.543953
+    },
+    "GMDCLTD": {
+      "fundamentals": {
+        "sector": "Energy",
+        "industry": "Thermal Coal",
+        "market_cap": 183103193088,
+        "pe_ratio": 18.517208,
+        "pb_ratio": 2.722488,
+        "debt_equity": 4.139,
+        "div_yield": 1.75,
+        "beta": 0.208,
+        "rev_growth": -0.114,
+        "profit_margin": 0.36136,
+        "description": "Gujarat Mineral Development Corporation Limited engages in mining and mineral processing business in India. The company operates through two segments, Mining and Power. It explores for lignite, bauxite, fluorspar, manganese, silica sand, limestone, bentonite, and ball clay. The company's products used in the textiles, chemicals, ceramics, bricks and captive power. Its products are also used in the electricity and synthetic natural gas generation, agriculture, mining and refining, transportation, hydrofluoric acid, refrigerant gas, flux in metallurgical, tableware, quick and hydrated lime, limestone tile and slab, wall cladding, vanity top, and synthetic foundry moulding catalyst sectors. The company also generates power using thermal, wind, and solar resources. Gujarat Mineral Development Corporation Limited was incorporated in 1963 and is based in Ahmedabad, India.",
+        "website": "https://www.gmdcltd.com",
+        "employees": 765,
+        "updated_at": "2026-03-21T07:10:30.255446"
+      },
+      "volume": {
+        "vol_last": 32106450,
+        "vol_avg_20": 3716392,
+        "vol_ratio": 8.64,
+        "vol_profile": {
+          "528.8-547.7": 20563376,
+          "547.7-566.6": 20276908,
+          "566.6-585.5": 49436799,
+          "585.5-604.4": 9150398,
+          "604.4-623.3": 5027036
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057252.7987537
+    },
+    "CHENNPETRO": {
+      "fundamentals": {
+        "sector": "Energy",
+        "industry": "Oil & Gas Refining & Marketing",
+        "market_cap": 158705106944,
+        "pe_ratio": 7.369022,
+        "pb_ratio": 1.7962643,
+        "debt_equity": 21.902,
+        "div_yield": 0.47,
+        "beta": 0.14,
+        "rev_growth": 0.213,
+        "profit_margin": 0.033570003,
+        "description": "Chennai Petroleum Corporation Limited produces and supplies petroleum products in India. The company offers liquefied petroleum gas, naphtha, motor gasoline and spirit, kerosene, aviation turbine fuel, automotive high-speed and high flash diesel, light diesel oil, and bunker and non-bunker fuel oil. It also provides lube products, such as paving bitumen, lube oil base stocks, and extracts. In addition, the company offers paraffin wax, mineral turpentine oil, food grade and pharma grade hexane, petrochemical feedstocks, micro crystalline wax, sulphur, pet-coke, propylene, poly butene feedstock (PBFS), methyl ethyl ketone feedstock, and kerosene supply. Further, it provides asphalt, linear alkyl benzene feedstock, butene-2, lean butene, lean PBFS, furnace oil, isrosene, ISRO naphtha, propylene glycol and polyols, poly iso-butylene, NATO diesel, JP-5 fuel for fighter jets, and missile fuels. The company was formerly known as Madras Refineries Limited and changed its name to Chennai Petroleum Corporation Limited in June 2000. The company was incorporated in 1965 and is based in Chennai, India. Chennai Petroleum Corporation Limited is a subsidiary of Indian Oil Corporation Limited.",
+        "website": "https://www.cpcl.co.in",
+        "employees": 1413,
+        "updated_at": "2026-03-21T07:10:27.920488"
+      },
+      "volume": {
+        "vol_last": 4575447,
+        "vol_avg_20": 3291874,
+        "vol_ratio": 1.39,
+        "vol_profile": {
+          "879.0-916.2": 6562096,
+          "916.2-953.4": 16695679,
+          "953.4-990.6": 10497428,
+          "990.6-1027.8": 24806729,
+          "1027.8-1065.1": 4575447
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057248.707947
+    },
+    "TRIVENI": {
+      "fundamentals": {
+        "sector": "Consumer Defensive",
+        "industry": "Confectioners",
+        "market_cap": 78799847424,
+        "pe_ratio": 25.736767,
+        "pb_ratio": 2.5587595,
+        "debt_equity": 24.554,
+        "div_yield": 1.17,
+        "beta": 0.277,
+        "rev_growth": 0.165,
+        "profit_margin": 0.04639,
+        "description": "Triveni Engineering & Industries Limited engages in the sugar and allied businesses, and engineering businesses in India and internationally. The company is involved in the production of refined sugar, multi-grade white crystal sugar, and pharmaceutical-grade sugar; power generation using captively produced bagasse; production of alcohol/ethanol using molasses; operation of distilleries; and production of ethanol, extra neutral alcohol, and potable liquor. It also engages in the manufacture of low-speed gears and gear boxes covering supply to OEMs, after-market services, and retrofitment of gearboxes; EPC contracts, equipment supply, and operations and maintenance contracts; operation of fuel stations; and retail of diesel/petrol. In addition, the company provides engineered-to-order process equipment and comprehensive solutions; propulsion and other critical gearboxes, critical turbo and motor driven pumps, gas turbine generators for auxiliary power, fin stabilizers, propulsion shafting, winches, and engineered solutions; water treatment, water and wastewater network management, wastewater/sewage treatment, desalination for seawater and brackish water, recycle and zero liquid discharge services; and operation and maintenance contracts, products and process audits, health check-ups, upgradation of existing plants, and on-site support, as well as spares and services. It serves industrial clusters, refineries, coal, sand processing plant, non-ferrous industries, oil and gas, thermal and hydro power plants, steel plants, sugar and allied industries, and desalination industries. Triveni Engineering & Industries Limited was incorporated in 1932 and is headquartered in Noida, India.",
+        "website": "https://www.trivenigroup.com",
+        "employees": 2850,
+        "updated_at": "2026-03-21T07:10:53.632973"
+      },
+      "volume": {
+        "vol_last": 677444,
+        "vol_avg_20": 445866,
+        "vol_ratio": 1.52,
+        "vol_profile": {
+          "335.5-348.1": 1761713,
+          "348.1-360.8": 1131045,
+          "360.8-373.5": 639460,
+          "373.5-386.2": 1692604,
+          "386.2-398.9": 3396556
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057279.7848318
+    },
+    "INOXWIND": {
+      "fundamentals": {
+        "sector": "Industrials",
+        "industry": "Specialty Industrial Machinery",
+        "market_cap": 141519126528,
+        "pe_ratio": 29.868612,
+        "pb_ratio": 1.6075426,
+        "debt_equity": 15.713,
+        "div_yield": 0,
+        "beta": -0.385,
+        "rev_growth": 0.325,
+        "profit_margin": 0.113350004,
+        "description": "Inox Wind Limited engages in the manufacture and sale of wind turbine generators and components for independent power producers, utilities, public sector undertakings, businesses, and private investors in India. It provides wind turbine generator components, including nacelles, hubs, rotor blade, and tubular towers. The company offers various services, such as wind resource assessment, site acquisition, infrastructure development, erection, procurement and commissioning, and long-term operations and maintenance services for wind power projects. Inox Wind Limited was incorporated in 2009 and is based in Noida, India.",
+        "website": "https://inoxwind.com",
+        "employees": 1235,
+        "updated_at": "2026-03-21T07:10:53.330869"
+      },
+      "volume": {
+        "vol_last": 29331679,
+        "vol_avg_20": 12006727,
+        "vol_ratio": 2.44,
+        "vol_profile": {
+          "78.1-84.7": 144555715,
+          "84.7-91.3": 32642894,
+          "91.3-98.0": 75027876,
+          "98.0-104.6": 82513036,
+          "104.6-111.2": 36546853
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057279.181061
+    },
+    "FORCEMOT": {
+      "fundamentals": {
+        "sector": "Consumer Cyclical",
+        "industry": "Auto Manufacturers",
+        "market_cap": 284409626624,
+        "pe_ratio": 20.789991,
+        "pb_ratio": 8.111295,
+        "debt_equity": 0,
+        "div_yield": 0.19,
+        "beta": 0.502,
+        "rev_growth": 0.127,
+        "profit_margin": 0.15433,
+        "description": "Force Motors Limited, an integrated automobile company, designs, develops, manufactures, and sells a range of automotive components, aggregates, and vehicles in India. The company provides passenger vehicles, ambulances, school buses, and delivery van; small commercial, light commercial, multi utility vehicles, special vehicles, and spare parts; special utility vehicles, which include off-roaders/recreation vehicles and military vehicles; and agricultural tractors. Its product portfolio consists of urbania, a ground-up modular monocoque van platform for shared urban mobility; traveller, a platform that caters to passenger transport, cargo delivery, ambulances, and school buses; monobus; trax, a rugged utility vehicle platform for rural and last mile transport; special application vehicles; gurkha off-road vehicle; and electric vehicles. In addition, the company offers shared mobility solutions, commercial fleets, specialized transport, and defense solutions. It exports its products to various countries in the Middle East, Asia, Latin America, and Africa. The company was incorporated in 1958 and is based in Pune, India. Force Motors Limited operates as a subsidiary of Jaya Hind Industries Pvt. Ltd.",
+        "website": "https://www.forcemotors.com",
+        "employees": 4640,
+        "updated_at": "2026-03-21T07:10:23.549307"
+      },
+      "volume": {
+        "vol_last": 88432,
+        "vol_avg_20": 108568,
+        "vol_ratio": 0.81,
+        "vol_profile": {
+          "20245.0-21351.2": 652228,
+          "21351.2-22457.4": 1186777,
+          "22457.4-23563.6": 94543,
+          "23563.6-24669.8": 991540,
+          "24669.8-25776.0": 632108
+        },
+        "vol_trend": "FALLING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057237.014464
+    },
+    "AARTIIND": {
+      "fundamentals": {
+        "sector": "Basic Materials",
+        "industry": "Specialty Chemicals",
+        "market_cap": 155189477376,
+        "pe_ratio": 41.012478,
+        "pb_ratio": 2.7252553,
+        "debt_equity": 69.555,
+        "div_yield": 0.24,
+        "beta": 0.464,
+        "rev_growth": 0.26,
+        "profit_margin": 0.047059998,
+        "description": "Aarti Industries Limited engages in the manufacture and sale of specialty chemicals in India and internationally. It offers di chloro benzene, nitro chloro and nitro benzene, nitro toluenes, sulphur, and other organic and inorganic products; chlorination, nitration, hydrogenation, ammonolysis, halex, dinitro chlorination, alkylation, hydrolysis, methoxylation, esterification, diazotization, sulphonation, condensation, n-alkylation, and oxidation. It also provides end use products, including dyes, basic pharma, pigments, agro chemicals, polymers, fertilizers, UV absorbers, plasticizers, specialty chemicals, flavour fragrance and food beverage products, and refinery and oil field chemicals, as well as intermediates. Aarti Industries Limited was incorporated in 1984 and is headquartered in Mumbai, India.",
+        "website": "https://www.aarti-industries.com",
+        "employees": 5868,
+        "updated_at": "2026-03-21T07:10:21.442044"
+      },
+      "volume": {
+        "vol_last": 1189070,
+        "vol_avg_20": 869409,
+        "vol_ratio": 1.37,
+        "vol_profile": {
+          "409.2-421.5": 3922818,
+          "421.5-433.7": 7240794,
+          "433.7-445.9": 1339511,
+          "445.9-458.2": 8857740,
+          "458.2-470.4": 3828741
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057230.6645832
+    },
+    "MAPMYINDIA": {
+      "fundamentals": {
+        "sector": "Technology",
+        "industry": "Software - Infrastructure",
+        "market_cap": 50108628992,
+        "pe_ratio": 38.17007,
+        "pb_ratio": 6.1295524,
+        "debt_equity": 1.148,
+        "div_yield": 0.38,
+        "beta": -0.185,
+        "rev_growth": -0.182,
+        "profit_margin": 0.27922,
+        "description": "C. E. Info Systems Limited provides digital mapping, geospatial, and Internet of Things (IoT) platform solutions in India and internationally. The company offers digital maps and geospatial data products. It also provides mGIS, geospatial and analytics, and ML/AI engine for processing geospatial data; IoT and telematics solutions, InTouch platform, workmate, and hardware and sensors; and Map portal, Mappls app, Mappls gadgets, Mappls pin, Political map of India, and India maps. In addition, the company offers NCASE Automotive Suite, NaviMaps, Mappls App, Mappls Gadgets, and Navigation SDK. Further, it provides map APIs and SDKs, combat covid APIs, InTouch SDK, workmate APIs, and GIS and analytics APIs. Additionally, it offers drone services, including DroneTech and solutions for drones. The company offers its solutions to automotive, enterprise, government, and mobility and IoT industries. C. E. Info Systems Limited was founded in 1992 and is headquartered in New Delhi, India.",
+        "website": "https://www.mapmyindia.com",
+        "employees": 551,
+        "updated_at": "2026-03-21T07:10:53.929972"
+      },
+      "volume": {
+        "vol_last": 833272,
+        "vol_avg_20": 199579,
+        "vol_ratio": 4.18,
+        "vol_profile": {
+          "863.5-950.5": 2227418,
+          "950.5-1037.5": 1106270,
+          "1037.5-1124.4": 1116499,
+          "1124.4-1211.4": 1883201,
+          "1211.4-1298.4": 409840
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057279.1349025
+    },
+    "SAGILITY": {
+      "fundamentals": {
+        "sector": "Healthcare",
+        "industry": "Health Information Services",
+        "market_cap": 182852698112,
+        "pe_ratio": 21.580112,
+        "pb_ratio": 2.078323,
+        "debt_equity": 13.851,
+        "div_yield": 0.26,
+        "beta": 1.0,
+        "rev_growth": 0.357,
+        "profit_margin": 0.12611,
+        "description": "Sagility Limited engages in the provision of business process management services to the healthcare and insurance industries in India, Jamaica, the Philippines, the United States, and Colombia. The company offers claims cost containment and management, member and provider engagement, enrolment, benefits plan building, payment integrity and billing, credentialing, clinical and case management, provider network operation services, analytics, front and back-office, administrative support provider, and data management services. It also provides utilization and care management, and population health management, as well as revenue cycle management functions, such as financial clearance, medical coding, billing, labs and durable medical equipment support, patient access and engagement, and accounts receivable follow-up services. In addition, it provides services to pharmacy benefit managers that manage prescription drugs for members under health insurance plans. Further, it offers various platforms, including document processing engine, genAI solutions for customer and member engagement, nurse assist, revenue cycle management, provider forward, enrolment and plan automation, and contract central. The company was formerly known as Sagility India Limited and changed its name to Sagility Limited in August 2025. The company was incorporated in 2021 and is based in Bengaluru, India. Sagility Limited operates as a subsidiary of Sagility B.V.",
+        "website": "https://www.sagilityhealth.com",
+        "employees": 48522,
+        "updated_at": "2026-03-21T07:10:32.463179"
+      },
+      "volume": {
+        "vol_last": 111634024,
+        "vol_avg_20": 40992652,
+        "vol_ratio": 2.72,
+        "vol_profile": {
+          "37.4-39.9": 473518657,
+          "39.9-42.5": 269922483,
+          "42.5-45.0": 76411916,
+          "45.0-47.5": 99012557,
+          "47.5-50.1": 73522821
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057254.151504
+    },
+    "HINDCOPPER": {
+      "fundamentals": {
+        "sector": "Basic Materials",
+        "industry": "Copper",
+        "market_cap": 473492553728,
+        "pe_ratio": 71.45256,
+        "pb_ratio": 15.961715,
+        "debt_equity": 4.776,
+        "div_yield": 0.5,
+        "beta": 1.588,
+        "rev_growth": 1.097,
+        "profit_margin": 0.2493,
+        "description": "Hindustan Copper Limited engages in the exploration, exploitation, and mining of copper and copper ores in India. It offers continuous cast copper rods, copper cathodes, copper concentrates, copper sulfate, sulphuric acid, reverts, anode slime, and nickel cathodes. The company's flagship project is the Malanjkhand Copper project located in Madhya Pradesh. It also involved in the beneficiation, smelting, and refining of minerals. The company also exports its products. Hindustan Copper Limited was incorporated in 1967 and is based in Kolkata, India.",
+        "website": "https://www.hindustancopper.com",
+        "employees": 1274,
+        "updated_at": "2026-03-21T07:10:48.842188"
+      },
+      "volume": {
+        "vol_last": 17029763,
+        "vol_avg_20": 11070320,
+        "vol_ratio": 1.54,
+        "vol_profile": {
+          "470.5-501.1": 79963816,
+          "501.1-531.8": 8013312,
+          "531.8-562.4": 68037847,
+          "562.4-593.1": 174435432,
+          "593.1-623.7": 46881692
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057265.1446853
+    },
+    "ABFRL": {
+      "fundamentals": {
+        "sector": "Consumer Cyclical",
+        "industry": "Apparel Manufacturing",
+        "market_cap": 72958926848,
+        "pe_ratio": 0,
+        "pb_ratio": 1.1640725,
+        "debt_equity": 84.682,
+        "div_yield": 0,
+        "beta": -0.455,
+        "rev_growth": -0.456,
+        "profit_margin": -0.03649,
+        "description": "Aditya Birla Fashion and Retail Limited manufactures, distributes, and retails fashion apparel and accessories in India and internationally. It operates in Pantaloons and Ethnic & Others segments. The company offers shirts, trousers, denims, t-shirts, dresses, suits and blazers, casuals, ceremonial, and party wear; shorts, joggers, track pants, sweatshirts, jackets, polos, chinos, kurtas and bottom wear, occasion wear, festive ensembles, classic shirts, logo T-shirts, casual pants, lehengas and kurta sets, innerwear, athleisure wear, workwear, tops, sleepwear, crops tops, skirts, jeans, and sportswear; and accessories, as well as footwear, handbags, bed linen, towels, smart table linen, dressy cushion covers, and others. It markets its products under the Louis Philippe, Van Heusen, Allen Solly, and Peter England brands, as well as The Collective, Ralph Lauren, Hackett London, Ted Baker, and Fred Perry luxury brands; and ethnic wear products under the Sabyasachi, S&N' by Shantnu & Nikhil, Tasva, Tarun Tahiliani, House of Masaba, and Jaypore brands, as well as operates fashion store under the Pantaloons brand name. The company was formerly known as Pantaloons Fashion & Retail Limited and changed its name to Aditya Birla Fashion and Retail Limited in January 2016. The company was incorporated in 2007 and is based in Mumbai, India.",
+        "website": "https://www.abfrl.com",
+        "employees": 33085,
+        "updated_at": "2026-03-21T07:10:27.503595"
+      },
+      "volume": {
+        "vol_last": 32777362,
+        "vol_avg_20": 4911891,
+        "vol_ratio": 6.67,
+        "vol_profile": {
+          "56.8-60.3": 53523597,
+          "60.3-63.8": 21584596,
+          "63.8-67.3": 12663931,
+          "67.3-70.8": 21867193,
+          "70.8-74.3": 35860790
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057248.7039456
+    },
+    "FIRSTCRY": {
+      "fundamentals": {
+        "sector": "Consumer Cyclical",
+        "industry": "Internet Retail",
+        "market_cap": 121712590848,
+        "pe_ratio": 0,
+        "pb_ratio": 2.5269954,
+        "debt_equity": 31.483,
+        "div_yield": 0,
+        "beta": 1.0,
+        "rev_growth": 0.116,
+        "profit_margin": -0.022449998,
+        "description": "Brainbees Solutions Limited operates multi-channel retailing platform for mothers, babies, and kids products in India and internationally. The company offers products in various categories, including boy and girl fashion products, footwear, toys, diapering and gear products, feeding and bath products, nursery products, health and safety products, boutiques, women's beauty and care products, moms and maternity products, birthday and gift products, books and CDs, and school supplies under third-party Indian brands and global brands, as well as its home brands, such as BabyHug, Babyoye, Cutewalk, Pine Kids, and others. It also owns and operates pre-schools. The company sells its products through company-owned modern stores, franchisee-owned modern stores, and general trade retail distribution, as well as through FirstCry platform. Brainbees Solutions Limited was incorporated in 2010 and is headquartered in Pune, India.",
+        "website": "https://www.firstcry.com",
+        "employees": 3752,
+        "updated_at": "2026-03-21T07:10:53.862067"
+      },
+      "volume": {
+        "vol_last": 70441214,
+        "vol_avg_20": 7809752,
+        "vol_ratio": 9.02,
+        "vol_profile": {
+          "210.1-224.7": 98102689,
+          "224.7-239.4": 4830565,
+          "239.4-254.1": 79622857,
+          "254.1-268.8": 1004083,
+          "268.8-283.5": 3275406
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057279.899512
+    },
+    "CCL": {
+      "fundamentals": {
+        "sector": "Consumer Defensive",
+        "industry": "Packaged Foods",
+        "market_cap": 144866181120,
+        "pe_ratio": 38.608448,
+        "pb_ratio": 6.9436197,
+        "debt_equity": 77.989,
+        "div_yield": 0.71,
+        "beta": -0.026,
+        "rev_growth": 0.384,
+        "profit_margin": 0.092089996,
+        "description": "CCL Products (India) Limited manufactures and sells instant coffee and coffee related products in India. The company offers filter, premix, instant, and flavored coffee, including spray dried coffee powder and agglomerated coffee, freeze dried coffee, freeze concentrated liquid coffee, roast and ground coffee, and roasted coffee beans under the Continental brand. It also exports its products. CCL Products (India) Limited was incorporated in 1961 and is based in Hyderabad, India.",
+        "website": "https://www.cclproducts.com",
+        "employees": 1358,
+        "updated_at": "2026-03-21T07:10:32.750806"
+      },
+      "volume": {
+        "vol_last": 912056,
+        "vol_avg_20": 427365,
+        "vol_ratio": 2.13,
+        "vol_profile": {
+          "987.9-1007.8": 1080381,
+          "1007.8-1027.8": 2461216,
+          "1027.8-1047.7": 5718934,
+          "1047.7-1067.7": 853773,
+          "1067.7-1087.6": 0
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057254.9415035
+    },
+    "RPOWER": {
+      "fundamentals": {
+        "sector": "Utilities",
+        "industry": "Utilities - Independent Power Producers",
+        "market_cap": 93551140864,
+        "pe_ratio": 32.78261,
+        "pb_ratio": 0.56678945,
+        "debt_equity": 92.224,
+        "div_yield": 0,
+        "beta": 0.706,
+        "rev_growth": 0.011,
+        "profit_margin": 0.03667,
+        "description": "Reliance Power Limited, together with its subsidiaries, engages in the development, construction, and operation of power projects in India and internationally. Its portfolio of power projects is based on coal, gas, hydro, wind, and solar energy. The company owns and operates Sasan ultra mega power project, a coal-based power plant with a capacity of 3,960 megawatts; Rosa coal-based power project, with a capacity of 1,200; Butibori power project, a coal-based thermal plant with a capacity of 600 megawatts; Dhursar solar photovoltaic power project with a capacity of 40 megawatts; a concentrated solar power project with a capacity of 100 megawatts; and Ultra Mega power project, a coal-based power plant with a capacity of 3,960 megawatts. It also engages in the development of coal mines in India, including The Moher and Moher Amlohri Extension coal block, as well as the operation of a coal mine concessions in Indonesia. Reliance Power Limited was incorporated in 1995 and is based in Mumbai, India.",
+        "website": "https://www.reliancepower.co.in",
+        "employees": 1267,
+        "updated_at": "2026-03-21T07:10:51.364454"
+      },
+      "volume": {
+        "vol_last": 73391945,
+        "vol_avg_20": 46641915,
+        "vol_ratio": 1.57,
+        "vol_profile": {
+          "21.8-23.1": 598772567,
+          "23.1-24.5": 207462635,
+          "24.5-25.8": 77973912,
+          "25.8-27.1": 117223986,
+          "27.1-28.5": 188182579
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057265.598562
+    },
+    "DOMS": {
+      "fundamentals": {
+        "sector": "Industrials",
+        "industry": "Business Equipment & Supplies",
+        "market_cap": 138325622784,
+        "pe_ratio": 62.501373,
+        "pb_ratio": 12.581923,
+        "debt_equity": 13.64,
+        "div_yield": 0.14,
+        "beta": -0.691,
+        "rev_growth": 0.182,
+        "profit_margin": 0.09945,
+        "description": "DOMS Industries Limited engages in the design, development, manufacturing, and sale of stationery and art material products under the DOMS brand name in India and internationally. It offers pencils, erasers, sharpeners, mathematical instruments, chalk and chalk holders, writing boards, crayons, oil pasters, color pencils, poster colours, water colours, sketch pens, brush pens, tempera colors, and brushes, as well as modeling clays, playing doughs, glitter glues, glue stick, scholastic adhesives, acrylic paints, artists brush, kneadable erasers, pigment liners, canvas boards, and artists water colours. It also provides pens, board markers, permanent markers, and correction pens; notebooks, exercise and drawing books, sketch pads, coloring books, wiro books, executive diaries, and conference pads; stationery kits, art material kits, painting kits, and combo packs; as well as baby diapers and wet wipes. In addition, it provides packaging services. The company was founded in 1973 and is based in Valsad, India.",
+        "website": "https://www.domsindia.com",
+        "employees": 11300,
+        "updated_at": "2026-03-21T07:10:42.362346"
+      },
+      "volume": {
+        "vol_last": 233219,
+        "vol_avg_20": 433247,
+        "vol_ratio": 0.54,
+        "vol_profile": {
+          "2055.8-2141.4": 797804,
+          "2141.4-2227.0": 7087853,
+          "2227.0-2312.6": 485207,
+          "2312.6-2398.2": 469279,
+          "2398.2-2483.8": 107332
+        },
+        "vol_trend": "FALLING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057259.5877218
+    },
+    "ATHERENERG": {
+      "fundamentals": {
+        "sector": "Consumer Cyclical",
+        "industry": "Auto Manufacturers",
+        "market_cap": 298482827264,
+        "pe_ratio": 0,
+        "pb_ratio": 11.051178,
+        "debt_equity": 15.813,
+        "div_yield": 0,
+        "beta": 1.0,
+        "rev_growth": 0.502,
+        "profit_margin": -0.20525,
+        "description": "Ather Energy Limited, an electric vehicle company, engages in the design, development, and sale of electric two-wheelers, and associated product ecosystem. The company also offers vehicle architecture and chassis; battery packs and battery management system; vehicle control unit; touchscreen dashboard; motor controller; transmission; signal harness; and fast charging system. In addition, it provides charging infrastructure, software and accessories. The company was incorporated in 2013 and is headquartered in Bengaluru, India.",
+        "website": "https://www.atherenergy.com",
+        "employees": 1617,
+        "updated_at": "2026-03-21T07:10:53.178175"
+      },
+      "volume": {
+        "vol_last": 4289067,
+        "vol_avg_20": 2024589,
+        "vol_ratio": 2.12,
+        "vol_profile": {
+          "674.0-695.4": 3909835,
+          "695.4-716.7": 23829960,
+          "716.7-738.0": 10957502,
+          "738.0-759.3": 11957862,
+          "759.3-780.6": 0
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057278.9628084
+    },
+    "AUROPHARMA": {
+      "fundamentals": {
+        "sector": "Healthcare",
+        "industry": "Drug Manufacturers - Specialty & Generic",
+        "market_cap": 750047199232,
+        "pe_ratio": 21.505413,
+        "pb_ratio": 2.1402233,
+        "debt_equity": 22.248,
+        "div_yield": 0.31,
+        "beta": 0.057,
+        "rev_growth": 0.084,
+        "profit_margin": 0.10509,
+        "description": "Aurobindo Pharma Limited, a biopharmaceutical company, develops, manufactures, commercializes, and sells generic pharmaceuticals, active pharmaceutical ingredients (APIs), and injectables. The company offers formulation in form of oral solids, liquids, injectables, vaccines, and metered dose inhalers; and APIs, biosimilars, and peptides targeting therapeutic areas, such as central nervous system, cardiovascular, respiratory, antibiotics, anti-retroviral, anti-diabetics, gastroenterology, oncology, and dermatology. It also provides antiretroviral drugs for the people and children living with HIV; and API space for sterile and non-sterile penicillin's, cephalosporins, penems, and non-beta lactams. The company has operations in India, the United States, Europe, Puerto Rico, and internationally. The company was incorporated in 1986 and is headquartered in Hyderabad, India.",
+        "website": "https://www.aurobindo.com",
+        "employees": 27707,
+        "updated_at": "2026-03-21T07:10:53.866222"
+      },
+      "volume": {
+        "vol_last": 1395632,
+        "vol_avg_20": 1519764,
+        "vol_ratio": 0.92,
+        "vol_profile": {
+          "1124.1-1161.7": 20783059,
+          "1161.7-1199.2": 10805063,
+          "1199.2-1236.8": 10887667,
+          "1236.8-1274.3": 4697080,
+          "1274.3-1311.9": 9841794
+        },
+        "vol_trend": "FALLING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057278.6745985
+    },
+    "LLOYDSME": {
+      "fundamentals": {
+        "sector": "Basic Materials",
+        "industry": "Steel",
+        "market_cap": 700943237120,
+        "pe_ratio": 28.410492,
+        "pb_ratio": 8.382283,
+        "debt_equity": 100.054,
+        "div_yield": 0.08,
+        "beta": -0.075,
+        "rev_growth": 2.019,
+        "profit_margin": 0.20048,
+        "description": "Lloyds Metals and Energy Limited manufactures and sells sponge iron and iron ore in India. The company operates in four segments: Sponge Iron, Mining, Power, and Pellet Trading. It offers wire rods and TMT rebars, as well as flat products. The company is also involved in the generation of power; and trading of pellets. Lloyds Metals and Energy Limited was incorporated in 1977 and is based in Mumbai, India.",
+        "website": "https://lloyds.in",
+        "employees": 1834,
+        "updated_at": "2026-03-21T07:10:27.513632"
+      },
+      "volume": {
+        "vol_last": 1461484,
+        "vol_avg_20": 663099,
+        "vol_ratio": 2.2,
+        "vol_profile": {
+          "1127.4-1154.8": 3025123,
+          "1154.8-1182.2": 1689999,
+          "1182.2-1209.6": 4471741,
+          "1209.6-1237.0": 4366701,
+          "1237.0-1264.4": 4273678
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057249.1786196
+    },
+    "ESCORTS": {
+      "fundamentals": {
+        "sector": "Industrials",
+        "industry": "Farm & Heavy Construction Machinery",
+        "market_cap": 336610459648,
+        "pe_ratio": 25.533298,
+        "pb_ratio": 2.8318837,
+        "debt_equity": 0.871,
+        "div_yield": 1.59,
+        "beta": 0.074,
+        "rev_growth": 0.113,
+        "profit_margin": 0.21711999,
+        "description": "Escorts Kubota Limited manufactures and sells agricultural and construction equipment in India and internationally. The company offers rotavator, straw reaper, super seeder, MB plough, orchard sprayer, paddy harvester, rice transplanter, hydraulic pump, diesel filter, and gear products, as well as parts and lubricants; diesel engines; and cranes, vibratory soil compactors, backhoe loaders, tandem rollers, and mini excavators. It also provides agricultural tractors; engines for agricultural tractors; construction, earth moving, and material handling equipment; and round and flat tubes, heating elements, center buffer couplers, automobile shock absorbers, telescopic front fork and Mcpherson struts, internal combustion engines, and brake blocks. In addition, the company trades in oils and lubricants, implements, trailers, tractors, compressor accessories and spares, construction, earth moving, and material handling equipment. Further, it develops, produces, and import parts and accessories, as well as provides maintenance and warranty, crop, and financing services. The company offer its products under the Farmtrac, Powertrac, Steeltrac, Farmpower, and Kubota brands. The company was formerly known as Escorts Limited and changed its name to Escorts Kubota Limited in June 2022. Escorts Kubota Limited was incorporated in 1944 and is based in Faridabad, India. Escorts Kubota Limited is a subsidiary of Kubota Corporation.",
+        "website": "https://www.escortskubota.com",
+        "employees": 4622,
+        "updated_at": "2026-03-21T07:10:23.833890"
+      },
+      "volume": {
+        "vol_last": 830127,
+        "vol_avg_20": 133624,
+        "vol_ratio": 6.21,
+        "vol_profile": {
+          "2887.2-3070.6": 1203293,
+          "3070.6-3254.1": 420889,
+          "3254.1-3437.5": 551090,
+          "3437.5-3621.0": 1263276,
+          "3621.0-3804.4": 416698
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057237.7820642
+    },
+    "LAURUSLABS": {
+      "fundamentals": {
+        "sector": "Healthcare",
+        "industry": "Drug Manufacturers - Specialty & Generic",
+        "market_cap": 533074870272,
+        "pe_ratio": 63.28205,
+        "pb_ratio": 11.095252,
+        "debt_equity": 44.831,
+        "div_yield": 0.16,
+        "beta": 0.279,
+        "rev_growth": 0.257,
+        "profit_margin": 0.12546,
+        "description": "Laurus Labs Limited, together with its subsidiaries, manufactures and sells medicines and active pharmaceutical ingredients (APIs) in India and internationally. The company offers Generics APIs and oral solid formulations for advanced intermediates for anti-retroviral (ARV), antidiabetic, cardiovascular, anti-asthma, ophthalmology, oncology, gastroenterology, and hepatitis C therapeutic areas. It also provides biotechnology services used in the nutraceutical, dietary supplements, alternate food proteins, and cosmeceutical products. In addition, the company develops novel enzymatic solutions for industrial biotechnology, and animal origin free recombinant proteins and enzymes for biopharma; and offers business support services for pharmaceuticals field. Laurus Labs Limited was incorporated in 2005 and is based in Hyderabad, India.",
+        "website": "https://www.lauruslabs.com",
+        "employees": 6167,
+        "updated_at": "2026-03-21T07:10:53.779134"
+      },
+      "volume": {
+        "vol_last": 1763438,
+        "vol_avg_20": 1642590,
+        "vol_ratio": 1.07,
+        "vol_profile": {
+          "944.9-974.5": 8324982,
+          "974.5-1004.0": 7513316,
+          "1004.0-1033.6": 14851857,
+          "1033.6-1063.2": 6873588,
+          "1063.2-1092.8": 6049099
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057280.1834164
+    },
+    "HINDPETRO": {
+      "fundamentals": {
+        "sector": "Energy",
+        "industry": "Oil & Gas Refining & Marketing",
+        "market_cap": 715586666496,
+        "pe_ratio": 4.6469526,
+        "pb_ratio": 1.2576852,
+        "debt_equity": 110.909,
+        "div_yield": 4.61,
+        "beta": 0.89,
+        "rev_growth": 0.041,
+        "profit_margin": 0.03545,
+        "description": "Hindustan Petroleum Corporation Limited, together with its subsidiaries, engages in the refining and marketing of petroleum products in India and internationally. It operates through Downstream Petroleum and All Other segments. The company offers light distillates, including liquefied petroleum gas, motor spirits, naphtha, hexane, propylene, and solvents; and middle distillates, such as high-speed diesel, superior kerosene oil, light diesel oil, aviation turbine fuels, mineral turpentine oil, jute batching oil, and lube and turbine oil base stocks. It also provides heavy distillates, including bitumen, furnace oil, and low sulphur heavy stock; and compressed natural gas, lubes and greases, biofuel blended fuels, and petrochemicals. In addition, the company engages in the exploration and production of hydrocarbons; provision of management services for exploration and production blocks; manufacture of ethanol and sugar; generation of power from bagasse; trading in refined oil products; operation and maintenance of liquefied natural gas regasification terminals; production and distribution of green energy from wind and solar power plants; retail through petroleum pumps; distribution of LPG products; direct sales; and operation of natural gas pipelines, EV charging stations, and battery swapping facilities. It exports its products. The company was founded in 1910 and is headquartered in Mumbai, India. Hindustan Petroleum Corporation Limited is a subsidiary of Oil and Natural Gas Corporation Limited.",
+        "website": "https://www.hindustanpetroleum.com",
+        "employees": 8049,
+        "updated_at": "2026-03-21T07:10:53.869068"
+      },
+      "volume": {
+        "vol_last": 24169257,
+        "vol_avg_20": 10483768,
+        "vol_ratio": 2.31,
+        "vol_profile": {
+          "324.8-352.6": 73973291,
+          "352.6-380.3": 20474362,
+          "380.3-408.1": 66484682,
+          "408.1-435.9": 32417206,
+          "435.9-463.6": 41222341
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057279.9433079
+    },
+    "IDEA": {
+      "fundamentals": {
+        "sector": "Communication Services",
+        "industry": "Telecom Services",
+        "market_cap": 1011923943424,
+        "pe_ratio": 0,
+        "pb_ratio": -1.2268488,
+        "debt_equity": 0,
+        "div_yield": 0,
+        "beta": -0.089,
+        "rev_growth": 0.019,
+        "profit_margin": -0.55325,
+        "description": "Vodafone Idea Limited, together with its subsidiaries, provides mobile telecommunication services in India. The company offers voice services, such as 4G VoLTE and Voice over WIFI calling; broadband data services on 3G, 4G, and 5G platforms; content and digital products and services; value-added services, including over-the-top paid subscription, digital advertising, gaming, digital marketplace, and utility bill payment app, as well as voice and short messaging services; and long distance and internet service provider services. It also engages in renting of passive infrastructure to telecommunication service providers; outsourcing backend IT support, data centre operations, and hosting; and provision of high speed broadband internet access through cable network and high bandwidth internet broadband, and manpower services. In addition, the company trades in mobile handsets, data cards, and related accessories and services; outsources finance and accounts, human resources, supply chain management, credit and collection support, and customer support, as well as caters to the information technology (IT) needs for data consolidation. Further, it offers technology, software, hardware, VAS, application software, and contents and related products and services, which facilitate and develop access to IT enabled VAS products and services on single or multiple platforms or operating systems; and data centre related services and IT solutions, including E-SIMs activation, as well as prepaid and postpaid plans. The company was formerly known as Idea Cellular Limited and changed its name to Vodafone Idea Limited in August 2018. Vodafone Idea Limited was incorporated in 1995 and is based in Mumbai, India.",
+        "website": "https://www.myvi.in",
+        "employees": 9985,
+        "updated_at": "2026-03-21T07:10:26.696502"
+      },
+      "volume": {
+        "vol_last": 611463733,
+        "vol_avg_20": 460353737,
+        "vol_ratio": 1.33,
+        "vol_profile": {
+          "8.9-9.5": 3319584075,
+          "9.5-10.1": 2593777079,
+          "10.1-10.7": 1473272311,
+          "10.7-11.3": 2730319415,
+          "11.3-11.9": 2783760809
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057245.4727008
+    },
+    "TARIL": {
+      "fundamentals": {
+        "sector": "Industrials",
+        "industry": "Electrical Equipment & Parts",
+        "market_cap": 85592285184,
+        "pe_ratio": 31.753899,
+        "pb_ratio": 6.3611217,
+        "debt_equity": 26.723,
+        "div_yield": 0.07,
+        "beta": -0.859,
+        "rev_growth": 0.317,
+        "profit_margin": 0.11209,
+        "description": "Transformers and Rectifiers (India) Limited, together with its subsidiaries, manufactures and sells transformers in India. The company provides power transformers, such as generator transformers, unit and station auxiliary transformers, small and medium power transformers, and trackside transformers for railways; and rectifier transformers, including 6 and 12/24 pulse transformers with IPT, as well as transformers for bridge construction. It offers distribution transformers, including energy efficient transformers, transformers with packaged substations, copper and aluminium wounds, hermitically sealed type transformers, and transformers with corrugated cooling fins. In addition, the company provides furnace transformers consisting of electric arc furnace and submerged arc furnace transformers, ladle refining furnace transformers, induction furnace transformers, and DC arc furnace transformers; specialty transformers, including testing and earthing transformers and transformers having multiple secondaries; and shunt and series reactors. It exports its products. The company was formerly known as Triveni Electric Company Limited and changed its name to Transformers and Rectifiers (India) Limited in March 1995. Transformers and Rectifiers (India) Limited was founded in 1981 and is based in Ahmedabad, India.",
+        "website": "https://www.transformerindia.com",
+        "employees": 553,
+        "updated_at": "2026-03-21T07:10:50.281895"
+      },
+      "volume": {
+        "vol_last": 4133153,
+        "vol_avg_20": 5156251,
+        "vol_ratio": 0.8,
+        "vol_profile": {
+          "248.0-261.1": 1931133,
+          "261.1-274.3": 12847311,
+          "274.3-287.5": 77398085,
+          "287.5-300.7": 62016777,
+          "300.7-313.9": 46276697
+        },
+        "vol_trend": "FALLING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057265.6300848
+    },
+    "GPIL": {
+      "fundamentals": {
+        "sector": "Basic Materials",
+        "industry": "Steel",
+        "market_cap": 170372628480,
+        "pe_ratio": 22.372232,
+        "pb_ratio": 3.0803242,
+        "debt_equity": 3.643,
+        "div_yield": 0.38,
+        "beta": 0.681,
+        "rev_growth": -0.122,
+        "profit_margin": 0.14163,
+        "description": "Godawari Power & Ispat Limited, together with its subsidiaries, engages in the mining of iron ores in India. It manufactures and sells iron ore pellets, sponge iron, steel billets, MS rounds, wire rods, HB wires, and ferro alloys with generation of electricity, as well as silico manganese. The company was formerly known as Ispat Godawari Ltd. Godawari Power & Ispat Limited was incorporated in 1999 and is based in Raipur, India.",
+        "website": "https://www.godawaripowerispat.com",
+        "employees": 1884,
+        "updated_at": "2026-03-21T07:10:53.533344"
+      },
+      "volume": {
+        "vol_last": 3581111,
+        "vol_avg_20": 1842075,
+        "vol_ratio": 1.94,
+        "vol_profile": {
+          "247.2-252.4": 14525235,
+          "252.4-257.5": 5091910,
+          "257.5-262.7": 16446545,
+          "262.7-267.8": 9946133,
+          "267.8-273.0": 10563667
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057279.8164005
+    },
+    "BAYERCROP": {
+      "fundamentals": {
+        "sector": "Basic Materials",
+        "industry": "Agricultural Inputs",
+        "market_cap": 212139917312,
+        "pe_ratio": 31.646204,
+        "pb_ratio": 6.7871256,
+        "debt_equity": 3.266,
+        "div_yield": 2.65,
+        "beta": 0.298,
+        "rev_growth": 0.047,
+        "profit_margin": 0.11928,
+        "description": "Bayer CropScience Limited engages in the manufacture, sale, and distribution of insecticides, fungicides, herbicides, and various other agrochemical products and hybrid corn seeds in India, Germany, Bangladesh, and internationally. It provides medicines in the therapeutic areas of cardiology, gynecology, diabetes, oncology, and ophthalmology; and computed tomography, X-Ray, and magnetic resonance imaging devices. In addition, the company offers consumer health products that are used as a daily health solution to treat minor illnesses, as well as sells and distributes row crop hybrid seeds. Further, it provides digital farming products comprising FarmRise and other digital applications, as well as tools, including remote sensing, IoT sensors, GPS, drones, artificial intelligence, and data analytics to monitor and manage crop growth, soil health, and weather conditions. The company also exports its products. Bayer CropScience Limited was founded in 1896 and is based in Thane, India.",
+        "website": "https://www.bayer.in",
+        "employees": 1169,
+        "updated_at": "2026-03-21T07:10:53.775132"
+      },
+      "volume": {
+        "vol_last": 115131,
+        "vol_avg_20": 22417,
+        "vol_ratio": 5.14,
+        "vol_profile": {
+          "4463.9-4537.7": 228149,
+          "4537.7-4611.5": 57717,
+          "4611.5-4685.3": 65625,
+          "4685.3-4759.1": 193508,
+          "4759.1-4832.9": 121334
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057279.211062
+    },
+    "HONASA": {
+      "fundamentals": {
+        "sector": "Consumer Defensive",
+        "industry": "Household & Personal Products",
+        "market_cap": 94129815552,
+        "pe_ratio": 60.628933,
+        "pb_ratio": 7.377175,
+        "debt_equity": 11.184,
+        "div_yield": 0,
+        "beta": 0.532,
+        "rev_growth": 0.162,
+        "profit_margin": 0.06865,
+        "description": "Honasa Consumer Limited operates as a digital beauty and personal care company in India and internationally. The company provides body and baby care, skin and hair care, color cosmetics, other related personal care under Mamaearth, The Derma Co., Aqualogica, Ayuga, Staze and Dr. Sheth's brands. It offers beauty salon and hair styling services under the BBlunt brand; and operates Momspresso, a content development and influencer marketing platform. The company was formerly known as Honasa Consumer Private Limited and changed its name to Honasa Consumer Limited in November 2022. Honasa Consumer Limited was incorporated in 2016 and is based in Gurugram, India.",
+        "website": "https://www.honasa.in",
+        "employees": 923,
+        "updated_at": "2026-03-21T07:10:27.216291"
+      },
+      "volume": {
+        "vol_last": 732764,
+        "vol_avg_20": 683305,
+        "vol_ratio": 1.07,
+        "vol_profile": {
+          "264.0-272.7": 1360530,
+          "272.7-281.4": 861824,
+          "281.4-290.1": 5974769,
+          "290.1-298.7": 2549740,
+          "298.7-307.4": 34156876
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057249.0712013
+    },
+    "AWL": {
+      "fundamentals": {
+        "sector": "Consumer Defensive",
+        "industry": "Packaged Foods",
+        "market_cap": 249033572352,
+        "pe_ratio": 26.387363,
+        "pb_ratio": 2.511144,
+        "debt_equity": 11.063,
+        "div_yield": 0,
+        "beta": -0.422,
+        "rev_growth": 0.103,
+        "profit_margin": 0.013150001,
+        "description": "AWL Agri Business Limited, a fast-moving consumer goods food company, provides kitchen commodities in India and internationally. It operates through Edible Oils, Food & FMCG, and Industry Essentials segments. The company offers soyabean, palm, sunflower, rice bran, mustard, groundnut, cottonseed, and blended oil; specialty fats, including industrial margarine, bakery shortenings, and vanaspati for baked products; and lauric fats as substitutes for milk fat and cocoa butter substitutes for ice cream and confectionery. It also provides oleochemicals, such as stearic acids, soap noodles, palmitic acids, oleic acids, and glycerin for home and personal care products; castor oils and its derivatives comprising steric acids and ricin oleic acids for medical, pharmaceutical, cosmetic, and aeronautical use; and de-oiled cakes that are used as livestock feeds. In addition, the company offers wheat flour, rice, pulses, sugar, besan, poha, rawa, suji, soya chunks, sattu, soya flour, soya grits, soya flakes, and soya bari; and soaps, handwash, and sanitizers. Further, it is involved in packaging of frying oil. The company provides its products under the Fortune, King's, Aadhar, Bullet, Raag, Alpha, Jubilee, Avsar, Golden Chef, Fryola, Kohinoor, Charminar, Trophy, and Alife brand names, as well as e-commerce channels. The company was formerly known as Adani Wilmar Limited and changed its name to AWL Agri Business Limited in March 2025. AWL Agri Business Limited was incorporated in 1999 and is headquartered in Ahmedabad, India. As on November 19, 2025, AWL Agri Business Limited operates as a subsidiary to Lence Pte. Ltd.",
+        "website": "https://www.awl.in",
+        "employees": 2772,
+        "updated_at": "2026-03-21T07:10:30.116595"
+      },
+      "volume": {
+        "vol_last": 25381347,
+        "vol_avg_20": 5812887,
+        "vol_ratio": 4.37,
+        "vol_profile": {
+          "172.3-180.1": 77261876,
+          "180.1-187.9": 2799429,
+          "187.9-195.7": 34397289,
+          "195.7-203.5": 5411057,
+          "203.5-211.4": 8231716
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057251.318016
+    },
+    "OLECTRA": {
+      "fundamentals": {
+        "sector": "Industrials",
+        "industry": "Farm & Heavy Construction Machinery",
+        "market_cap": 90075398144,
+        "pe_ratio": 62.888252,
+        "pb_ratio": 8.021695,
+        "debt_equity": 32.542,
+        "div_yield": 0.04,
+        "beta": -0.461,
+        "rev_growth": 0.288,
+        "profit_margin": 0.06753,
+        "description": "Olectra Greentech Limited manufactures and sells electric buses and trucks in India. It operates in two segments, Composite Polymer Insulators and E-Vehicle. The company offers electric tippers. It also provides 1200KV, 330-420KV, 220-245KV, 110-132KV, 52-77KV, 33-36KV, 22-28KV, and 10-15KV composite polymer insulators for transmission and distribution; and tonne, bracket tube, and stay arm insulators for railways. It serves state and central government bodies, and power generation and distribution corporations; private power generation companies; and multinational infrastructure companies. The company was formerly known as Goldstone Infratech Limited and changed its name to Olectra Greentech Limited in July 2018. Olectra Greentech Limited was incorporated in 2000 and is headquartered in Hyderabad, India.",
+        "website": "https://olectra.com",
+        "employees": 801,
+        "updated_at": "2026-03-21T07:10:53.778135"
+      },
+      "volume": {
+        "vol_last": 9112235,
+        "vol_avg_20": 1383336,
+        "vol_ratio": 6.59,
+        "vol_profile": {
+          "880.5-923.8": 3043089,
+          "923.8-967.2": 1888468,
+          "967.2-1010.6": 2191233,
+          "1010.6-1054.0": 4529485,
+          "1054.0-1097.4": 9350680
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057280.1387234
+    },
+    "IDBI": {
+      "fundamentals": {
+        "sector": "Financial Services",
+        "industry": "Banks - Regional",
+        "market_cap": 785754292224,
+        "pe_ratio": 8.457175,
+        "pb_ratio": 1.126754,
+        "debt_equity": 0,
+        "div_yield": 2.87,
+        "beta": 0.385,
+        "rev_growth": 0.03,
+        "profit_margin": 0.51497,
+        "description": "IDBI Bank Limited provides banking and financial solutions to retail and corporate customers in India. It operates through three segments: Corporate/Wholesale Banking, Retail Banking, and Treasury Operations. The company offers savings, current, and salary accounts, as well as fixed deposits; home, auto, education, and personal loans, as well as loans against properties and securities; debit, credit, and prepaid cards; mobile and Internet banking; and investment advisory and capital market services. It also provides fund and non-fund-based assistance; packing credit to exporters; receivable buyout with recourse; channel financing for dealers of corporates; scheme for financing automated teller machines/cash dispense vendors; technology upgrading fund scheme for textile and jute industries; and lending to non-banking finance companies/housing finance companies and commercial real estate sector. In addition, the company offers bank guarantees, letters of credit, documentary collection, and bill discounting services; cash management, trade finance, and remittance services; and debt syndication and advisory services. Further, it provides finance to micro, small, and medium enterprises; agriculture finance; products and services for non-resident Indians; treasury services, such as call money/ notice money / term money, commercial papers, certificate of deposit, government securities, treasury bills, corporate bonds, and equities; and foreign currency services comprising remittances, currency forward contracts, LTFX, FX-retail, currency options, swaps, FRA, currency exchange, and exchange traded derivative contracts. The company was formerly known as IDBI Ltd. and changed its name to IDBI Bank Limited in May 2008. IDBI Bank Limited was founded in 1964 and is headquartered in Mumbai, India.",
+        "website": "https://www.idbi.bank.in",
+        "employees": 17555,
+        "updated_at": "2026-03-21T07:10:53.869068"
+      },
+      "volume": {
+        "vol_last": 32493530,
+        "vol_avg_20": 28291886,
+        "vol_ratio": 1.15,
+        "vol_profile": {
+          "70.2-79.3": 275770621,
+          "79.3-88.5": 0,
+          "88.5-97.7": 20394944,
+          "97.7-106.8": 113102010,
+          "106.8-116.0": 362179422
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057279.913589
+    },
+    "HEXT": {
+      "fundamentals": {
+        "sector": "Technology",
+        "industry": "Information Technology Services",
+        "market_cap": 267777097728,
+        "pe_ratio": 19.83973,
+        "pb_ratio": 4.2401175,
+        "debt_equity": 10.783,
+        "div_yield": 5.23,
+        "beta": 1.0,
+        "rev_growth": 0.103,
+        "profit_margin": 0.10195,
+        "description": "Hexaware Technologies Limited provides information technology consulting, software development, and business process services worldwide. The company operates through Travel and Transportation, Financial Services, Banking, Healthcare and Insurance, Hi-Tech Professional Services, and Manufacturing and Consumer segments. It offers application services, including enterprise architecture consulting, application development, application rationalization and modernization, application support and maintenance, quality assurance and testing, and security and compliance; cybersecurity services, such as governance, risk, and compliance, hybrid cloud security, DevSecOps, and digital workplace security; automation-as-a-service and IT ops automation; and generative AI solutions comprising secure access, knowledge management, private LLM for legal, Tensai GPT/enterprise chatbot, multimodal connect, RapidX, case citation, personalized product recommendations, Amaze, smart sales advisor, medical coding acceleration, interaction analytics, and Bond Reco. The company provides ESG integration, net zero transition, and climate tech services; quality engineering and software testing services, such as software engineering, applications, application managed, and enterprise platform services. In addition, it offers business process, cloud, data and AI, digital IT operation, digital and software, and enterprise platform services. It serves banking, education and institutions, financial services, hi-tech, products and platforms, insurance, life sciences and healthcare, manufacturing, professional services, retail and consumer, telecom and utilities, transportation and logistics, and travel and hospitality industries. The company was formerly known as Aptech Limited and changed its name to Hexaware Technologies Limited in January 2001. The company was founded in 1990 and is based in Navi Mumbai, India. As of November 12, 2021, Hexaware Technologies Limited operates as a subsidiary of CA Magnum Holdings.",
+        "website": "https://hexaware.com",
+        "employees": 33844,
+        "updated_at": "2026-03-21T07:10:51.830243"
+      },
+      "volume": {
+        "vol_last": 2222905,
+        "vol_avg_20": 1264687,
+        "vol_ratio": 1.76,
+        "vol_profile": {
+          "407.0-448.3": 11987465,
+          "448.3-489.6": 10509597,
+          "489.6-531.0": 2796684,
+          "531.0-572.3": 14698175,
+          "572.3-613.6": 7195408
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057266.230804
+    },
+    "MAHABANK": {
+      "fundamentals": {
+        "sector": "Financial Services",
+        "industry": "Banks - Regional",
+        "market_cap": 503719919616,
+        "pe_ratio": 7.7779093,
+        "pb_ratio": 1.5071803,
+        "debt_equity": 0,
+        "div_yield": 3.82,
+        "beta": 0.602,
+        "rev_growth": 0.255,
+        "profit_margin": 0.49323002,
+        "description": "Bank of Maharashtra provides various banking products and services in India. The company operates through Treasury, Corporate/Wholesale Banking, Retail Banking, and Other Banking Operations segments. It accepts savings, current, term, and demand deposits, as well as provides capital gain account schemes. The company also offers housing loans, vehicle and car loans, topup loans, education loans, gold loans, personal loans, salary gain schemes, green financing schemes, rooftop solar panel loans, and adhaar loans, as well as loans against properties and deposits; working capital, term, project, infrastructure, export, and bill financing services; lines of credit; commercial lease rental services; accounts takeover services; non-fund based services; micro, small, and medium enterprise loans; and agriculture loans and other services. In addition, it provides digital banking and lending services, and government schemes; debit and credit cards; documentary credits and collections, import and export financing, guarantees, travel related forex, non-resident Indian services, capital account transactions, remittance schemes, and risk management services; and remittance facilities, as well as hedges exchange risk. Bank of Maharashtra was incorporated in 1935 and is headquartered in Pune, India.",
+        "website": "https://bankofmaharashtra.bank.in",
+        "employees": 14591,
+        "updated_at": "2026-03-21T07:10:44.944944"
+      },
+      "volume": {
+        "vol_last": 32954374,
+        "vol_avg_20": 26910082,
+        "vol_ratio": 1.22,
+        "vol_profile": {
+          "62.5-65.1": 88567753,
+          "65.1-67.7": 200910247,
+          "67.7-70.4": 153717685,
+          "70.4-73.0": 112139174,
+          "73.0-75.7": 93549610
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057264.2148378
+    },
+    "IOB": {
+      "fundamentals": {
+        "sector": "Financial Services",
+        "industry": "Banks - Regional",
+        "market_cap": 649691725824,
+        "pe_ratio": 13.707317,
+        "pb_ratio": 1.8997184,
+        "debt_equity": 0,
+        "div_yield": 0,
+        "beta": 0.12,
+        "rev_growth": 0.163,
+        "profit_margin": 0.34405997,
+        "description": "Indian Overseas Bank provides various banking products and services in India and internationally. It operates through Treasury, Corporate/Wholesale Banking, Retail Banking, and Other Banking Operations segments. The company accepts various deposits, such as demand, savings, current, fixed, recurring, tax saver, and term deposits. Its loan products include home, vehicle, jewel, consumer durable, education, reverse mortgage, personal, agricultural, and corporate loans, as well as loan against the property and sovereign gold bond; and micro, small, and medium enterprise loans. It also provides debit and credit cards, export credit, NRI accounts, agricultural and rural banking products, mutual funds, lockers, merchant banking, and internet and mobile banking services; depository services; and life, health, personal accident, digital, and motor insurance products. It operates branches, ATMs, and business correspondents in India; and overseas branches in Singapore, Hong Kong, Colombo, and Bangkok. Indian Overseas Bank was incorporated in 1936 and is headquartered in Chennai, India.",
+        "website": "https://www.iob.bank.in",
+        "employees": 20966,
+        "updated_at": "2026-03-21T07:10:52.980559"
+      },
+      "volume": {
+        "vol_last": 28217721,
+        "vol_avg_20": 8280537,
+        "vol_ratio": 3.41,
+        "vol_profile": {
+          "31.6-32.7": 25743430,
+          "32.7-33.7": 12895529,
+          "33.7-34.7": 62389542,
+          "34.7-35.8": 41113144,
+          "35.8-36.8": 75926865
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057278.5488048
+    },
+    "SCHAEFFLER": {
+      "fundamentals": {
+        "sector": "Consumer Cyclical",
+        "industry": "Auto Parts",
+        "market_cap": 654365294592,
+        "pe_ratio": 56.820034,
+        "pb_ratio": 10.832189,
+        "debt_equity": 0.904,
+        "div_yield": 0.84,
+        "beta": -0.188,
+        "rev_growth": 0.275,
+        "profit_margin": 0.118769996,
+        "description": "Schaeffler India Limited engages in the development, manufacture, and distribution of high-precision roller and ball bearings, and related components worldwide. The company operates in two segments, Mobility Components and Related Solutions; and Others. It offers ball bearings; linear guidance systems; cylindrical, spherical, needle, and tapered roller bearings; mounting and dismounting products; and lubrication, alignment, and condition monitoring products, as well as wheel bearings. The company also provides mechatronic products; release system, timing drive, front end auxiliary drive, steering and suspension, cooling, dampers, valve train, flywheels; and clutch systems for passenger cars, light commercial vehicles, heavy commercial vehicles, and tractors; assembly machines, testing systems, handling technology, machining centers, digitalization services, robotics, and vision systems; and concentric slave cylinder, clutch master cylinder, semi slave cylinder, adapter, and high-pressure pipe assemblies. In addition, it offers engine, gear, chassis, transmission, grease, coolant, hydraulic, and shock absorber oil; spare part solutions; and maintenance, repair, and digital services. The company offers its products under the Schaeffler, LuK, INA, FAG, and Schaeffler TruPower brands. It serves aerospace, productronics, food, beverage and packaging, medical equipment, printing machinery, robotics, construction machinery, agriculture, pneumatic, industrial transmission, fluid, electric motors, rail, wind, water, solar, mining and processing, metallurgical production and processing, and textile machinery, as well as machine tools, two-wheelers, power transmission, raw material, paper, and pulp industries. The company was formerly known as FAG Bearings India Limited and changed its name to Schaeffler India Limited in July 2017. Schaeffler India Limited was incorporated in 1962 and is based in Pune, India.",
+        "website": "https://www.schaeffler.co.in",
+        "employees": 0,
+        "updated_at": "2026-03-21T07:10:53.633971"
+      },
+      "volume": {
+        "vol_last": 213501,
+        "vol_avg_20": 180253,
+        "vol_ratio": 1.18,
+        "vol_profile": {
+          "3772.1-3889.1": 557033,
+          "3889.1-4006.1": 399485,
+          "4006.1-4123.2": 484764,
+          "4123.2-4240.2": 473781,
+          "4240.2-4357.2": 1897554
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057278.9782398
+    },
+    "TATAELXSI": {
+      "fundamentals": {
+        "sector": "Technology",
+        "industry": "Software - Application",
+        "market_cap": 263994671104,
+        "pe_ratio": 45.415287,
+        "pb_ratio": 9.768765,
+        "debt_equity": 6.257,
+        "div_yield": 1.86,
+        "beta": 0.262,
+        "rev_growth": 0.015,
+        "profit_margin": 0.15675001,
+        "description": "Tata Elxsi Limited provides product design and engineering, systems integration, and support services in India, the United States, Europe, and Internationally. The company operates through two segments, Systems Integration and Support, and Software Development and Services. It offers AIVA, an AI-based video analytics platform that automates video tagging, object detection, content indexing, and metadata generation; and iCX, a SaaS-based solution for automating, monitoring, and managing CPEs. It also provides QoEtient, a platform for video streaming services; TEPlay, an OTT/IPTV platform; Neuron, an autonomous network platform for telco operators; and uLike, a platform for AI-powered content recommendation engine. In addition, it offers TETHER, a cloud-based platform for vehicle connectivity; eMobility HILS, a scalable solution for validating electric vehicle systems; Robo-Taxi, a platform for autonomous ride-hailing; AVENIR, a platform for real-time data processing, validation, and integration for software defined vehicles; AutonomAI, an AI-driven platform for self-driving capabilities; and MOBIUS+, a blockchain-powered solution. Further, it provides TEDREG, a regulatory intelligence platform for compliance management; Digital Health Platform, a customizable platform for remote patient monitoring, virtual consultations, and personalized health insights; TEngage, a digital health platform for patient engagement tools with customizable workflows, interactive communication channels, and performance tracking dashboards; TEDAX Big Data, an AI-driven analytics platform; and TEcare, a care management platform for multi-channel support and care plan customization. It serves automotive, broadcast and media, communications, off-highway equipment, healthcare and life sciences, appliances and consumer electronics, rail, semiconductor, and aerospace industries. The company was incorporated in 1989 and is headquartered in Bengaluru, India.",
+        "website": "https://www.tataelxsi.com",
+        "employees": 11973,
+        "updated_at": "2026-03-21T07:10:52.429216"
+      },
+      "volume": {
+        "vol_last": 826769,
+        "vol_avg_20": 353856,
+        "vol_ratio": 2.34,
+        "vol_profile": {
+          "4039.3-4307.6": 3071329,
+          "4307.6-4576.0": 3017828,
+          "4576.0-4844.3": 1701033,
+          "4844.3-5112.7": 1396647,
+          "5112.7-5381.0": 751048
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057266.930017
+    },
+    "JINDALSTEL": {
+      "fundamentals": {
+        "sector": "Basic Materials",
+        "industry": "Steel",
+        "market_cap": 1207249666048,
+        "pe_ratio": 60.971226,
+        "pb_ratio": 2.4301822,
+        "debt_equity": 38.018,
+        "div_yield": 0.17,
+        "beta": 0.637,
+        "rev_growth": 0.109,
+        "profit_margin": 0.03951,
+        "description": "Jindal Steel Limited operates in the steel, mining, and infrastructure sectors in India and internationally. It offers rails; medium and heavy hot-rolled parallel flange beams and column sections; plates and coils; angles and channels; cold heading quality, electrode quality, and high carbon wire rods; round bars; fabricated sections; Jindal Speedfloor concrete flooring solutions; Jindal Panther TMT rebars; semi-finished products, including slabs, billets, blooms, beam blank, and rounds; and Jindal Panther cement comprising Portland slag cement, Portland composite cement, and ground-granulated blast-furnace slag, as well as rockhard plates, cathode bards, and track shoes. The company also operates and maintains a total captive power plant capacity of 1,634 megawatts. In addition, it operates coal and iron ore mines located at various locations in India, Australia, and Africa. The company was formerly known as Jindal Steel & Power Limited and changed its name to Jindal Steel Limited in July 2025. Jindal Steel Limited was incorporated in 1979 and is based in New Delhi, India.",
+        "website": "https://www.jindalsteel.in",
+        "employees": 5918,
+        "updated_at": "2026-03-21T07:10:46.817499"
+      },
+      "volume": {
+        "vol_last": 1998780,
+        "vol_avg_20": 1309174,
+        "vol_ratio": 1.53,
+        "vol_profile": {
+          "1133.0-1159.7": 6815669,
+          "1159.7-1186.4": 6796310,
+          "1186.4-1213.1": 12081414,
+          "1213.1-1239.8": 6716054,
+          "1239.8-1266.5": 2561064
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057264.1978412
+    },
+    "CANBK": {
+      "fundamentals": {
+        "sector": "Financial Services",
+        "industry": "Banks - Regional",
+        "market_cap": 1237599649792,
+        "pe_ratio": 6.126628,
+        "pb_ratio": 1.0548126,
+        "debt_equity": 0,
+        "div_yield": 2.93,
+        "beta": 0.369,
+        "rev_growth": -0.426,
+        "profit_margin": 0.34346,
+        "description": "Canara Bank provides various banking products and services in India and internationally. It offers deposits and accounts, such as savings accounts, current accounts, recurring deposits, and term deposits; unclaimed deposits; loan products, including home, vehicle, education, personal, mortgage, gold, MSME, agri, and solar loans; life, general, and health insurance products; corporate loans comprising working capital, infrastructure, and export finance products, as well as term loans; depository services, merchant banking, and online trading services; and mutual funds. The company also provides digital lending portal; mobile and internet banking; credit, debit, and prepaid cards; UPI and fastag; missed call banking; online account opening services; and payment solutions; NRI banking accounts; remittance facilities; attorneyship service; and nomination facility. In addition, it offers supply chain finance management; syndication services; IPO monitoring services; locker services; doorstep banking services; and consultancy services, which includes estate and wills, private and charitable trustee, debenture and security trusteeship, and attorney services. Canara Bank was incorporated in 1906 and is headquartered in Bengaluru, India.",
+        "website": "https://www.canarabank.bank.in",
+        "employees": 81260,
+        "updated_at": "2026-03-21T07:10:54.010983"
+      },
+      "volume": {
+        "vol_last": 30533679,
+        "vol_avg_20": 25944884,
+        "vol_ratio": 1.18,
+        "vol_profile": {
+          "132.9-138.1": 138292202,
+          "138.1-143.3": 100686771,
+          "143.3-148.5": 224684665,
+          "148.5-153.7": 95221879,
+          "153.7-158.9": 147783261
+        },
+        "vol_trend": "RISING",
+        "delivery_pct": 45.0
+      },
+      "ts": 1774057280.0750682
+    }
   },
-  "macro_status": "FFILL",
+  "sgx_signal": {
+    "gift_nifty": 23114.5,
+    "nifty_prev_close": 23002.15,
+    "premium": 112.35,
+    "premium_pct": 0.488,
+    "signal": "GAP_UP",
+    "strength": "MODERATE",
+    "expected_open_range": [
+      23045,
+      23184
+    ],
+    "orb_trade_setup": {
+      "active": true,
+      "direction": "LONG",
+      "entry_above": 23184,
+      "stop_below": 23045,
+      "target": 23462,
+      "confidence": 0.55,
+      "reason": "Gap up GAP_UP: trade long above range high 23184"
+    },
+    "timestamp": "2026-03-21T07:56:27.882581+05:30",
+    "source": "GIFT_NSE",
+    "bias": 0.488
+  },
   "sigma_scores": {
-    "ATHERENERG": 0.6623,
-    "IOB": 0.6438,
-    "OLAELEC": 0.6408,
-    "AARTIIND": 0.6396,
-    "TRIVENI": 0.6332,
-    "SCHAEFFLER": 0.625,
-    "GLENMARK": 0.6239,
-    "ESCORTS": 0.6157,
-    "HINDPETRO": 0.6147,
-    "CCL": 0.6125,
-    "AUROPHARMA": 0.6118,
-    "HEXT": 0.6098,
-    "HONASA": 0.606,
-    "LAURUSLABS": 0.6012,
-    "SAGILITY": 0.5992,
-    "FORCEMOT": 0.5953,
-    "ANANTRAJ": 0.5926,
-    "IDEA": 0.5905,
-    "JINDALSTEL": 0.587,
-    "BAYERCROP": 0.5821,
-    "TARIL": 0.5809,
-    "FIRSTCRY": 0.5808,
-    "HINDCOPPER": 0.5698,
-    "MAPMYINDIA": 0.5684,
-    "AWL": 0.5658,
-    "MAHABANK": 0.5592,
-    "CHENNPETRO": 0.5591,
-    "CANBK:SWING": 0.5582,
-    "TATAELXSI": 0.5549,
-    "IDBI": 0.5548,
-    "DOMS": 0.5466,
-    "BHEL": 0.5351,
-    "LLOYDSME": 0.5338,
-    "LLOYDSME:SWING": 0.5338,
-    "OLECTRA": 0.5117,
-    "HAPPSTMNDS": 0.5111,
-    "GPIL": 0.5095,
-    "RPOWER": 0.5084,
-    "MRPL": 0.5065,
-    "INOXWIND": 0.5035,
-    "INOXWIND:SWING": 0.5035,
-    "GMDCLTD": 0.4998,
-    "ABFRL": 0.4925
+    "ATHERENERG": 0.618,
+    "IOB": 0.6022,
+    "OLAELEC": 0.602,
+    "AARTIIND": 0.5927,
+    "TRIVENI": 0.5867,
+    "SCHAEFFLER": 0.581,
+    "GLENMARK": 0.5757,
+    "ESCORTS": 0.5742,
+    "HINDPETRO": 0.5697,
+    "CCL": 0.5676,
+    "HEXT": 0.5676,
+    "AUROPHARMA": 0.5631,
+    "HONASA": 0.5613,
+    "SAGILITY": 0.561,
+    "LAURUSLABS": 0.5532,
+    "FORCEMOT": 0.5507,
+    "ANANTRAJ": 0.5477,
+    "IDEA": 0.544,
+    "BAYERCROP": 0.54,
+    "JINDALSTEL": 0.539,
+    "TARIL": 0.5373,
+    "FIRSTCRY": 0.5364,
+    "MAPMYINDIA": 0.5288,
+    "AWL": 0.5278,
+    "HINDCOPPER": 0.5257,
+    "CHENNPETRO": 0.5141,
+    "MAHABANK": 0.5129,
+    "CANBK": 0.5111,
+    "TATAELXSI": 0.5085,
+    "IDBI": 0.5084,
+    "DOMS": 0.4984,
+    "LLOYDSME": 0.4889,
+    "BHEL": 0.488,
+    "OLECTRA": 0.4794,
+    "HAPPSTMNDS": 0.4789,
+    "RPOWER": 0.4638,
+    "GPIL": 0.4624,
+    "MRPL": 0.4616,
+    "GMDCLTD": 0.4603,
+    "INOXWIND": 0.457,
+    "ABFRL": 0.454
   },
   "atlas_scores": {
-    "IOB": 0.7187,
-    "ATHERENERG": 0.7091,
-    "AARTIIND": 0.6969,
-    "OLAELEC": 0.6965,
-    "ESCORTS": 0.6916,
-    "TRIVENI": 0.6889,
-    "SCHAEFFLER": 0.6796,
-    "HEXT": 0.6741,
-    "HONASA": 0.6638,
-    "HINDPETRO": 0.66,
-    "GLENMARK": 0.6599,
-    "FIRSTCRY": 0.6458,
-    "AUROPHARMA": 0.6455,
-    "BAYERCROP": 0.644,
-    "MAPMYINDIA": 0.6405,
-    "SAGILITY": 0.6347,
-    "CCL": 0.6279,
-    "LAURUSLABS": 0.6137,
-    "AWL": 0.6134,
-    "FORCEMOT": 0.6105,
-    "ANANTRAJ": 0.6083,
-    "TARIL": 0.6048,
-    "IDEA": 0.6029,
-    "JINDALSTEL": 0.6024,
-    "HINDCOPPER": 0.5879,
-    "CHENNPETRO": 0.5753,
-    "CANBK:SWING": 0.5734,
-    "MAHABANK": 0.5727,
-    "OLECTRA": 0.5616,
-    "IDBI": 0.5558,
-    "TATAELXSI": 0.5542,
-    "DOMS": 0.5534,
-    "LLOYDSME": 0.5461,
-    "LLOYDSME:SWING": 0.5461,
-    "BHEL": 0.5441,
-    "ABFRL": 0.526,
-    "RPOWER": 0.5239,
-    "HAPPSTMNDS": 0.5237,
-    "GPIL": 0.5122,
-    "GMDCLTD": 0.5082,
-    "INOXWIND": 0.494,
-    "INOXWIND:SWING": 0.494,
-    "MRPL": 0.4929
+    "IOB": 0.6865,
+    "AARTIIND": 0.6852,
+    "ATHERENERG": 0.6803,
+    "TRIVENI": 0.6774,
+    "SCHAEFFLER": 0.6735,
+    "ESCORTS": 0.6667,
+    "HEXT": 0.6601,
+    "OLAELEC": 0.6544,
+    "HONASA": 0.6538,
+    "GLENMARK": 0.65,
+    "HINDPETRO": 0.6442,
+    "AUROPHARMA": 0.6373,
+    "BAYERCROP": 0.6325,
+    "FIRSTCRY": 0.6289,
+    "MAPMYINDIA": 0.6213,
+    "SAGILITY": 0.6213,
+    "AWL": 0.6203,
+    "CCL": 0.6128,
+    "LAURUSLABS": 0.6043,
+    "ANANTRAJ": 0.5951,
+    "JINDALSTEL": 0.5939,
+    "TARIL": 0.5927,
+    "IDEA": 0.5919,
+    "FORCEMOT": 0.5905,
+    "HINDCOPPER": 0.5804,
+    "CHENNPETRO": 0.5749,
+    "OLECTRA": 0.5671,
+    "MAHABANK": 0.5661,
+    "CANBK": 0.5614,
+    "HAPPSTMNDS": 0.5463,
+    "IDBI": 0.5433,
+    "DOMS": 0.5432,
+    "TATAELXSI": 0.5431,
+    "BHEL": 0.5377,
+    "LLOYDSME": 0.5357,
+    "RPOWER": 0.513,
+    "ABFRL": 0.5083,
+    "GPIL": 0.5058,
+    "GMDCLTD": 0.4991,
+    "INOXWIND": 0.4871,
+    "MRPL": 0.4869
   }
 }

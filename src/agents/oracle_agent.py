@@ -70,21 +70,20 @@ except ImportError:
 # ─────────────────────────────────────────────────────────────
 
 try:
-    from ..event_bus.event_bus import BaseAgent, EventType
+    from src.event_bus.event_bus import BaseAgent, EventType
 except ImportError:
-
-    class BaseAgent:
-        def __init__(self, event_bus, config, name=""):
-            self.event_bus = event_bus
-            self.config = config
-            self.name = name
-            self.is_active = True
-
-        def publish_event(self, *a, **k):
-            pass
-
-    class EventType:
-        MACRO_UPDATE = "MACRO_UPDATE"
+    try:
+        from ..event_bus.event_bus import BaseAgent, EventType
+    except ImportError:
+        # Fallback for static analysis tools
+        class BaseAgent:
+            def __init__(self, event_bus=None, config=None, name=""):
+                self.event_bus = event_bus; self.config = config or {}; self.name = name
+                self.is_active = True; self.last_activity = "Initialised"
+            def publish_event(self, *a, **k): pass
+            def subscribe(self, *a, **k): pass
+        class EventType:
+            MACRO_UPDATE = "macro_update"
 
 
 # ─────────────────────────────────────────────────────────────
