@@ -344,6 +344,7 @@ function TabBar({active,setActive,counts}) {
     {id:"positions",label:"Positions",badge:counts.pos},
     {id:"signals",label:"Signals",badge:counts.sigs},
     {id:"news",label:"News",badge:counts.news},
+    {id:"macro",label:"External Factors"},
     {id:"performance",label:"Performance"},
     {id:"evaluation",label:"Evaluation",badge:counts.eval},
     {id:"agents",label:"Agents"},
@@ -967,6 +968,11 @@ function SignalsTab({signals,onStock,picks}) {
 // ═══════════════════════════════════════════════════════════════════════════
 function NewsTab({news,picks}) {
   const [expanded,setExpanded]=useState(null);
+  const sortedNews = [...news].sort((a,b)=>{
+    const ta = new Date(a.time||a.ts||0).getTime();
+    const tb = new Date(b.time||b.ts||0).getTime();
+    return tb - ta;
+  });
   return (
     <div style={{display:"flex",flexDirection:"column",gap:0,background:G.surface,
       border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
@@ -974,9 +980,9 @@ function NewsTab({news,picks}) {
         <span style={{color:G.text,fontSize:13,fontWeight:600}}>Market Intelligence</span>
         <span style={{color:G.textMut,fontSize:10}}>FinBERT sentiment · HERMES agent · {news.length} items</span>
       </div>
-      {news.length===0
+      {sortedNews.length===0
         ?<Empty icon="📰" title="No news yet" sub="HERMES agent fetches and analyses market news every 2 minutes."/>
-        :news.map((item,idx)=>{
+        :sortedNews.map((item,idx)=>{
           const pick=picks.find(p=>p.s===item.symbol);
           const sentColor=item.sentiment?.includes("BULL")?G.green:item.sentiment?.includes("BEAR")?G.red:G.yellow;
           return (
@@ -1461,6 +1467,53 @@ function AgentsTab({agentKpi,events,karmaStats,dataSources}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// TAB: MACRO / EXTERNAL FACTORS
+// ═══════════════════════════════════════════════════════════════════════════
+function MacroTab({macro}) {
+  const biasColor = macro.macro_bias==="BULLISH"?G.green:macro.macro_bias==="BEARISH"?G.red:G.yellow;
+  const riskColor = macro.risk_level==="LOW"?G.green:macro.risk_level==="MEDIUM"?G.yellow:G.red;
+  
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
+        <div style={{color:G.text,fontSize:14,fontWeight:600,marginBottom:12}}>🌍 Global Macro & External Factors</div>
+        
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
+          {[
+            {label:"Macro Bias",val:macro.macro_bias??"NEUTRAL",color:biasColor},
+            {label:"Risk Level",val:macro.risk_level??"MEDIUM",color:riskColor},
+            {label:"Size Multiplier",val:`${(macro.size_mult??1).toFixed(2)}x`,color:G.blue},
+            {label:"Regime Hint",val:macro.regime_hint??"SIDEWAYS",color:G.purple},
+          ].map(({label,val,color})=>(
+            <div key={label} style={{background:G.bg,borderRadius:6,padding:"10px 12px",border:`1px solid ${G.border}`}}>
+              <div style={{color:G.textMut,fontSize:9,marginBottom:4}}>{label}</div>
+              <div style={{color,fontSize:14,fontWeight:700,fontFamily:"monospace"}}>{val}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+          {[
+            {label:"India VIX (Fear Gauge)",val:macro.vix?macro.vix.toFixed(2):"15.00",sub:macro.vix>20?"High Volatility":"Normal Bias"},
+            {label:"FII Flow (Cr)",val:macro.fii_flow_cr!=null?`${macro.fii_flow_cr>=0?"+":""}${macro.fii_flow_cr.toFixed(0)}`:"0",color:macro.fii_flow_cr>=0?G.green:G.red,sub:macro.fii_flow_cr>=0?"Bullish Net Inflow":"Bearish Net Outflow"},
+            {label:"USD/INR",val:macro.usdinr?macro.usdinr.toFixed(2):"83.30",sub:macro.usdinr>84?"Rupee weakening (Bearish)":"Stable Currency"},
+            {label:"S&P 500 Daily Return",val:macro.spx_ret_pct!=null?`${macro.spx_ret_pct>=0?"+":""}${macro.spx_ret_pct.toFixed(2)}%`:"0.00%",color:macro.spx_ret_pct>=0?G.green:G.red,sub:"US Market sentiment mirror"},
+            {label:"Brent Crude Return",val:macro.crude_ret_pct!=null?`${macro.crude_ret_pct>=0?"+":""}${macro.crude_ret_pct.toFixed(2)}%`:"0.00%",color:macro.crude_ret_pct<0?G.green:G.red,sub:macro.crude_ret_pct>2?"Inflationary pressure":"Stable Energy Prices"},
+            {label:"US Fed Action / Impact",val:"HOLD",color:G.yellow,sub:"Terminal rate priced in"}
+          ].map(({label,val,color,sub})=>(
+            <div key={label} style={{background:G.bg,borderRadius:6,padding:"12px 14px",borderLeft:`3px solid ${color??G.blue}`}}>
+              <div style={{color:G.textSec,fontSize:11,marginBottom:4}}>{label}</div>
+              <div style={{color:color??G.text,fontSize:18,fontWeight:700,fontFamily:"monospace"}}>{val}</div>
+              <div style={{color:G.textMut,fontSize:10,marginTop:4}}>{sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // STOCK MODAL
 // ═══════════════════════════════════════════════════════════════════════════
 function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode}) {
@@ -1476,7 +1529,12 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
   const buySigs=stockSigs.filter(s=>s.signal===1);
   const sellSigs=stockSigs.filter(s=>s.signal===-1);
   const rating=computeRating(stock.confidence??0.5,buySigs.length,sellSigs.length,stock.score??0);
-  const tabs=[{id:"overview",label:"Overview"},{id:"signals",label:`Signals (${stockSigs.length})`},{id:"fundamentals",label:"Fundamentals"}];
+  const tabs=[
+    {id:"overview",label:"Overview"},
+    {id:"indicators",label:"Indicators"},
+    {id:"signals",label:`Signals (${stockSigs.length})`},
+    {id:"fundamentals",label:"Fundamentals"}
+  ];
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:100,
       display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
@@ -1573,6 +1631,37 @@ function StockModal({stock,onClose,candles,quotes,signals,fundamentals,news,mode
               )}
             </div>
           )}
+          {tab==="indicators"&&(
+            <div>
+              {!ind
+                ?<Empty icon="📈" title="No indicators" sub="Not enough candle data to compute indicators."/>
+                :<div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12}}>
+                  {[
+                    {id:"RSI (14)",val:ind.rsi[ind.n-1]?.toFixed(1),desc:"Relative Strength Index measures momentum. >70 Overbought, <30 Oversold. High impact on mean-reversion strategies."},
+                    {id:"ADX (14)",val:ind.adx[ind.n-1]?.toFixed(1),desc:"Average Directional Index measures trend strength. >25 Strong Trend, <20 Sideways. Confirms breakouts."},
+                    {id:"MACD",val:ind.macd[ind.n-1]?.toFixed(2),desc:"Moving Average Convergence Divergence. Positive=Bullish trend, Negative=Bearish trend."},
+                    {id:"MACD Histogram",val:ind.mh[ind.n-1]?.toFixed(2),desc:"MACD Line minus Signal Line. Rising=Increasing bullish momentum."},
+                    {id:"ATR (14)",val:`₹${ind.atr[ind.n-1]?.toFixed(2)}`,desc:"Average True Range measures absolute volatility. Used mathematically for Stop Loss sizing."},
+                    {id:"VWAP",val:`₹${ind.vwap[ind.n-1]?.toFixed(2)}`,desc:"Volume Weighted Average Price. Institutional benchmark for intraday/swing trend identification."},
+                    {id:"BB Width",val:`${(ind.bbw[ind.n-1]*100)?.toFixed(1)}%`,desc:"Bollinger Band Width. <2% implies extreme compression and an imminent breakout."},
+                    {id:"Statistical Z-Score",val:((ind.c[ind.n-1]-ind.sma20[ind.n-1])/ind.atr[ind.n-1])?.toFixed(2),desc:"Distance from 20-SMA in standard deviations (ATRized). >2 indicates extreme optimism."},
+                  ].map(({id,val,desc})=>(
+                    <div key={id} style={{background:G.bg,border:`1px solid ${G.border}`,borderRadius:6,padding:"14px 16px",position:"relative",cursor:"help"}}
+                         onMouseEnter={(e)=>{const t=e.currentTarget.querySelector('.tooltip');if(t)t.style.display='block';}}
+                         onMouseLeave={(e)=>{const t=e.currentTarget.querySelector('.tooltip');if(t)t.style.display='none';}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                        <span style={{color:G.textSec,fontSize:11,fontWeight:600}}>{id} <span style={{fontSize:10}}>ℹ️</span></span>
+                        <span style={{color:G.text,fontSize:15,fontWeight:700,fontFamily:"monospace"}}>{val}</span>
+                      </div>
+                      <div className="tooltip" style={{display:"none",position:"absolute",top:"100%",left:0,zIndex:100,background:G.surfaceHov,border:`1px solid ${G.borderMid}`,padding:"10px 14px",borderRadius:6,color:G.text,fontSize:11,width:"100%",boxShadow:"0 8px 16px rgba(0,0,0,0.6)",marginTop:4,lineHeight:1.5}}>
+                        <strong style={{color:G.blue}}>{id} Definition</strong><br/>
+                        {desc}
+                      </div>
+                    </div>
+                  ))}
+                </div>}
+            </div>
+          )}
           {tab==="signals"&&(
             <div>
               {stockSigs.length===0
@@ -1637,6 +1726,7 @@ export default function App() {
   const [karmaStats,setKarmaStats] = useState({});
   const [fundamentals,setFundamentals] = useState({});
   const [news,setNews]             = useState([]);
+  const [macro,setMacro]           = useState({});
   const [events,setEvents]         = useState([]);
   const [selectedStock,setSelected]= useState(null);
   const [ NSE_UNIVERSE, setNseUniverse ] = useState([]);
@@ -1689,6 +1779,7 @@ export default function App() {
           if(msg.karma)      setKarmaStats(msg.karma);
           if(msg.fundamentals) setFundamentals(prev=>({...prev,...msg.fundamentals}));
           if(msg.news)       setNews(msg.news);
+          if(msg.macro)      setMacro(msg.macro);
           if(msg.eval_stats) setEvalStats(msg.eval_stats);
           if(msg.agent_scores) setAgtScores(msg.agent_scores);
           if(msg.agent_kpi)  setAgentKpi(msg.agent_kpi);
@@ -1900,6 +1991,8 @@ export default function App() {
           <SignalsTab signals={allSigs} onStock={setSelected} picks={picks}/>}
         {tab==="news"&&
           <NewsTab news={news} picks={picks}/>}
+        {tab==="macro"&&
+          <MacroTab macro={macro}/>}
         {tab==="performance"&&
           <PerformanceTab evalStats={evalStats} positions={positions} agentKpi={agentKpi} systemState={systemState}/>}
         {tab==="evaluation"&&

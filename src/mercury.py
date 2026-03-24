@@ -70,6 +70,18 @@ class PaperExecutor:
                     direction, symbol, qty, filled, slip_bps)
         return result
 
+    def execute_trade(self, signal: dict) -> dict:
+        """Requirement for MercuryAgent: unified entry point."""
+        res = self.place_order(
+            signal['symbol'], signal['action'], signal['quantity'], signal['price']
+        )
+        return {
+            'success': res.status == "FILLED",
+            'fill_price': res.filled_price,
+            'quantity': res.qty,
+            'order_id': res.order_id
+        }
+
     def modify_sl(self, order_id: str, new_sl: float) -> bool:
         """Simulate trailing SL modification."""
         logger.info("[PAPER] ModifySL %s → ₹%.2f", order_id, new_sl)
@@ -78,6 +90,16 @@ class PaperExecutor:
     def cancel_order(self, order_id: str) -> bool:
         logger.info("[PAPER] Cancel %s", order_id)
         return True
+
+    def modify_order(self, order_id: str, symbol: str, new_price: float, **kwargs) -> bool:
+        """Simulate order modification (SL/Target)."""
+        logger.info("[PAPER] ModifyOrder %s %s → ₹%.2f", order_id, symbol, new_price)
+        return True
+
+    def close_position(self, position: dict) -> dict:
+        """Simulate closing an open position."""
+        logger.info("[PAPER] Closing position %s", position.get('symbol'))
+        return {'success': True, 'pnl': 0.0, 'fill_price': 0.0}
 
     def get_fill_stats(self) -> dict:
         if not self.fills: return {"fills": 0, "avg_slippage_bps": 0}
@@ -161,6 +183,58 @@ class OpenAlgoExecutor:
                 status="REJECTED", mode="LIVE", reason=str(e)
             )
 
+    def execute_trade(self, signal: dict) -> dict:
+        """Requirement for MercuryAgent: high-precision live execution."""
+        # Check if we should use patient limit execution (Requirement #3.4)
+        use_patient = signal.get('confidence', 0) > 0.7  # Use for high-conviction trades
+        
+        if use_patient:
+            res = self.execute_with_patience(
+                signal['symbol'], signal['action'], signal['quantity'], signal['price']
+            )
+        else:
+            res = self.place_order(
+                signal['symbol'], signal['action'], signal['quantity'], signal['price']
+            )
+            
+        return {
+            'success': res.status == "FILLED",
+            'fill_price': res.filled_price,
+            'quantity': res.qty,
+            'order_id': res.order_id,
+            'error': res.reason if res.status != "FILLED" else ""
+        }
+
+    def execute_with_patience(self, symbol: str, direction: str, qty: int,
+                              entry_price: float, wait_seconds: int = 30) -> OrderResult:
+        """Requirement #3.4: Patient Limit Order (Wait 30s before market buy)."""
+        logger.info(f"[PATIENT] Placing limit order for {symbol} @ ₹{entry_price:.2f} (wait {wait_seconds}s)")
+        
+        # 1. Place Limit Order
+        limit_result = self.place_order(symbol, direction, qty, entry_price, order_type="LIMIT")
+        if limit_result.status == "FILLED":
+            return limit_result
+            
+        # 2. Wait and poll status (Simulation for now; OpenAlgo needs /orderstatus endpoint)
+        start_time = time.time()
+        while time.time() - start_time < wait_seconds:
+            # check_status = self._get_with_retry(f"/orderstatus/{limit_result.order_id}")
+            # if check_status.get('status') == 'FILLED': return ...
+            time.sleep(2) # Polling interval
+            
+        # 3. If still pending, cancel and go market
+        logger.info(f"[PATIENT] {symbol} limit not filled. Switching to MARKET.")
+        self.cancel_order(limit_result.order_id)
+        return self.place_order(symbol, direction, qty, entry_price, order_type="MARKET")
+
+    def cancel_order(self, order_id: str) -> bool:
+        """Cancel a pending order via OpenAlgo."""
+        try:
+            self._post_with_retry("/cancelorder", {"orderid": order_id})
+            return True
+        except Exception:
+            return False
+
     def place_bracket_order(self, symbol: str, direction: str, qty: int,
                              entry_price: float, stop_loss: float,
                              target: float) -> OrderResult:
@@ -236,6 +310,25 @@ class OpenAlgoExecutor:
         except Exception as e:
             logger.error("[LIVE] CancelOrder failed: %s", e)
             return False
+
+    def close_position(self, position: dict) -> dict:
+        """Requirement #3.4: Live position closure."""
+        symbol = position.get('symbol')
+        qty    = position.get('quantity', position.get('qty', 0))
+        # For simple square off, we place an opposite market order
+        direction = "SELL" if "BUY" in str(position.get('side', 'BUY')).upper() else "BUY"
+        logger.info(f"[LIVE] Squaring off {symbol} ({qty} units)")
+        
+        try:
+            res = self.place_order(symbol, direction, qty, 0.0, order_type="MARKET")
+            return {
+                'success': res.status == "FILLED",
+                'fill_price': res.filled_price,
+                'pnl': (res.filled_price - position.get('entry_price', 0)) * qty if direction == "SELL" else 0
+            }
+        except Exception as e:
+            logger.error(f"Live close failed: {e}")
+            return {'success': False, 'error': str(e)}
 
     def get_positions(self) -> list:
         try:

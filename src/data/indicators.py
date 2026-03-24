@@ -64,6 +64,7 @@ def add_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
         .add_momentum()
         .add_volatility()
         .add_volume()
+        .add_candlestick()
         .add_meta()
         .build()
     )
@@ -231,6 +232,15 @@ class IndicatorEngine:
         # Average volume
         df['avg_volume'] = vol.rolling(20).mean()
 
+        self._df = df
+        return self
+
+    # ── Candlestick Patterns ───────────────────────────────────────────────
+
+    def add_candlestick(self) -> 'IndicatorEngine':
+        """Common price-action patterns (Doji, Hammer, Engulfing)."""
+        df = self._df
+        df = _detect_patterns(df)
         self._df = df
         return self
 
@@ -481,6 +491,44 @@ def _supertrend(
         supertrend.iloc[i] = lower_band.iloc[i] if direction.iloc[i] == 1 else upper_band.iloc[i]
 
     return supertrend, direction
+
+
+def _detect_patterns(df: pd.DataFrame) -> pd.DataFrame:
+    """Detect common candlestick patterns (True/False or 1/0)."""
+    o, h, l, c = df['open'], df['high'], df['low'], df['close']
+    body_size = (c - o).abs()
+    candle_range = h - l
+    
+    # Doji (Body size <= 10% of total range)
+    df['is_doji'] = (body_size <= (0.10 * candle_range)) & (candle_range > 0)
+    
+    # Hammer (Small body, long lower wick)
+    # - Body in upper 1/3 of range
+    # - Lower wick >= 2 * body size
+    # - Upper wick <= 0.1 * candle_range
+    lower_wick = np.minimum(o, c) - l
+    upper_wick = h - np.maximum(o, c)
+    df['is_hammer'] = (lower_wick >= (2 * body_size)) & (upper_wick <= (0.1 * candle_range)) & (candle_range > 0)
+    
+    # Shooting Star (Small body, long upper wick) - Bearish reversal
+    df['is_shooting_star'] = (upper_wick >= (2 * body_size)) & (lower_wick <= (0.1 * candle_range)) & (candle_range > 0)
+    
+    # Engulfing Patterns
+    # Bullish: Previous candle red, current green and engulfs body
+    prev_o = o.shift(1); prev_c = c.shift(1)
+    df['is_bull_engulfing'] = (prev_c < prev_o) & (c > o) & (c >= prev_o) & (o <= prev_c)
+    
+    # Bearish: Previous candle green, current red and engulfs body
+    df['is_bear_engulfing'] = (prev_c > prev_o) & (c < o) & (c <= prev_o) & (o >= prev_c)
+    
+    # Morning / Evening Star (3-candle patterns)
+    # Morning Star: Bearish -> Doji/Small -> Bullish
+    # Shift indices manually for 3-candle window
+    # Simple versions:
+    df['is_morning_star'] = (c.shift(2) < o.shift(2)) & (df['is_doji'].shift(1)) & (c > o) & (c > (o.shift(2) + c.shift(2))/2)
+    df['is_evening_star'] = (c.shift(2) > o.shift(2)) & (df['is_doji'].shift(1)) & (c < o) & (c < (o.shift(2) + c.shift(2))/2)
+
+    return df
 
 
 # ---------------------------------------------------------------------------

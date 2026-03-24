@@ -106,6 +106,11 @@ class TitanStrategyEngine:
             ("S3",  "Opening Range Bias",       "Statistical",    "15m",    self.s3_orb2),
             ("S4",  "Seasonal Pattern",         "Statistical",    "1D",     self.s4_seasonal),
             ("S5",  "Event Momentum",           "Statistical",    "1D",     self.s5_event),
+            # ── Category G: Candlestick Patterns (4) ──────────────────────
+            ("G1",  "Hammer / Shooting Star",   "Price Action",   "15m",    self.g1_hammer),
+            ("G2",  "Engulfing Reversal",       "Price Action",   "15m",    self.g2_engulfing),
+            ("G3",  "Morning / Evening Star",   "Price Action",   "15m",    self.g3_stars),
+            ("G4",  "Doji Breakout",            "Price Action",   "15m",    self.g4_doji),
         ]
 
     # ── Helpers ──────────────────────────────────────────────────────────────
@@ -658,8 +663,49 @@ class TitanStrategyEngine:
         if rsi is not None and len(rsi) >= 3:
             rsi_surge = rsi[-1] - rsi[-3]
             if rsi_surge > 10: return Signal("S5","Event Momentum","Statistical",1,0.65,f"RSI surge +{rsi_surge:.1f} in 3 bars — event momentum","1D",{"rsi_surge":rsi_surge})
-            if rsi_surge < -10: return Signal("S5","Event Momentum","Statistical",-1,0.65,f"RSI drop {rsi_surge:.1f} in 3 bars — event selloff","1D",{"rsi_surge":rsi_surge})
+            if rsi_surge < -10: return Signal("S5","Event Momentum","Statistical",1,0.65,f"RSI drop {rsi_surge:.1f} in 3 bars — event selloff","1D",{"rsi_surge":rsi_surge})
         return Signal("S5","Event Momentum","Statistical",0,0.28,"No momentum event","1D",{})
+
+    # ── Category G: Candlestick Patterns ──────────────────────────────────
+
+    def g1_hammer(self, df, ind):
+        if not df.get('is_hammer', pd.Series([False]*len(df))).iloc[-1] and \
+           not df.get('is_shooting_star', pd.Series([False]*len(df))).iloc[-1]:
+            return Signal("G1","Hammer/ShootingStar","Price Action",0,0.0,"No pattern","15m",{})
+        
+        is_hammer = df['is_hammer'].iloc[-1]
+        c = ind.get("close"); rsi = ind.get("rsi")
+        if is_hammer:
+            # Hammer is bullish reversal if RSI was low
+            conf = 0.72 if (rsi is not None and rsi[-1] < 40) else 0.55
+            return Signal("G1","Hammer","Price Action",1,conf,"Bullish Hammer pattern detected","15m",{})
+        else:
+            # Shooting star is bearish reversal
+            conf = 0.72 if (rsi is not None and rsi[-1] > 60) else 0.55
+            return Signal("G1","Shooting Star","Price Action",-1,conf,"Bearish Shooting Star pattern detected","15m",{})
+
+    def g2_engulfing(self, df, ind):
+        bull = df.get('is_bull_engulfing', pd.Series([False]*len(df))).iloc[-1]
+        bear = df.get('is_bear_engulfing', pd.Series([False]*len(df))).iloc[-1]
+        if bull: return Signal("G2","Bullish Engulfing","Price Action",1,0.75,"Strong Bullish Engulfing reversal","15m",{})
+        if bear: return Signal("G2","Bearish Engulfing","Price Action",-1,0.75,"Strong Bearish Engulfing reversal","15m",{})
+        return Signal("G2","Engulfing","Price Action",0,0.0,"No pattern","15m",{})
+
+    def g3_stars(self, df, ind):
+        morning = df.get('is_morning_star', pd.Series([False]*len(df))).iloc[-1]
+        evening = df.get('is_evening_star', pd.Series([False]*len(df))).iloc[-1]
+        if morning: return Signal("G3","Morning Star","Price Action",1,0.80,"Morning Star 3-bar reversal bullish","15m",{})
+        if evening: return Signal("G3","Evening Star","Price Action",-1,0.80,"Evening Star 3-bar reversal bearish","15m",{})
+        return Signal("G3","Stars","Price Action",0,0.0,"No pattern","15m",{})
+
+    def g4_doji(self, df, ind):
+        if not df.get('is_doji', pd.Series([False]*len(df))).iloc[-1]:
+            return Signal("G4","Doji","Price Action",0,0.0,"No Doji","15m",{})
+        # Doji is neutral, but can signal reversal
+        rsi = ind.get("rsi")
+        if rsi is not None and rsi[-1] < 30: return Signal("G4","Doji Reversal","Price Action",1,0.58,"Oversold Doji — potential bounce","15m",{})
+        if rsi is not None and rsi[-1] > 70: return Signal("G4","Doji Reversal","Price Action",-1,0.58,"Overbought Doji — potential pullback","15m",{})
+        return Signal("G4","Doji","Price Action",0,0.30,"Neutral Doji (indecision)","15m",{})
 
     # ── Master runner ─────────────────────────────────────────────────────────
 

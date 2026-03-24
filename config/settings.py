@@ -15,8 +15,9 @@ from typing import List
 from dotenv import load_dotenv
 
 # Load .env from project root
-_ENV_PATH = os.path.join(os.path.dirname(__file__), '..', '.env')
-load_dotenv(_ENV_PATH)
+_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+_ENV_PATH = os.path.join(_PROJECT_ROOT, '.env')
+load_dotenv(_ENV_PATH, override=True)
 
 
 @dataclass
@@ -73,6 +74,7 @@ class Settings:
     MAX_POSITIONS: int            = int(os.getenv('MAX_POSITIONS',            '10'))
     MAX_TRADES_PER_DAY: int       = int(os.getenv('MAX_TRADES_PER_DAY',       '20'))
     CONSECUTIVE_LOSS_LIMIT: int   = int(os.getenv('CONSECUTIVE_LOSS_LIMIT',   '3'))
+    MIN_RR: float                 = float(os.getenv('MIN_RR',                 '1.0'))
 
     # ── Portfolio Management ────────────────────────────────────────────────
     # Once a swing/positional position is open, hold it until target OR stop hit.

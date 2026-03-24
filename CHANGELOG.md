@@ -1,6 +1,26 @@
 # Changelog — AlphaZero Capital
 
 All notable changes to the AlphaZero Capital project will be documented in this file.
+**Rule:** Every new feature or fix MUST be accompanied by the date of implementation.
+
+## [5.0.0] - 2026-03-24
+
+### 🛡️ Risk Management & Capital Safeguards
+- **Strategy Correlation Guard**: Implemented a strict limit of **3 open positions per strategy** (e.g., T10) to prevent over-exposure and "herd behavior" during mass signal generation.
+- **Short Sale P&L Fix**: Resolved a critical money leak where short positions (SELL signals) were having their P&L incorrectly calculated as BUYS. Logic is now fully direction-aware.
+- **Volatility Filter**: Added a mandatory **9:15 AM - 9:45 AM IST entry lock** to avoid getting stopped out by initial market-open noise.
+
+### 🚀 Execution & Signal Improvements
+- **Execution Gap Fix**: Replaced the hardcoded 0.65 entry confidence threshold with **Regime-Adaptive Confidence**:
+  - Trending: 0.55
+  - Sideways: 0.60
+  - Volatile: 0.70
+- **Daily P&L Dash**: Rewired dashboard to display real-time "Today's P&L" based on trades closed in the current session.
+- **History Expansion**: Increased history rendering limit from 100 to 500 trades for better audit trails.
+
+### 🕯️ Candlestick Price Action
+- **Pattern Detection Engine**: Added native support for **Hammer**, **Doji**, **Engulfing**, and **Morning/Evening Star** patterns in the indicator layer.
+- **TITAN Integration**: New "Price Action" strategy category added to TITAN, contributing 10% to overall signal confidence across all regimes.
 
 ## [4.0.0] - 2026-03-21
 

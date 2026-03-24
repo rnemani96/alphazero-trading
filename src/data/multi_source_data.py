@@ -264,6 +264,10 @@ class MultiSourceData:
         self._ncache: Dict[str, Tuple[float, List[NewsItem]]] = {}
 
         self._funder_cache: Dict[str, Tuple[float, Dict]] = {}
+        
+        # Initialize tokens from env/globals
+        self._upstox_token = _UPSTOX_TOKEN
+        
         logger.info(
             "MultiSourceData init — sources: "
             f"Upstox={'✓' if UPSTOX_OK else '✗'} "
@@ -271,7 +275,7 @@ class MultiSourceData:
             f"yfinance={'✓' if YF_OK else '✗'} "
             f"TwelveData={'✓' if TD_OK else '✗'} "
             f"Finnhub={'✓' if FH_OK else '✗'} "
-            f"AlphaVantage={'✓' if AV_OK else '✗'} "
+            f"Alpha Vantage={'✓' if AV_OK else '✗'} "
             f"NSEDirect={'✓' if NSE_PY_OK or REQUESTS_OK else '✗'}"
         )
 

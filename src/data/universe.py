@@ -115,3 +115,49 @@ def get_sector_map() -> Dict[str, str]:
 def get_sector(symbol: str) -> str:
     """Helper to get a single stock's sector."""
     return get_sector_map().get(symbol, "OTHER")
+
+
+def get_karma_universe(msd) -> List[str]:
+    """
+    Generate a dynamic learning universe for KARMA:
+    - Top 50 Gainers (Nifty 500)
+    - Top 50 Losers (Nifty 500)
+    - 100 Random stocks from Nifty 500
+    Total: ~200 stocks.
+    """
+    import random
+    all_syms = get_nifty500_symbols()
+    if not all_syms:
+        return []
+
+    logger.info(f"Generating KARMA universe from {len(all_syms)} NIFTY 500 stocks...")
+    
+    # 1. Fetch performance data for all (batched 100 at a time for safety)
+    performance = []
+    batch_size = 100
+    for i in range(0, len(all_syms), batch_size):
+        batch = all_syms[i : i + batch_size]
+        quotes = msd.get_bulk_quotes(batch)
+        for sym, q in quotes.items():
+            chg = q.get("change_pct", 0)
+            performance.append((sym, chg))
+
+    if not performance:
+        logger.warning("No performance data found for training universe. Using random sample.")
+        return random.sample(all_syms, min(200, len(all_syms)))
+
+    # 2. Sort by performance
+    performance.sort(key=lambda x: x[1], reverse=True)
+    
+    top_gainers = [x[0] for x in performance[:50]]
+    top_losers  = [x[0] for x in performance[-50:]]
+    
+    # 3. Random 100 (excluding gainers/losers)
+    used = set(top_gainers + top_losers)
+    remaining = [s for s in all_syms if s not in used]
+    random_sample = random.sample(remaining, min(100, len(remaining)))
+    
+    final_list = list(set(top_gainers + top_losers + random_sample))
+    logger.info(f"KARMA Universe Ready: {len(final_list)} stocks ({len(top_gainers)} gainers, {len(top_losers)} losers, {len(random_sample)} random)")
+    
+    return final_list

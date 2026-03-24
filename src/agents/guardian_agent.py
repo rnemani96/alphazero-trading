@@ -97,6 +97,7 @@ class GuardianAgent(BaseAgent):
         self.consec_losses      = 0
         self.kill_switch_active = False
         self.cooldown_until: Optional[datetime] = None
+        self.max_strategy_positions = 3
         self.last_trade_time: Optional[datetime] = None
         self.trade_decisions    = 0
         self.last_reset_date    = date.today()
@@ -166,8 +167,9 @@ class GuardianAgent(BaseAgent):
             if price <= 0:
                 return self._reject('INVALID_PRICE')
 
-            # ── Dynamic SL / Target from ATR ──────────────────────────────────
-            sl, tgt = self._compute_sl_target(price, action, atr)
+            # ── Dynamic SL / Target from ATR (Regime-Aware) ───────────────────
+            regime  = signal.get('regime', 'SIDEWAYS').upper()
+            sl, tgt = self._compute_sl_target(price, action, atr, regime)
             rr      = self._compute_rr(price, sl, tgt)
             if rr < self.min_rr:
                 return self._reject(f'LOW_RR ({rr:.2f} < {self.min_rr})')
@@ -207,6 +209,14 @@ class GuardianAgent(BaseAgent):
             if sector_used + pos_size > current_capital * self.max_sector_pct:
                 return self._reject(f'SECTOR_LIMIT ({sector})')
 
+            # ── Strategy Correlation Guard ────────────────────────────────────
+            # Prevent single strategy (e.g., T10) from dominating portfolio
+            same_strat_positions = [
+                p for p in positions if p.get('strategy', p.get('sid', '')) == strat
+            ]
+            if len(same_strat_positions) >= self.max_strategy_positions:
+                return self._reject(f'STRATEGY_LIMIT ({strat}: {len(same_strat_positions)} open)')
+
             # ── Duplicate position guard ───────────────────────────────────────
             open_syms = {p.get('symbol') for p in positions}
             if sym in open_syms:
@@ -224,10 +234,12 @@ class GuardianAgent(BaseAgent):
                 'qty':           qty,
                 'rr':            rr,
                 'vix':           self._current_vix,
+                'regime':        regime,
+                'action_side':   action
             })
 
-            logger.info("GUARDIAN ✅ %s ×%d ₹%.2f  SL=₹%.2f  TGT=₹%.2f  R:R=%.1f  conf=%.2f",
-                        sym, qty, price, sl, tgt, rr, conf)
+            logger.info("GUARDIAN ✅ %s %s ×%d ₹%.2f  SL=₹%.2f  TGT=₹%.2f  R:R=%.1f  conf=%.2f  regime=%s",
+                        action, sym, qty, price, sl, tgt, rr, conf, regime)
 
             return {
                 'approved':      True,
@@ -237,6 +249,8 @@ class GuardianAgent(BaseAgent):
                 'stop_loss':     sl,
                 'target':        tgt,
                 'sector':        sector,
+                'action':        action,
+                'regime':        regime
             }
 
     def approve_signals(self, signals: List[Dict]) -> List[Dict]:
@@ -261,6 +275,7 @@ class GuardianAgent(BaseAgent):
                 sig['qty']           = result['quantity']
                 sig['stop_loss']     = result.get('stop_loss', sig.get('stop_loss', 0))
                 sig['target']        = result.get('target',    sig.get('target',    0))
+                sig['direction']     = result.get('action',    'BUY') # ensure direction is passed
                 approved.append(sig)
                 any_approved = True
         
@@ -339,15 +354,32 @@ class GuardianAgent(BaseAgent):
         logger.critical("GUARDIAN 🚨 %s", msg)
 
     def _compute_sl_target(
-        self, price: float, action: str, atr: float
+        self, price: float, action: str, atr: float, regime: str = 'SIDEWAYS'
     ) -> Tuple[float, float]:
-        """ATR-based stop-loss and 3:1 R:R target."""
+        """
+        Regime-aware ATR-based stop-loss and dynamically adjusted target.
+        - Trending: 1.5x ATR SL
+        - Sideways: 2.5x ATR SL
+        - Volatile: 3.5x ATR SL
+        """
+        multipliers = {
+            'TRENDING': 1.5,
+            'SIDEWAYS': 2.5,
+            'VOLATILE': 3.5,
+            'CRASH':    4.0
+        }
+        mult = multipliers.get(regime.upper(), 2.0)
+        
+        # Risk 1 unit of mult*ATR, Aim for min 2 units of mult*ATR (preserving R:R)
+        risk_dist = mult * atr
+        
         if action == 'BUY':
-            sl  = round(price - 1.5 * atr, 2)
-            tgt = round(price + 3.0 * atr, 2)
+            sl  = round(price - risk_dist, 2)
+            tgt = round(price + max(risk_dist * self.min_rr, 3.0 * atr), 2)
         else:
-            sl  = round(price + 1.5 * atr, 2)
-            tgt = round(price - 3.0 * atr, 2)
+            sl  = round(price + risk_dist, 2)
+            tgt = round(price - max(risk_dist * self.min_rr, 3.0 * atr), 2)
+            
         return sl, tgt
 
     def _compute_rr(self, price: float, sl: float, tgt: float) -> float:

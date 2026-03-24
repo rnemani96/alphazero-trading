@@ -60,8 +60,9 @@ def _get_engine():
 # ── Regime → strategy-category weights ────────────────────────────────────────
 _REGIME_WEIGHTS: Dict[str, Dict[str, float]] = {
     'TRENDING': {
-        'Trend':          0.55,
-        'Breakout':       0.25,
+        'Trend':          0.50,
+        'Breakout':       0.20,
+        'Price Action':   0.10,
         'VWAP':           0.10,
         'Volume':         0.10,
         'Mean Reversion': 0.00,
@@ -69,15 +70,17 @@ _REGIME_WEIGHTS: Dict[str, Dict[str, float]] = {
     },
     'SIDEWAYS': {
         'Trend':          0.10,
-        'Mean Reversion': 0.55,
-        'VWAP':           0.20,
+        'Mean Reversion': 0.50,
+        'Price Action':   0.10,
+        'VWAP':           0.15,
         'Volume':         0.15,
         'Breakout':       0.00,
         'Statistical':    0.00,
     },
     'VOLATILE': {
-        'Trend':          0.15,
-        'Breakout':       0.35,
+        'Trend':          0.10,
+        'Breakout':       0.30,
+        'Price Action':   0.10,
         'VWAP':           0.20,
         'Volume':         0.20,
         'Mean Reversion': 0.10,
@@ -92,8 +95,9 @@ _REGIME_WEIGHTS: Dict[str, Dict[str, float]] = {
         'Statistical':    0.00,
     },
     'NEUTRAL': {
-        'Trend':          0.30,
-        'Mean Reversion': 0.25,
+        'Trend':          0.25,
+        'Mean Reversion': 0.20,
+        'Price Action':   0.10,
         'Breakout':       0.20,
         'VWAP':           0.15,
         'Volume':         0.10,

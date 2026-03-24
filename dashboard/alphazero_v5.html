@@ -534,10 +534,19 @@ function TopNav({regime,indices,paperPnl,time,connStatus,mode}) {
         VIX <span style={{color:(indices.vix||0) > 22 ? G.red : G.green,fontWeight:700}}>{(indices.vix||14.2).toFixed(1)}</span>
       </span>
       <div style={{flex:1}}/>
-      <div style={{textAlign:"right"}}>
-        <div style={{color:G.textMut,fontSize:9,fontFamily:"monospace",letterSpacing:".08em"}}>NET P&L (after charges)</div>
-        <div style={{color:(paperPnl||0)>=0?G.green:G.red,fontSize:13,fontWeight:700,fontFamily:"monospace"}}>
-          {(paperPnl||0)>=0?"+":"-"}₹{Math.abs(paperPnl||0).toLocaleString("en-IN",{maximumFractionDigits:0})}
+      <div style={{display:"flex",gap:20,alignItems:"center"}}>
+        <div style={{textAlign:"right"}}>
+          <div style={{color:G.textMut,fontSize:9,fontFamily:"monospace",letterSpacing:".08em"}}>TODAY'S P&L</div>
+          <div style={{color:(indices.today_pnl||indices.todayPnl||0)>=0?G.green:G.red,fontSize:13,fontWeight:700,fontFamily:"monospace"}}>
+            {(indices.today_pnl||indices.todayPnl||0)>=0?"+":"-"}₹{Math.abs(indices.today_pnl||indices.todayPnl||0).toLocaleString("en-IN",{maximumFractionDigits:0})}
+          </div>
+        </div>
+        <div style={{width:1,height:24,background:G.border}}/>
+        <div style={{textAlign:"right"}}>
+          <div style={{color:G.textMut,fontSize:9,fontFamily:"monospace",letterSpacing:".08em"}}>TOTAL NET P&L</div>
+          <div style={{color:(paperPnl||0)>=0?G.green:G.red,fontSize:13,fontWeight:700,fontFamily:"monospace"}}>
+            {(paperPnl||0)>=0?"+":"-"}₹{Math.abs(paperPnl||0).toLocaleString("en-IN",{maximumFractionDigits:0})}
+          </div>
         </div>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -559,6 +568,7 @@ function TabBar({active,setActive,counts}) {
     {id:"positions",label:"Positions",badge:counts.pos},
     {id:"signals",label:"Signals",badge:counts.sigs},
     {id:"news",label:"News",badge:counts.news},
+    {id:"macro",label:"External Factors"},
     {id:"performance",label:"Performance"},
     {id:"evaluation",label:"Evaluation",badge:counts.eval},
     {id:"agents",label:"Agents"},
@@ -587,25 +597,28 @@ function TabBar({active,setActive,counts}) {
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: OVERVIEW
 // ═══════════════════════════════════════════════════════════════════════════
-function OverviewTab({picks:rawPicks,positions:rawPositions,allSigs:rawSigs,evalStats,indices,candleCache,news,onStock,candidates,NSE_UNIVERSE=[]}) {
+function OverviewTab({picks:rawPicks,positions:rawPositions,allSigs:rawSigs,evalStats,indices,candleCache,news,onStock,candidates,NSE_UNIVERSE=[],apData={}}) {
   const positions = Array.isArray(rawPositions) ? rawPositions : Object.values(rawPositions || {});
   const picks = Array.isArray(rawPicks) ? rawPicks : Object.values(rawPicks || {});
   const allSigs = Array.isArray(rawSigs) ? rawSigs : Object.values(rawSigs || {});
   
   const open=positions.filter(p=>p.status==="OPEN");
-  const netPnl=open.reduce((s,p)=>s+calcNetPnl(p).netPnl,0);
-  const grossPnl=open.reduce((s,p)=>s+calcNetPnl(p).grossPnl,0);
+  const grossPnl=apData.total_unrealised_pnl || open.reduce((s,p)=>s+calcNetPnl(p).grossPnl,0);
+  const netPnl=apData.total_realised_pnl || open.reduce((s,p)=>s+calcNetPnl(p).netPnl,0);
+  const totalOpen = apData.total_open ?? open.length;
+  const maxSlots = apData.max_positions || 10;
+  const wr=apData.win_rate_pct != null ? apData.win_rate_pct/100 : (evalStats.win_rate||0);
   const buy=allSigs.filter(s=>s.signal===1).length;
   const sell=allSigs.filter(s=>s.signal===-1).length;
-  const wr=evalStats.win_rate||0;
   return (
     <div style={{display:"flex",flexDirection:"column",gap:24}}>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12}}>
         {[
-          {label:"Open Positions",val:open.length,sub:`${10-open.length} slots free`,color:G.blue},
-          {label:"Gross P&L",val:`${grossPnl>=0?"+":""}₹${Math.abs(grossPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"before charges",color:grossPnl>=0?G.green:G.red},
-          {label:"Net P&L (after charges)",val:`${netPnl>=0?"+":""}₹${Math.abs(netPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"STT+Brok+GST+DP incl.",color:netPnl>=0?G.teal:G.red},
-          {label:"Agent Win Rate",val:`${((wr||0)*100).toFixed(1)}%`,sub:`${evalStats.total_evaluated||0} evaluated`,color:wr>=0.55?G.green:wr>=0.40?G.yellow:G.red},
+          {label:"Open Positions",val:totalOpen,sub:`${maxSlots-totalOpen} slots free`,color:G.blue},
+          {label:"Today's Realised P&L",val:`${(apData.today_pnl||0)>=0?"+":""}₹${Math.abs(apData.today_pnl||0).toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"trades closed today",color:(apData.today_pnl||0)>=0?G.green:G.red},
+          {label:"Gross P&L (Unrealised)",val:`${grossPnl>=0?"+":""}₹${Math.abs(grossPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"before charges",color:grossPnl>=0?G.green:G.red},
+          {label:"Net P&L (Lifetime)",val:`${netPnl>=0?"+":""}₹${Math.abs(netPnl).toLocaleString("en-IN",{maximumFractionDigits:0})}`,sub:"after all brokerage & taxes",color:netPnl>=0?G.teal:G.red},
+          {label:"System Win Rate",val:`${((wr||0)*100).toFixed(1)}%`,sub:`${apData.total_trades||evalStats.total_evaluated||0} trades recorded`,color:wr>=0.55?G.green:wr>=0.40?G.yellow:G.red},
         ].map(({label,val,sub,color})=>(
           <div key={label} style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
             <div style={{color:G.textSec,fontSize:11,marginBottom:8}}>{label}</div>
@@ -631,7 +644,7 @@ function OverviewTab({picks:rawPicks,positions:rawPositions,allSigs:rawSigs,eval
           )):picks.map((s,i)=>{
             const sym = s.symbol || s.s;
             const candles=candleCache[sym]||[];
-            const price=candles.length?(candles[candles.length-1].close||candles[candles.length-1].Close||s.base||0):s.price||s.base||0;
+            const price=s.price||(candles.length?(candles[candles.length-1].close||candles[candles.length-1].Close||s.base||0):s.base||0);
             const first=candles[0];
             const chg=first?(price-(first.close||first.Close||price))/(first.close||first.Close||price)*100:0;
             const rr=s.entry&&s.sl&&s.target?(s.target-s.entry)/(s.entry-s.sl):0;
@@ -743,6 +756,33 @@ function PositionsTab({positions:rawPositions,mode,apData={}}) {
   return (
     <div style={{display:"flex",flexDirection:"column",gap:0}}>
 
+      {/* ── Capital usage banner ── */}
+      <div style={{display:"flex",gap:12,marginBottom:12,background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"12px 18px",alignItems:"center"}}>
+        {(()=>{
+          const totalCap=apData.initial_capital||1000000;
+          const invested=apData.total_invested||open.reduce((s,p)=>(s+(p.entryPrice||0)*(p.qty||0)),0);
+          const free=Math.max(0,totalCap-invested);
+          const pct=Math.min(100,(invested/totalCap)*100);
+          return (<>
+            <span style={{color:G.textMut,fontSize:10}}>CAPITAL</span>
+            <div style={{flex:1,height:6,background:G.bg,borderRadius:3,overflow:"hidden"}}>
+              <div style={{width:`${pct}%`,height:"100%",background:pct>80?G.red:pct>50?G.yellow:G.green,borderRadius:3,transition:"width .4s"}}/>
+            </div>
+            {[
+              {label:"Total",val:`₹${(totalCap/100000).toFixed(0)}L`,color:G.textSec},
+              {label:"Deployed",val:`₹${invested.toLocaleString("en-IN",{maximumFractionDigits:0})}`,color:G.yellow},
+              {label:"Free",val:`₹${free.toLocaleString("en-IN",{maximumFractionDigits:0})}`,color:G.green},
+              {label:"Utilization",val:`${pct.toFixed(1)}%`,color:pct>80?G.red:pct>50?G.yellow:G.teal},
+            ].map(({label,val,color})=>(
+              <div key={label} style={{textAlign:"center",minWidth:80}}>
+                <div style={{color:G.textMut,fontSize:9}}>{label}</div>
+                <div style={{color,fontWeight:700,fontSize:12,fontFamily:"monospace"}}>{val}</div>
+              </div>
+            ))}
+          </>);
+        })()}
+      </div>
+
       {/* ── Inner sub-tab bar ── */}
       <div style={{display:"flex",gap:0,borderBottom:`1px solid ${G.border}`,
         background:G.surface,borderRadius:"8px 8px 0 0",overflow:"hidden",marginBottom:16}}>
@@ -778,7 +818,7 @@ function PositionsTab({positions:rawPositions,mode,apData={}}) {
                   <table style={{width:"100%",borderCollapse:"collapse"}}>
                     <thead>
                       <tr style={{background:G.bg}}>
-                        {["Symbol","Strategy","TT","Entry ₹","CMP ₹","SL ₹","Target ₹","Qty","Gross P&L","Net P&L","Status","Opened"].map(h=>(
+                        {["Symbol","Strategy","Regime","TT","Entry ₹","CMP ₹","H/L ₹","SL ₹","Target ₹","Qty","Gross P&L","Net P&L","Status","Opened"].map(h=>(
                           <th key={h} style={{color:G.textSec,fontSize:10,padding:"9px 14px",
                             textAlign:"left",fontWeight:500,borderBottom:`1px solid ${G.border}`,
                             whiteSpace:"nowrap",fontFamily:"monospace"}}>{h}</th>
@@ -798,9 +838,14 @@ function PositionsTab({positions:rawPositions,mode,apData={}}) {
                               {monitoring&&<div style={{color:G.blue,fontSize:8,marginTop:2}}>📡 Monitoring</div>}
                             </td>
                             <td style={{padding:"11px 14px"}}><Tag label={pos.sid||"-"} color={G.yellow}/></td>
+                            <td style={{padding:"11px 14px"}}>{pos.regime ? <Tag label={REGIME_SAFE(pos.regime).icon+" "+pos.regime} color={REGIME_SAFE(pos.regime).color} /> : "-"}</td>
                             <td style={{padding:"11px 14px"}}><Tag label={pos.tt||"SWING"} color={TT_COLOR[pos.tt]||G.blue}/></td>
                             <td style={{padding:"11px 14px",color:G.textSec,fontSize:12,fontFamily:"monospace"}}>{(pos.entryPrice||0).toFixed(2)}</td>
                             <td style={{padding:"11px 14px",color:G.text,fontSize:12,fontWeight:700,fontFamily:"monospace"}}>{(pos.cp||pos.entryPrice||0).toFixed(2)}</td>
+                            <td style={{padding:"11px 14px",fontFamily:"monospace"}}>
+                              <div style={{color:G.teal,fontSize:10,fontWeight:600}}>H: {(pos.hp||pos.cp||pos.entryPrice||0).toFixed(1)}</div>
+                              <div style={{color:G.red,fontSize:10,fontWeight:600}}>L: {(pos.lp||pos.cp||pos.entryPrice||0).toFixed(1)}</div>
+                            </td>
                             <td style={{padding:"11px 14px",color:G.red,fontSize:12,fontFamily:"monospace"}}>{(pos.sl||0).toFixed(2)}</td>
                             <td style={{padding:"11px 14px",color:G.green,fontSize:12,fontFamily:"monospace"}}>{(pos.target||0).toFixed(2)}</td>
                             <td style={{padding:"11px 14px",color:G.textSec,fontSize:12,fontFamily:"monospace"}}>{pos.qty}</td>
@@ -940,10 +985,11 @@ function PositionsTab({positions:rawPositions,mode,apData={}}) {
           </div>
 
           {/* Summary stats */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10}}>
             {[
+              {label:"Today's P&L",   v:apData.today_pnl||0,            fmt:v=>`${v>=0?"+":""}₹${Math.abs(v).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:v=>(v||0) >= 0 ? G.green : G.red},
               {label:"Unrealised P&L",v:apData.total_unrealised_pnl||0,fmt:v=>`${v>=0?"+":""}₹${Math.abs(v).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:v=>(v||0) >= 0 ? G.green : G.red},
-              {label:"Realised P&L",  v:apData.total_realised_pnl||0,  fmt:v=>`${v>=0?"+":""}₹${Math.abs(v).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:v=>(v||0) >= 0 ? G.green : G.red},
+              {label:"Lifetime P&L",  v:apData.total_realised_pnl||0,  fmt:v=>`${v>=0?"+":""}₹${Math.abs(v).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:v=>(v||0) >= 0 ? G.green : G.red},
               {label:"Win Rate",      v:apData.win_rate_pct||0,         fmt:v=>`${(v||0).toFixed(1)}%`, c:v=>(v||0)>=55?G.green:(v||0)>=40?G.yellow:G.red},
               {label:"Capital In",    v:apData.total_invested||0,       fmt:v=>`₹${(v||0).toLocaleString("en-IN",{maximumFractionDigits:0})}`,c:()=>G.blue},
             ].map(({label,v,fmt,c})=>(
@@ -1051,14 +1097,14 @@ function PositionsTab({positions:rawPositions,mode,apData={}}) {
                 <table style={{width:"100%",borderCollapse:"collapse"}}>
                   <thead>
                     <tr style={{background:G.bg}}>
-                      {["Symbol","Entry ₹","Exit ₹","P&L","P&L %","Result","Strategy","Days","Closed"].map(h=>(
+                      {["Symbol","Term","Regime","Strategy","Entry ₹","Exit ₹","P&L","P&L %","Result","Closed"].map(h=>(
                         <th key={h} style={{color:G.textSec,fontSize:10,padding:"9px 14px",textAlign:"left",
                           fontWeight:500,borderBottom:`1px solid ${G.border}`,whiteSpace:"nowrap",fontFamily:"monospace"}}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {[...([...apHist].reverse().slice(0,30)), ...(apHist.length===0?closed.map(p=>({
+                    {[...([...apHist].reverse()), ...(apHist.length===0?closed.map(p=>({
                         symbol:p.symbol,entry_price:p.entry_price||0,current_price:p.current_price||p.entry_price||0,
                         realised_pnl:calcNetPnl({...p,cp:p.current_price||p.entry_price}).netPnl,
                         realised_pct:calcNetPnl({...p,cp:p.current_price||p.entry_price}).netPct,
@@ -1078,6 +1124,9 @@ function PositionsTab({positions:rawPositions,mode,apData={}}) {
                           onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
                           onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                           <td style={{padding:"10px 14px",fontWeight:700,fontSize:12,fontFamily:"monospace",color:G.text}}>{p?.symbol||"-"}</td>
+                          <td style={{padding:"10px 14px"}}><Tag label={p?.trade_type||"SWING"} color={TT_COLOR[p?.trade_type]||G.blue}/></td>
+                          <td style={{padding:"10px 14px"}}>{p?.regime ? <Tag label={REGIME_SAFE(p.regime).icon} color={REGIME_SAFE(p.regime).color} /> : "-"}</td>
+                          <td style={{padding:"10px 14px",color:G.textMut,fontSize:11}}>{p?.strategy||"--"}</td>
                           <td style={{padding:"10px 14px",fontFamily:"monospace",color:G.textSec,fontSize:12}}>₹{(p?.entry_price||0).toLocaleString("en-IN",{maximumFractionDigits:2})}</td>
                           <td style={{padding:"10px 14px",fontFamily:"monospace",color:G.text,fontSize:12}}>₹{(p?.current_price||0).toLocaleString("en-IN",{maximumFractionDigits:2})}</td>
                           <td style={{padding:"10px 14px",fontFamily:"monospace",fontSize:12,fontWeight:700,color:rpnl>=0?G.teal:G.red}}>
@@ -1090,8 +1139,6 @@ function PositionsTab({positions:rawPositions,mode,apData={}}) {
                             <span style={{padding:"2px 7px",borderRadius:20,fontSize:10,fontWeight:700,
                               background:sc+"18",color:sc,border:`1px solid ${sc}33`}}>{sl}</span>
                           </td>
-                          <td style={{padding:"10px 14px",color:G.textMut,fontSize:11}}>{p?.strategy||"--"}</td>
-                          <td style={{padding:"10px 14px",color:G.textMut,fontSize:11,fontFamily:"monospace"}}>{p?.days_open||0}d</td>
                           <td style={{padding:"10px 14px",color:G.textMut,fontSize:10}}>{cd}</td>
                         </tr>
                       );
@@ -1153,12 +1200,12 @@ function SignalsTab({signals,onStock,picks}) {
                       onMouseEnter={e=>e.currentTarget.style.background=G.surfaceHov}
                       onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
                       <td style={{padding:"10px 14px",color:G.blue,fontWeight:700,fontSize:12,fontFamily:"monospace"}}>{sig.symbol}</td>
-                      <td style={{padding:"10px 14px"}}><Tag label={sig.strategy_id||sig.id||"-"} color={G.yellow}/></td>
+                      <td style={{padding:"10px 14px"}}><Tag label={sig.top_strategy||sig.strategy_id||sig.id||"-"} color={G.yellow}/></td>
                       <td style={{padding:"10px 14px"}}>
-                        <Tag label={sig.signal===1?"BUY":sig.signal===-1?"SELL":"HOLD"}
-                          color={sig.signal===1?G.green:sig.signal===-1?G.red:G.yellow}/>
+                        <Tag label={sig.action==="BUY"||sig.signal===1?"BUY":sig.action==="SELL"||sig.signal===-1?"SELL":"HOLD"}
+                          color={sig.action==="BUY"||sig.signal===1?G.green:sig.action==="SELL"||sig.signal===-1?G.red:G.yellow}/>
                       </td>
-                      <td style={{padding:"10px 14px",color:G.textSec,fontSize:11}}>{sig.category||"-"}</td>
+                      <td style={{padding:"10px 14px",color:G.textSec,fontSize:11}}>{sig.trade_type||sig.category||"-"}</td>
                       <td style={{padding:"10px 14px"}}>
                         <div style={{display:"flex",alignItems:"center",gap:6}}>
                           <div style={{width:50,height:4,background:G.border,borderRadius:2,overflow:"hidden"}}>
@@ -1172,9 +1219,11 @@ function SignalsTab({signals,onStock,picks}) {
                         {sig.regime&&<Tag label={sig.regime} color={REGIME_SAFE(sig.regime).color}/>}
                       </td>
                       <td style={{padding:"10px 14px",color:G.textMut,fontSize:11,maxWidth:280}}>
-                        <span style={{display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{sig.reason||"-"}</span>
+                        <span style={{display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={sig.reasons&&sig.reasons.length>0?sig.reasons.join(", "):sig.reason||""}>
+                          {sig.reasons&&sig.reasons.length>0?sig.reasons[0]:sig.reason||"-"}
+                        </span>
                       </td>
-                      <td style={{padding:"10px 14px",color:G.textMut,fontSize:10,fontFamily:"monospace",whiteSpace:"nowrap"}}>{sig.ts||sig.time||"-"}</td>
+                      <td style={{padding:"10px 14px",color:G.textMut,fontSize:10,fontFamily:"monospace",whiteSpace:"nowrap"}}>{sig.timestamp||sig.ts||sig.time||"-"}</td>
                     </tr>
                   );
                 })}
@@ -1191,6 +1240,92 @@ function SignalsTab({signals,onStock,picks}) {
 // ═══════════════════════════════════════════════════════════════════════════
 function NewsTab({news,picks}) {
   const [expanded,setExpanded]=useState(null);
+  const sortedNews = [...news].sort((a,b)=>{
+    const parseTs = (item) => {
+      const val = item.time||item.ts||item.timestamp||0;
+      if (typeof val === 'number') return val;
+      if (typeof val === 'string') {
+        if (val.includes('ago')) {
+          const m = val.match(/(\d+)\s*(min|hour|day|sec)/);
+          if (m) {
+            const num = parseInt(m[1]);
+            const unit = m[2];
+            const now = Date.now();
+            if (unit.startsWith('sec')) return now - num * 1000;
+            if (unit.startsWith('min')) return now - num * 60000;
+            if (unit.startsWith('hour')) return now - num * 3600000;
+            if (unit.startsWith('day')) return now - num * 86400000;
+          }
+        }
+        const d = new Date(val).getTime();
+        return isNaN(d) ? 0 : d;
+      }
+      return 0;
+    };
+    return parseTs(b) - parseTs(a);
+  });
+
+  function NewsRow({item,ekey}) {
+    const sentColor=(item.sentiment||"").includes("BULL")?G.green:(item.sentiment||"").includes("BEAR")?G.red:G.yellow;
+    return (
+      <div style={{borderBottom:`1px solid ${G.border}`,cursor:"pointer"}}
+        onClick={()=>setExpanded(expanded===ekey?null:ekey)}>
+        <div style={{padding:"14px 18px",display:"flex",gap:12,alignItems:"flex-start"}}
+          onMouseEnter={e=>e.currentTarget.parentElement.style.background=G.surfaceHov}
+          onMouseLeave={e=>e.currentTarget.parentElement.style.background="transparent"}>
+          <div style={{width:3,alignSelf:"stretch",background:sentColor,borderRadius:2,flexShrink:0}}/>
+          <div style={{flex:1}}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                {item.symbol&&<span style={{color:G.blue,fontWeight:700,fontSize:11,fontFamily:"monospace"}}>{item.symbol}</span>}
+                <Tag label={item.sentiment||"-"} color={sentColor}/>
+                <span style={{color:G.textMut,fontSize:10}}>{item.source}</span>
+              </div>
+              <span style={{color:G.textMut,fontSize:10,fontFamily:"monospace"}}>{item.time}</span>
+            </div>
+            <div style={{color:G.text,fontSize:12,lineHeight:1.5,marginBottom:4}}>{item.headline}</div>
+            {expanded===ekey&&(
+              <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
+                {item.impact&&<div style={{color:G.textSec,fontSize:11,lineHeight:1.5}}>{item.impact}</div>}
+                {item.sentiment_score!=null&&(
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{color:G.textMut,fontSize:10}}>Sentiment:</span>
+                    <div style={{width:60,height:4,background:G.border,borderRadius:2,overflow:"hidden"}}>
+                      <div style={{width:`${Math.abs(item.sentiment_score)*100}%`,height:"100%",
+                        background:item.sentiment_score>=0?G.green:G.red,borderRadius:2}}/>
+                    </div>
+                    <span style={{color:item.sentiment_score>=0?G.green:G.red,fontSize:10,fontFamily:"monospace",fontWeight:700}}>
+                      {item.sentiment_score>=0?"+":""}{(item.sentiment_score*100).toFixed(0)}%
+                    </span>
+                  </div>
+                )}
+                {item.url&&(
+                  <a href={item.url} target="_blank" rel="noreferrer"
+                    style={{color:G.blue,fontSize:10,textDecoration:"none"}}
+                    onClick={e=>e.stopPropagation()}>Read full article →</a>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const stockNews = sortedNews.filter(n=>n.symbol&&n.symbol!=='MARKET'&&n.symbol!=='GLOBAL');
+  const localNews = sortedNews.filter(n=>n.symbol==='MARKET'||(!n.symbol&&n.source&&(n.source.includes('NSE')||n.source.includes('India')||n.source.includes('Economic Times')||n.source.includes('Mint'))));
+  const globalNews = sortedNews.filter(n=>n.category==='GLOBAL'||n.symbol==='GLOBAL'||(!n.symbol&&!localNews.includes(n)&&!stockNews.includes(n)));
+
+  function GroupHeader({icon,title,count}) {
+    return (
+      <div style={{padding:"10px 18px",background:G.bg,borderBottom:`1px solid ${G.border}`,display:"flex",alignItems:"center",gap:8}}>
+        <span style={{fontSize:14}}>{icon}</span>
+        <span style={{color:G.textSec,fontSize:11,fontWeight:700,letterSpacing:".06em"}}>{title}</span>
+        <span style={{color:G.textMut,fontSize:10}}>({count})</span>
+      </div>
+    );
+  }
+
   return (
     <div style={{display:"flex",flexDirection:"column",gap:0,background:G.surface,
       border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
@@ -1198,55 +1333,62 @@ function NewsTab({news,picks}) {
         <span style={{color:G.text,fontSize:13,fontWeight:600}}>Market Intelligence</span>
         <span style={{color:G.textMut,fontSize:10}}>FinBERT sentiment · HERMES agent · {news.length} items</span>
       </div>
-      {news.length===0
+      {sortedNews.length===0
         ?<Empty icon="📰" title="No news yet" sub="HERMES agent fetches and analyses market news every 2 minutes."/>
-        :news.map((item,idx)=>{
-          const pick=picks.find(p=>(p.symbol||p.s)===item.symbol);
-          const sentColor=item.sentiment.includes("BULL")?G.green:item.sentiment.includes("BEAR")?G.red:G.yellow;
-          return (
-            <div key={item.id||idx} style={{borderBottom:`1px solid ${G.border}`,cursor:"pointer"}}
-              onClick={()=>setExpanded(expanded===idx?null:idx)}>
-              <div style={{padding:"14px 18px",display:"flex",gap:12,alignItems:"flex-start"}}
-                onMouseEnter={e=>e.currentTarget.parentElement.style.background=G.surfaceHov}
-                onMouseLeave={e=>e.currentTarget.parentElement.style.background="transparent"}>
-                <div style={{width:3,alignSelf:"stretch",background:sentColor,borderRadius:2,flexShrink:0}}/>
-                <div style={{flex:1}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                    <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                      <span style={{color:G.blue,fontWeight:700,fontSize:11,fontFamily:"monospace"}}>{item.symbol}</span>
-                      <Tag label={item.sentiment||"-"} color={sentColor}/>
-                      <span style={{color:G.textMut,fontSize:10}}>{item.source}</span>
-                    </div>
-                    <span style={{color:G.textMut,fontSize:10,fontFamily:"monospace"}}>{item.time}</span>
-                  </div>
-                  <div style={{color:G.text,fontSize:12,lineHeight:1.5,marginBottom:4}}>{item.headline}</div>
-                  {expanded===idx&&(
-                    <div style={{marginTop:8,display:"flex",flexDirection:"column",gap:6}}>
-                      {item.impact&&<div style={{color:G.textSec,fontSize:11,lineHeight:1.5}}>{item.impact}</div>}
-                      {item.sentiment_score!=null&&(
-                        <div style={{display:"flex",alignItems:"center",gap:6}}>
-                          <span style={{color:G.textMut,fontSize:10}}>Sentiment score:</span>
-                          <div style={{width:60,height:4,background:G.border,borderRadius:2,overflow:"hidden"}}>
-                            <div style={{width:`${Math.abs(item.sentiment_score)*100}%`,height:"100%",
-                              background:item.sentiment_score>=0?G.green:G.red,borderRadius:2}}/>
-                          </div>
-                          <span style={{color:item.sentiment_score>=0?G.green:G.red,fontSize:10,fontFamily:"monospace",fontWeight:700}}>
-                            {item.sentiment_score>=0?"+":""}{(item.sentiment_score*100).toFixed(0)}%
-                          </span>
-                        </div>
-                      )}
-                      {item.url&&(
-                        <a href={item.url} target="_blank" rel="noreferrer"
-                          style={{color:G.blue,fontSize:10,textDecoration:"none"}}
-                          onClick={e=>e.stopPropagation()}>Read full article →</a>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
+        :<div>
+          {stockNews.length>0&&<><GroupHeader icon="📈" title="STOCK NEWS" count={stockNews.length}/>{stockNews.map((item,i)=><NewsRow key={"s"+i} item={item} ekey={"s"+i}/>)}</>}
+          {localNews.length>0&&<><GroupHeader icon="🇮🇳" title="INDIA / LOCAL" count={localNews.length}/>{localNews.map((item,i)=><NewsRow key={"l"+i} item={item} ekey={"l"+i}/>)}</>}
+          {globalNews.length>0&&<><GroupHeader icon="🌍" title="GLOBAL MACRO" count={globalNews.length}/>{globalNews.map((item,i)=><NewsRow key={"g"+i} item={item} ekey={"g"+i}/>)}</>}
+          {stockNews.length===0&&localNews.length===0&&globalNews.length===0&&sortedNews.map((item,i)=><NewsRow key={"f"+i} item={item} ekey={"f"+i}/>)}
+        </div>
+      }
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: MACRO / EXTERNAL FACTORS
+// ═══════════════════════════════════════════════════════════════════════════
+function MacroTab({macro}) {
+  const biasColor = macro.macro_bias==="BULLISH"?G.green:macro.macro_bias==="BEARISH"?G.red:G.yellow;
+  const riskColor = macro.risk_level==="LOW"?G.green:macro.risk_level==="MEDIUM"?G.yellow:G.red;
+  
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
+        <div style={{color:G.text,fontSize:14,fontWeight:600,marginBottom:12}}>🌍 Global Macro & External Factors</div>
+        
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
+          {[
+            {label:"Macro Bias",val:macro.macro_bias||"NEUTRAL",color:biasColor},
+            {label:"Risk Level",val:macro.risk_level||"MEDIUM",color:riskColor},
+            {label:"Size Multiplier",val:`${(macro.size_mult||1).toFixed(2)}x`,color:G.blue},
+            {label:"Regime Hint",val:macro.regime_hint||"SIDEWAYS",color:G.purple},
+          ].map(({label,val,color})=>(
+            <div key={label} style={{background:G.bg,borderRadius:6,padding:"10px 12px",border:`1px solid ${G.border}`}}>
+              <div style={{color:G.textMut,fontSize:9,marginBottom:4}}>{label}</div>
+              <div style={{color,fontSize:14,fontWeight:700,fontFamily:"monospace"}}>{val}</div>
             </div>
-          );
-        })}
+          ))}
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
+          {[
+            {label:"India VIX (Fear Gauge)",val:macro.vix?macro.vix.toFixed(2):"15.00",sub:macro.vix>20?"High Volatility":"Normal Bias"},
+            {label:"FII Flow (Cr)",val:macro.fii_flow_cr!=null?`${macro.fii_flow_cr>=0?"+":""}${macro.fii_flow_cr.toFixed(0)}`:"0",color:macro.fii_flow_cr>=0?G.green:G.red,sub:macro.fii_flow_cr>=0?"Bullish Net Inflow":"Bearish Net Outflow"},
+            {label:"USD/INR",val:macro.usdinr?macro.usdinr.toFixed(2):"83.30",sub:macro.usdinr>84?"Rupee weakening (Bearish)":"Stable Currency"},
+            {label:"S&P 500 Daily Return",val:macro.spx_ret_pct!=null?`${macro.spx_ret_pct>=0?"+":""}${macro.spx_ret_pct.toFixed(2)}%`:"0.00%",color:macro.spx_ret_pct>=0?G.green:G.red,sub:"US Market sentiment mirror"},
+            {label:"Brent Crude Return",val:macro.crude_ret_pct!=null?`${macro.crude_ret_pct>=0?"+":""}${macro.crude_ret_pct.toFixed(2)}%`:"0.00%",color:macro.crude_ret_pct<0?G.green:G.red,sub:macro.crude_ret_pct>2?"Inflationary pressure":"Stable Energy Prices"},
+            {label:"US Fed Action / Impact",val:"HOLD",color:G.yellow,sub:"Terminal rate priced in"}
+          ].map(({label,val,color,sub})=>(
+            <div key={label} style={{background:G.bg,borderRadius:6,padding:"12px 14px",borderLeft:`3px solid ${color||G.blue}`}}>
+              <div style={{color:G.textSec,fontSize:11,marginBottom:4}}>{label}</div>
+              <div style={{color:color||G.text,fontSize:18,fontWeight:700,fontFamily:"monospace"}}>{val}</div>
+              <div style={{color:G.textMut,fontSize:10,marginTop:4}}>{sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1763,12 +1905,18 @@ function StockModal({stock,onClose,candles,quotes,signals,intel,news,mode,macroS
           </div>
           
           {/* Main Stats Row */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20,padding:"14px",background:G.canvas,borderRadius:8,border:`1px solid ${G.border}`}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:20,padding:"14px",background:G.canvas,borderRadius:8,border:`1px solid ${G.border}`}}>
             {[
               {label:"Entry",val:stock.entry?`₹${(stock.entry||0).toFixed(2)}`:"—",color:G.text,sub:"Suggested entry"},
               {label:"Target",val:stock.target?`₹${(stock.target||0).toFixed(2)}`:"—",color:G.green,sub:stock.target?`+${(((stock.target-price)/price*100)||0).toFixed(1)}% upside`:""},
               {label:"Stop Loss",val:stock.sl?`₹${(stock.sl||0).toFixed(2)}`:"—",color:G.red,sub:stock.sl?`${(((price-stock.sl)/price*100)||0).toFixed(1)}% risk`:""},
               {label:"Risk/Reward",val:stock.entry&&stock.sl&&stock.target?`1:${(((stock.target-stock.entry)/(stock.entry-stock.sl))||0).toFixed(2)}`:"—",color:G.purple,sub:"R:R ratio"},
+              {
+                label:"Expected Return",
+                val:stock.target && (stock.entry||price) ? `₹${((stock.target - (stock.entry||price)) * (stock.qty || Math.floor(100000/(stock.entry||price)))).toLocaleString("en-IN",{maximumFractionDigits:0})}` : "—",
+                color:G.teal,
+                sub:stock.tt === "INTRADAY" ? "Duration: < 1 day" : stock.tt === "LONG_TERM" ? "Duration: 1-3 months" : "Duration: 5-15 days"
+              },
             ].map(({label,val,color,sub})=>(
               <div key={label}>
                 <div style={{color:G.textMut,fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>{label}</div>
@@ -2088,6 +2236,7 @@ function App() {
   const [karmaStats,setKarmaStats]=useState({});
   const [fundamentals,setFundamentals]=useState({});
   const [news,setNews]=useState([]);
+  const [macro,setMacro]=useState({});
   const [events,setEvents]=useState([]);
   const [selectedStock,setSelected]=useState(null);
   const [ NSE_UNIVERSE, setNseUniverse ] = useState(DEFAULT_NSE_UNIVERSE);
@@ -2140,6 +2289,7 @@ function App() {
           if(msg.karma)      setKarmaStats(msg.karma);
           if(msg.fundamentals) setFundamentals(prev=>({...prev,...msg.fundamentals}));
           if(msg.news)       setNews(msg.news);
+          if(msg.macro)      setMacro(msg.macro);
           if(msg.eval_stats) setEvalStats(msg.eval_stats);
           if(msg.agent_scores) setAgtScores(msg.agent_scores);
           if(msg.agent_kpi)  setAgentKpi(msg.agent_kpi);
@@ -2347,20 +2497,22 @@ function App() {
       fontSize:13,display:"flex",flexDirection:"column",overflow:"hidden"}}>
 
       <ConnBanner status={connStatus}/>
-      <TopNav regime={regime} indices={indices} paperPnl={totalNetPnl} time={now} connStatus={connStatus} mode={systemState.mode}/>
+      <TopNav regime={regime} indices={{...indices, today_pnl: apData.today_pnl}} paperPnl={totalNetPnl} time={now} connStatus={connStatus} mode={systemState.mode}/>
       <TabBar active={tab} setActive={setTab} counts={tabCounts}/>
 
       <div style={{flex:1,padding:"20px 24px",width:"100%",overflowY:"auto",overflowX:"hidden"}}>
         {tab==="overview"&&
           <OverviewTab picks={picks} positions={positions} allSigs={allSigs}
             evalStats={evalStats} indices={indices} candleCache={candleCache}
-            news={news} onStock={setSelected} candidates={candidates} NSE_UNIVERSE={NSE_UNIVERSE}/>}
+            news={news} onStock={setSelected} candidates={candidates} NSE_UNIVERSE={NSE_UNIVERSE} apData={apData}/>}
         {tab==="positions"&&
           <PositionsTab positions={positions} mode={systemState.mode} apData={apData}/>}
         {tab==="signals"&&
           <SignalsTab signals={allSigs} onStock={setSelected} picks={picks}/>}
         {tab==="news"&&
           <NewsTab news={news} picks={picks}/>}
+        {tab==="macro"&&
+          <MacroTab macro={macro}/>}
         {tab==="performance"&&
           <PerformanceTab evalStats={evalStats} positions={positions} agentKpi={agentKpi} systemState={systemState}/>}
         {tab==="evaluation"&&

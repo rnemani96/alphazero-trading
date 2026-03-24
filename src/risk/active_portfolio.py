@@ -90,9 +90,11 @@ class ActivePortfolio:
         default_sl_pct:     float = 2.5,   # 2.5% default stop loss
         max_swing_days:     int   = 30,    # max holding period for SWING
         max_positional_days:int   = 90,    # max holding period for POSITIONAL
+        initial_capital:    float = 1000000,
     ):
         self.path               = os.path.abspath(path)
         self.max_positions      = max_positions
+        self.initial_capital     = initial_capital
         self.default_target_pct = default_target_pct
         self.default_sl_pct     = default_sl_pct
         self.max_swing_days     = max_swing_days
@@ -202,11 +204,19 @@ class ActivePortfolio:
         sector:     str   = "",
         confidence: float = 0.0,
         broker_id:  str   = "",
+        regime:     str   = "UNKNOWN",
+        direction:  str   = "BUY",    # BUY (Long) | SELL (Short)
     ) -> Dict:
         """Register a new open position."""
         with self._lock:
-            t = target    or round(entry_price * (1 + self.default_target_pct / 100), 2)
-            sl = stop_loss or round(entry_price * (1 - self.default_sl_pct / 100), 2)
+            # Fallback targets if not provided
+            if direction.upper() == "BUY":
+                t = target    or round(entry_price * (1 + self.default_target_pct / 100), 2)
+                sl = stop_loss or round(entry_price * (1 - self.default_sl_pct / 100), 2)
+            else:
+                t = target    or round(entry_price * (1 - self.default_target_pct / 100), 2)
+                sl = stop_loss or round(entry_price * (1 + self.default_sl_pct / 100), 2)
+
             max_days = self.max_positional_days if trade_type == "POSITIONAL" else self.max_swing_days
             pos = {
                 "symbol":        symbol,
@@ -219,6 +229,8 @@ class ActivePortfolio:
                 "pnl_pct":       0.0,
                 "strategy":      strategy,
                 "trade_type":    trade_type,
+                "regime":        regime,
+                "direction":     direction.upper(),
                 "status":        PositionStatus.OPEN,
                 "opened_at":     datetime.now(IST).isoformat(),
                 "closed_at":     None,
@@ -226,9 +238,12 @@ class ActivePortfolio:
                 "max_days":      max_days,
                 "days_open":     0,
                 "highest_price": round(entry_price, 2),
+                "lowest_price":  round(entry_price, 2),
                 "trailing_stop": round(sl, 2),
-                "target_pct":   round((t - entry_price) / entry_price * 100, 2),
-                "sl_pct":       round((entry_price - sl) / entry_price * 100, 2),
+                "target_dist":   abs(t - entry_price),
+                "sl_dist":       abs(entry_price - sl),
+                "scale_out_done": False,
+                "breakeven_done": False,
                 "atr":           round(atr, 2),
                 "sector":        sector,
                 "confidence":    round(confidence, 3),
@@ -239,20 +254,20 @@ class ActivePortfolio:
             self._state["positions"][key] = pos
             self._save()
             logger.info(
-                "[ActivePortfolio] OPENED %s × %d @ ₹%.2f | Target ₹%.2f | SL ₹%.2f | %s",
-                symbol, quantity, entry_price, t, sl, strategy,
+                "[ActivePortfolio] OPENED %s %s × %d @ ₹%.2f | Target ₹%.2f | SL ₹%.2f | %s",
+                pos["direction"], symbol, quantity, entry_price, t, sl, strategy,
             )
             return pos
 
     def update_prices(self, price_map: Dict[str, float]):
         """
         Update current prices for all open positions and check target/SL.
-
-        price_map: {symbol: ltp, ...}
-        Returns: (closed_positions, updated_stops)
+        direction-aware P&L and exits.
+        Returns: (closed_positions, updated_stops, partial_exits)
         """
         closed_this_tick: List[Dict] = []
         updated_stops: List[Dict]    = []
+        partial_exits: List[Dict]    = []
         with self._lock:
             for key, pos in list(self.positions.items()):
                 sym = pos.get("symbol")
@@ -266,72 +281,95 @@ class ActivePortfolio:
                 qty    = pos["quantity"]
                 target = pos["target"]
                 sl     = pos["stop_loss"]
+                side   = pos.get("direction", "BUY")
+                is_long = (side == "BUY")
 
-                # Update current price & P&L
-                pnl     = (price - ep) * qty
-                pnl_pct = (price - ep) / ep * 100
+                # ── Update current price & P&L (Direction Aware) ─────────────────
+                if is_long:
+                    pnl     = (price - ep) * qty
+                    pnl_pct = (price - ep) / ep * 100
+                else:
+                    pnl     = (ep - price) * qty
+                    pnl_pct = (ep - price) / ep * 100
 
                 pos["current_price"]  = round(price, 2)
                 pos["unrealised_pnl"] = round(pnl, 2)
                 pos["pnl_pct"]        = round(pnl_pct, 2)
 
-                # Dynamic Trailing Logic (P1 #5)
+                # Track peaks for trailing
                 highest = pos.get("highest_price", price)
-                if price > highest:
-                    pos["highest_price"] = round(price, 2)
-                    highest = price
+                lowest  = pos.get("lowest_price", price)
+                if price > highest: pos["highest_price"] = round(price, 2)
+                if price < lowest:  pos["lowest_price"]  = round(price, 2)
 
-                # Rule A: Break-even / Profit Lock (Move SL to +1% if price hits +2%)
-                if pnl_pct >= 2.0:
-                    lock_in_sl = ep * 1.01
-                    if lock_in_sl > pos["stop_loss"]:
-                        old_sl = pos["stop_loss"]
-                        pos["stop_loss"] = round(lock_in_sl, 2)
-                        updated_stops.append({
-                            "symbol": sym,
-                            "old_sl": old_sl,
-                            "new_sl": pos["stop_loss"],
-                            "broker_id": pos.get("broker_id")
-                        })
-                        logger.info("[ActivePortfolio] %s SL moved to lock 1%% profit (₹%.2f)", sym, lock_in_sl)
-
-                # Rule B: ATR-based trailing from highest price
-                atr = pos.get("atr", ep * 0.02)
-                # Wider trailer for volatile stocks (2.5x ATR), floor at 3%
-                trail_buffer = max(ep * 0.03, 2.5 * atr)
-                trail_sl = round(highest - trail_buffer, 2)
-
-                if trail_sl > pos.get("trailing_stop", 0):
-                    old_ts = pos.get("trailing_stop", sl)
-                    pos["trailing_stop"] = trail_sl
+                # ── Requirement #6: 0.5R Move -> Breakeven ───────────────────────
+                initial_risk_dist = pos.get("sl_dist", abs(ep - sl))
+                profit_dist = abs(price - ep) if pnl > 0 else 0
+                
+                if not pos.get("breakeven_done") and profit_dist >= (0.5 * initial_risk_dist):
+                    new_sl = round(ep * 1.005 if is_long else ep * 0.995, 2)
+                    pos["stop_loss"] = new_sl
+                    pos["breakeven_done"] = True
                     updated_stops.append({
-                        "symbol": sym,
-                        "old_sl": old_ts,
-                        "new_sl": trail_sl,
-                        "broker_id": pos.get("broker_id"),
-                        "is_trailing": True
+                        "symbol": sym, "new_sl": new_sl, "broker_id": pos.get("broker_id")
                     })
-                    logger.debug("[ActivePortfolio] %s trailing stop raised to ₹%.2f", sym, trail_sl)
+                    logger.info("🛡️ BREAKEVEN: %s %s moved to entry + 0.5%% after 0.5R move.", side, sym)
 
-                # Update days open
-                try:
-                    opened = datetime.fromisoformat(pos["opened_at"])
-                    pos["days_open"] = (datetime.now(IST) - opened.replace(tzinfo=IST)).days
-                except Exception:
-                    pass
+                # ── Requirement #6: 1.0R Move -> Partial Profit (50%) ───────────
+                if not pos.get("scale_out_done") and profit_dist >= initial_risk_dist:
+                    pos["scale_out_done"] = True
+                    reduced_qty = max(1, pos["quantity"] // 2)
+                    pos["quantity"] = pos["quantity"] - reduced_qty
+                    pos["realised_pnl"] = pos.get("realised_pnl", 0) + (profit_dist * reduced_qty)
+                    
+                    partial_exits.append({
+                        "symbol": sym,
+                        "quantity": reduced_qty,
+                        "action": "SELL" if is_long else "BUY",
+                        "price": price,
+                        "reason": "1R_SCALE_OUT"
+                    })
+                    logger.info("🚀 SCALE-OUT: %s %s 1R reached! Selling 50%% (%d shares).", side, sym, reduced_qty)
 
-                # ── Check exit conditions ──────────────────────────────────
+                # ── Dynamic Trailing Logic ──
+                atr = pos.get("atr", ep * 0.02)
+                trail_buffer = max(ep * 0.03, 2.5 * atr)
+                
+                if is_long:
+                    trail_sl = round(pos["highest_price"] - trail_buffer, 2)
+                    if trail_sl > pos.get("trailing_stop", 0):
+                        old_ts = pos.get("trailing_stop", sl)
+                        pos["trailing_stop"] = trail_sl
+                        updated_stops.append({"symbol": sym, "new_sl": trail_sl, "broker_id": pos.get("broker_id")})
+                else:
+                    trail_sl = round(pos["lowest_price"] + trail_buffer, 2)
+                    if trail_sl < pos.get("trailing_stop", float('inf')):
+                        old_ts = pos.get("trailing_stop", sl)
+                        pos["trailing_stop"] = trail_sl
+                        updated_stops.append({"symbol": sym, "new_sl": trail_sl, "broker_id": pos.get("broker_id")})
+
+                # ── Check exit conditions ──────────────────────────────────────
                 reason = None
                 close_status = None
-
-                if price >= target:
-                    reason       = f"Target ₹{target:.2f} reached! P&L: ₹{pnl:+.0f} ({pnl_pct:+.2f}%)"
-                    close_status = PositionStatus.TARGET
-                elif price <= sl or price <= pos.get("trailing_stop", sl):
-                    eff_sl   = max(sl, pos.get("trailing_stop", sl))
-                    reason   = f"Stop-loss ₹{eff_sl:.2f} hit. P&L: ₹{pnl:+.0f} ({pnl_pct:+.2f}%)"
-                    close_status = PositionStatus.STOPPED
-                elif pos["days_open"] >= pos.get("max_days", 30):
+                
+                if is_long:
+                    eff_sl = max(sl, pos.get("trailing_stop", 0))
+                    if price >= target:
+                        reason = f"Target ₹{target:.2f} reached! P&L: ₹{pnl:+.0f}"
+                        close_status = PositionStatus.TARGET
+                    elif price <= eff_sl:
+                        reason = f"Stop-loss ₹{eff_sl:.2f} hit. P&L: ₹{pnl:+.0f}"
+                        close_status = PositionStatus.STOPPED
+                else:
+                    eff_sl = min(sl, pos.get("trailing_stop", float('inf')))
+                    if price <= target:
+                        reason = f"Short Target ₹{target:.2f} reached! P&L: ₹{pnl:+.0f}"
+                        close_status = PositionStatus.TARGET
+                    elif price >= eff_sl:
+                        reason = f"Short SL ₹{eff_sl:.2f} hit. P&L: ₹{pnl:+.0f}"
+                        close_status = PositionStatus.STOPPED
+                
+                if not close_status and pos["days_open"] >= pos.get("max_days", 30):
                     reason       = f"Max holding period {pos['max_days']} days reached."
                     close_status = PositionStatus.EXPIRED
 
@@ -342,12 +380,11 @@ class ActivePortfolio:
                     pos["realised_pnl"] = round(pnl, 2)
                     pos["realised_pct"] = round(pnl_pct, 2)
                     closed_this_tick.append(pos.copy())
-                    # Move to history
                     self._state["history"].append(pos.copy())
-                    logger.info("[ActivePortfolio] CLOSED %s (%s) — %s | %s", sym, pos.get('trade_type'), close_status, reason)
+                    logger.info("[ActivePortfolio] CLOSED %s %s — %s | %s", side, sym, close_status, reason)
 
             self._save()
-        return closed_this_tick, updated_stops
+        return closed_this_tick, updated_stops, partial_exits
 
     def force_close(self, symbol: str, current_price: float, reason: str = "Manual override") -> Optional[Dict]:
         """Force-close a position (manual override / risk kill-switch)."""
@@ -358,12 +395,19 @@ class ActivePortfolio:
             if not pos or pos.get("status") != PositionStatus.OPEN:
                 logger.warning("[ActivePortfolio] %s not found in open positions.", symbol)
                 return None
+            
             ep  = pos["entry_price"]
             qty = pos["quantity"]
-            pnl = (current_price - ep) * qty
+            side = pos.get("direction", "BUY")
+            
+            if side == "BUY":
+                pnl = (current_price - ep) * qty
+            else:
+                pnl = (ep - current_price) * qty
+                
             pos["current_price"]  = round(current_price, 2)
             pos["unrealised_pnl"] = round(pnl, 2)
-            pos["pnl_pct"]        = round((current_price - ep) / ep * 100, 2)
+            pos["pnl_pct"]        = round(pnl / (ep * qty) * 100, 2) if ep else 0
             pos["status"]         = PositionStatus.OVERRIDE
             pos["closed_at"]      = datetime.now(IST).isoformat()
             pos["close_reason"]   = reason
@@ -371,7 +415,7 @@ class ActivePortfolio:
             pos["realised_pct"]   = pos["pnl_pct"]
             self._state["history"].append(pos.copy())
             self._save()
-            logger.info("[ActivePortfolio] FORCE CLOSED %s @ ₹%.2f — %s", symbol, current_price, reason)
+            logger.info("[ActivePortfolio] FORCE CLOSED %s %s @ ₹%.2f — %s", side, symbol, current_price, reason)
             return pos
 
     def adjust_target(self, symbol: str, new_target: float, trade_type: str = "SWING"):
@@ -404,7 +448,7 @@ class ActivePortfolio:
         """Return complete portfolio summary for dashboard rendering."""
         with self._lock:
             open_pos  = list(self.open_positions.values())
-            hist      = self.history[-100:]  # last 100 closed trades
+            hist      = self.history[-500:]  # Consider last 500 for stats
 
             total_invested = sum(p["invested_amount"] for p in open_pos)
             total_pnl      = sum(p["unrealised_pnl"] for p in open_pos)
@@ -430,6 +474,7 @@ class ActivePortfolio:
                 "total_open":       len(open_pos),
                 "max_positions":    self.max_positions,
                 "slots_available":  self.max_positions - len(open_pos),
+                "initial_capital":  round(self.initial_capital, 2),
                 "total_invested":   round(total_invested, 2),
                 "total_unrealised_pnl": round(total_pnl, 2),
                 "total_realised_pnl":   round(closed_pnl, 2),
@@ -439,7 +484,7 @@ class ActivePortfolio:
                 "losing_trades":    len(losing),
                 "near_target":      [p["symbol"] for p in near_target],
                 "near_sl":          [p["symbol"] for p in near_sl],
-                "history":          hist[-20:],          # last 20 for dashboard
+                "history":          hist,                 # send full relevant history to dashboard
                 "last_updated":     self._state.get("last_updated", ""),
                 "blocked_symbols":  [p["symbol"] for p in open_pos if p.get("trade_type") != "INTRADAY"],
             }
@@ -545,11 +590,11 @@ from typing import Tuple  # ensure Tuple is imported for can_add_position type h
 _AP_INSTANCE: Optional[ActivePortfolio] = None
 _AP_LOCK = threading.Lock()
 
-def get_active_portfolio(max_positions: int = 10) -> ActivePortfolio:
+def get_active_portfolio(max_positions: int = 10, initial_capital: float = 1000000) -> ActivePortfolio:
     global _AP_INSTANCE
     with _AP_LOCK:
         if _AP_INSTANCE is None:
-            _AP_INSTANCE = ActivePortfolio(max_positions=max_positions)
+            _AP_INSTANCE = ActivePortfolio(max_positions=max_positions, initial_capital=initial_capital)
     return _AP_INSTANCE
 
 

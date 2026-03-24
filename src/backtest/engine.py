@@ -215,6 +215,27 @@ class BacktestEngine:
         self.commission      = commission
         self.slippage_bps    = slippage_bps
 
+    def run_stress_test(self, symbols: List[str], data_map: Dict[str, Any]):
+        """Requirement #2.2: Parallel nightly stress-test to re-rank weights."""
+        logger.info(f"🌙 Starting stress-test on {len(symbols)} symbols...")
+        
+        # Convert List[CandleBar] or list of dicts to pd.DataFrame
+        df_map = {}
+        for sym, bars in data_map.items():
+            if bars:
+                try:
+                    dicts = [b.to_dict() if hasattr(b, 'to_dict') else b for b in bars]
+                    df = pd.DataFrame(dicts)
+                    df.columns = [c.lower() for c in df.columns]
+                    if 'close' in df.columns:
+                        df_map[sym] = df
+                except Exception as e:
+                    logger.debug(f"Failed to convert data for {sym}: {e}")
+        
+        # Override data loading if we have pre-fetched data
+        results = self.run(symbols=symbols, walk_forward=False, save=True, data_map_override=df_map)
+        return results
+
     # ── Public API ────────────────────────────────────────────────────────────
 
     def run(
@@ -225,6 +246,7 @@ class BacktestEngine:
         interval:       str = '1d',
         walk_forward:   bool = True,
         save:           bool = True,
+        data_map_override: Optional[Dict[str, pd.DataFrame]] = None,
     ) -> Dict[str, Any]:
         """
         Run full backtest.
@@ -252,7 +274,11 @@ class BacktestEngine:
         logger.info("Backtest: %d symbols | %s→%s | interval=%s | wf=%s",
                     len(symbols), start, end, interval, walk_forward)
 
-        data_map  = self._load_data(symbols, start, end, interval)
+        if data_map_override:
+            data_map = data_map_override
+        else:
+            data_map = self._load_data(symbols, start, end, interval)
+
         if not data_map:
             logger.warning("Backtest: no data loaded — aborting")
             return {}

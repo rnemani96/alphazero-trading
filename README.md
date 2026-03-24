@@ -2,36 +2,27 @@
 
 **Autonomous AI-Powered Trading System for NSE India**
 
-Version: 17.0 FINAL  
+Version: 5.0.0 (March 2026)
 Status: Production Ready ✅  
-Agents: 16 working together  
-AI Support: Claude, GPT-4, Gemini, Local Models
+Agents: 17 collaborating agents
+AI Support: Claude, GPT-4, Gemini (Multi-Provider)
 
 ---
 
 ## 📦 What's Included
 
-### Core System (v15)
-- ✅ 10 Base agents (CHIEF, SIGMA, ATLAS, NEXUS, TITAN, GUARDIAN, MERCURY, LENS, HERMES, KARMA)
-- ✅ Event-driven architecture
-- ✅ Risk management system
-- ✅ OpenAlgo integration
-- ✅ Paper & Live trading
+### Core Trading Engine (v5.0)
+- ✅ **Strategy Correlation Guard** - Max 3 positions per strategy (Risk Mitigation)
+- ✅ **Candlestick Pattern Engine** - Hammer, Doji, Engulfing, Stars detection
+- ✅ **Regime-Adaptive Confidence** - Dynamic entry triggers based on market state
+- ✅ **Short Trade P&L Fix** - Direction-aware accounting for SELL signals
+- ✅ **Volatility Lock** - 9:15-9:45 AM IST morning filter
 
-### Enhanced Features (v16)
-- ✅ **Options Flow Analysis** - Detect institutional money
-- ✅ **Multi-Timeframe Confirmation** - Higher win rate
-- ✅ **Trailing Stop Manager** - Lock in profits automatically
-
-### AI Intelligence (v17)
-- ✅ **Multi-AI Provider Support** (Claude, GPT-4, Gemini, Local)
-- ✅ **Earnings Call Analyzer** - Predict moves 1-2 days ahead
-- ✅ **Auto Strategy Generator** - Discovers new patterns
-
-### Technical Analysis
-- ✅ **TA-Lib** - 150+ technical indicators
-- ✅ **pandas-ta** - Backup TA library
-- ✅ Custom indicators
+### Intelligence Layer (v4.0)
+- ✅ **NEXUS Regime Classification** - XGBoost-powered market state detection
+- ✅ **TITAN 45-Strategy Suite** - Massive parallelized indicator voting
+- ✅ **HERMES News Sentiment** - FinBERT analysis of NSE/Moneycontrol
+- ✅ **ATLAS Sector Rotation** - Relative strength allocation
 
 ---
 
