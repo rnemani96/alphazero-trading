@@ -155,6 +155,7 @@ class NewsSentimentAgent(BaseAgent):
                 'extreme_flag':  metrics.get('extreme_sentiment_flag', 0),
                 'scores':        sym_scores,
                 'metrics':       metrics,
+                'headlines':     processed_news[:20],  # Included for dashboard
                 'timestamp':     datetime.now().isoformat(),
             }
             

@@ -277,6 +277,15 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
                             "macro_status": status_data.get("macro_status", "LIVE"),
                             "intel": status_data.get("intel", {}),
                             "signals": signals_data,
+                            "apData": status_data,
+                            "indices": status_data.get("indices", {}),
+                            "news": status_data.get("news", []),
+                            "evalStats": status_data.get("eval_stats", {}),
+                            "agent_kpi": status_data.get("agent_kpis", {}),
+                            "agent_scores": status_data.get("agent_scores", {}),
+                            "quotes": status_data.get("quotes", {}),
+                            "karma": status_data.get("karma", {}),
+                            "candidates": status_data.get("candidates", []),
                         }
                         await websocket.send_text(_safe_json_dumps(ws_payload))
                         

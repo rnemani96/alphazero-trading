@@ -589,7 +589,7 @@ class MultiSourceData:
 
         # Try Upstox bulk endpoint first
         if UPSTOX_OK and REQUESTS_OK and self._upstox_token:
-            result = self._upstox_bulk_quote(symbols)
+            result = self._upstox_bulk_quote(symbols) or {}
 
         # Fill missing via OpenAlgo or individual calls
         missing = [s for s in symbols if s not in result]

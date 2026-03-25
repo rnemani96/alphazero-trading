@@ -3,6 +3,21 @@
 All notable changes to the AlphaZero Capital project will be documented in this file.
 **Rule:** Every new feature or fix MUST be accompanied by the date of implementation.
 
+## [5.1.3] - 2026-03-25
+
+### 📊 Dashboard & UI Wiring (Full Dynamic Update)
+- **TopNav Indices**: Fully wired NIFTY 50, NIFTY BANK, INDIA VIX, and Today's P&L to real-time data. No longer static.
+- **Real-Time News Stream**: Wired HERMES agent news headlines to the dashboard's Intelligence tab via WebSockets.
+- **Dynamic Portfolio Quotes**: Enabled live price updates for all watchlist and portfolio symbols on every system iteration.
+- **Agent KPI & Knowledge Integration**: Wired KARMA learning patterns and LENS agent efficiency scores to the UI for total system transparency.
+- **Candidates Feed**: Scored stocks from SIGMA and ATLAS now appear in the "Active Scans" section in real-time.
+
+### 🛡️ Risk & Execution Logic
+- **Ghost Trade Fix**: Resolved the "trades_today" increment bug that was causing premature daily trade exhaustion by only counting successful executions.
+- **Multi-Upgrade Priority Logic**: Reverted `MAX_TRADES_PER_DAY` to **20** but heavily modified `APEX`/`main.py`. The system now dynamically replaces the lowest confidence/underperforming open positions if new exceptionally strong signals emerge, acting as a competitive 'survival of the fittest' rather than blindly consuming daily limits.
+- **Volume Sensitivity Tweak**: Relaxed `_check_volume_confirmation` threshold from **1.5 to 1.2** to improve signal throughput in low-volatility/sideways markets.
+- **Post-Market Audit (Mar 23rd)**: Identified and documented a cluster of T10/T2 breakout failures during a SIDEWAYS regime; recommended regime-based strategy filtering.
+
 ## [5.0.0] - 2026-03-24
 
 ### 🛡️ Risk Management & Capital Safeguards

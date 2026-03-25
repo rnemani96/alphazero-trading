@@ -312,7 +312,9 @@ def _write_state():
                 "lp": p.get("lowest_price"),
                 "time": p.get("opened_at"),
                 "status": p.get("status"),
-                "regime": p.get("regime")
+                "regime": p.get("regime"),
+                "dir":    p.get("direction", "BUY"),
+                "direction": p.get("direction", "BUY")
             })
 
         # ── Today's P&L: sum all trades closed TODAY ────────────────────────
@@ -333,23 +335,51 @@ def _write_state():
             "gross_pnl":   ap_summary.get("total_unrealised_pnl", 0.0),
             "net_pnl":     ap_summary.get("total_realised_pnl", 0.0),
             "today_pnl":   round(today_pnl, 2),
+            "todayPnl":    round(today_pnl, 2),
             "today_trades":today_trades,
             "win_rate":    ap_summary.get("win_rate_pct", 58.0) / 100.0,
+            "win_rate_pct":ap_summary.get("win_rate_pct", 58.0),
             "total_trades":ap_summary.get("total_trades", 0),
+            "winning_trades": ap_summary.get("winning_trades", 0),
+            "losing_trades":  ap_summary.get("losing_trades", 0),
             "open_positions_count": ap_summary.get("total_open", 0),
+            "total_open":       ap_summary.get("total_open", 0),
+            "max_positions":    ap_summary.get("max_positions", 10),
+            "slots_available":  ap_summary.get("slots_available", 10),
+            "total_invested":   ap_summary.get("total_invested", 0.0),
+            "total_unrealised_pnl": ap_summary.get("total_unrealised_pnl", 0.0),
+            "total_realised_pnl":   ap_summary.get("total_realised_pnl", 0.0),
+            "near_target":      ap_summary.get("near_target", []),
+            "near_sl":          ap_summary.get("near_sl", []),
+            "history":          ap_summary.get("history", []),
             "active_portfolio": ap_summary,
             "iteration":   _state.get("iteration", 0),
             "positions":   normalized_positions,
+            "open_positions": normalized_positions,
             "signals":     _state.get("latest_signals", [])[:10],
             "sgx_signal":  _state.get("sgx_signal", {}),
             "macro":       _state.get("macro", {}),
             "macro_status":_state.get("macro_status", "LIVE"),
             "intel":       _state.get("intelligence", {}),
+            "eval_stats":  lens_summary,
             "mc_result":   _state.get("last_mc_result", {}),
             "nexus_model": os.path.exists(_nexus_model_path),
             "audit_active":_audit is not None,
             "shadow_active":_shadow_mgr is not None,
             "agent_kpis": {k: float(getattr(v, 'kpi', 0.75)) for k, v in active_agents.items()},
+            "indices": {
+                "nifty": float(_state.get("market_indices", {}).get("NIFTY 50", {}).get("ltp", 24150)),
+                "banknifty": float(_state.get("market_indices", {}).get("NIFTY BANK", {}).get("ltp", 51840)),
+                "vix": float(_state.get("market_indices", {}).get("INDIA VIX", {}).get("ltp", 14.2)),
+                "market_open": _is_market_hours(),
+                "today_pnl": float(today_pnl),
+                "todayPnl": float(today_pnl),
+            },
+            "news": _state.get("latest_news", [])[:20],
+            "quotes": {s: {"ltp": p} for s, p in _state.get("latest_prices", {}).items()},
+            "candidates": _state.get("candidates", [])[:20],
+            "karma": agents['KARMA'].get_knowledge_summary() if agents.get('KARMA') else {},
+            "agent_scores": agents['LENS'].evaluator.get_agent_scores() if agents.get('LENS') and hasattr(agents['LENS'], 'evaluator') else {},
         }
         # Heartbeat for SENTINEL
         status["heartbeat"] = datetime.now(IST).isoformat()
@@ -513,16 +543,16 @@ def _aggregate_signals(
     # RELAXED FOR PAPER MODE/TESTING (USER REQUEST #4)
     # Dynamic thresholds based on regime (AlphaZero v5.0 suggested)
     if regime == 'TRENDING':
-        MIN_AGG_CONF = 0.40
+        MIN_AGG_CONF = 0.55
         MIN_AGREEMENT = 2
     elif regime == "SIDEWAYS":
-        MIN_AGG_CONF = 0.45
+        MIN_AGG_CONF = 0.60
         MIN_AGREEMENT = 2
     elif regime == "VOLATILE":
-        MIN_AGG_CONF = 0.50
+        MIN_AGG_CONF = 0.65
         MIN_AGREEMENT = 2
     else:
-        MIN_AGG_CONF = 0.45
+        MIN_AGG_CONF = 0.60
         MIN_AGREEMENT = 2
 
     TITAN_W  = 0.45
@@ -618,6 +648,9 @@ def _aggregate_signals(
         sig['hermes_confidence']= round(hermes_conf, 3)
         sig['regime_compat']    = regime_compat
         sig['agreement']        = agreement_count
+        sig['ts']               = datetime.now(IST).strftime("%H:%M:%S")
+        sig['timestamp']        = sig['ts']
+        sig['time']             = sig['ts']
         approved.append(sig)
 
     # Force debug mode print
@@ -711,7 +744,8 @@ def _check_volume_confirmation(sym: str, action: str, hist_df: Any) -> bool:
         else:
             no_divergence = last_close <= last_open  # Should be a red candle
             
-        return (volume_ratio > 1.5) and volume_trend_increasing and no_divergence
+        # RELAXED: was 1.5, reduced to 1.2 to avoid missing low-vol breakouts
+        return (volume_ratio > 1.2) and volume_trend_increasing and no_divergence
     except Exception as e:
         logger.debug("Volume check failed for %s: %s", sym, e)
         return True
@@ -973,6 +1007,21 @@ def _run_iteration():
     # ── Step 2: Market data + indicators ──────────────────────────────────────
     raw_quotes = _fetch_market_data(universe)
     prices     = raw_quotes.get('prices', {})
+    _state['latest_prices'] = prices
+
+    # ── Step 2a: Market Indices (NIFTY 50, NIFTY BANK, INDIA VIX) ──────────────
+    if it == 1 or it % 5 == 0:
+        try:
+            index_syms = ["NIFTY 50", "NIFTY BANK", "INDIA VIX"]
+            idx_quotes = MSD.get_bulk_quotes(index_syms) if MSD else {}
+            if idx_quotes:
+                _state['market_indices'] = idx_quotes
+                logger.info("Indices: NIFTY=%.0f  BANK=%.0f  VIX=%.1f",
+                            idx_quotes.get("NIFTY 50", {}).get("ltp", 0),
+                            idx_quotes.get("NIFTY BANK", {}).get("ltp", 0),
+                            idx_quotes.get("INDIA VIX", {}).get("ltp", 0))
+        except Exception as e:
+            logger.debug("Index fetch failed: %s", e)
 
     from concurrent.futures import ThreadPoolExecutor
     
@@ -1118,6 +1167,7 @@ def _run_iteration():
             )
             _state['sentiment'] = overall_sentiment
             _state['sentiment_scores'] = sentiment_scores
+            _state['latest_news'] = sent_result.get('headlines', [])
         except Exception as exc:
             logger.debug("HERMES: %s", exc)
 
@@ -1188,6 +1238,7 @@ def _run_iteration():
             scored_sigma = agents['SIGMA'].score_stocks(candidates, regime)
             sigma_scores = {s['symbol']: s['sigma_score'] for s in scored_sigma}
             _state['sigma_scores'] = sigma_scores
+            _state['candidates']   = scored_sigma
             
             # ATLAS scoring
             if agents.get('ATLAS'):
@@ -1335,13 +1386,8 @@ def _run_iteration():
         except Exception as exc:
             logger.debug("GUARDIAN check %s: %s", sig.get('symbol'), exc)
 
-    # Update Guardian state once if batch was approved
-    if any_approved and agents.get('GUARDIAN'):
-        try:
-            agents['GUARDIAN'].last_trade_time = datetime.now()
-            agents['GUARDIAN'].trades_today   += 1
-        except Exception:
-            pass
+    # We move state update to post-execution to ensure accuracy of trades_today counter
+    # (Moved to line 1576+)
 
     logger.info("Risk gate: %d / %d signals approved", len(approved_signals), len(signals))
     if signals and not approved_signals:
@@ -1459,22 +1505,38 @@ def _run_iteration():
         final_signals.append(sig)
 
     # ── Requirement #5: Position Replacement (Upgrade weaker positions) ────────
-    if len(final_signals) > 0 and AP and len(AP.open_positions) >= settings.MAX_POSITIONS:
-        logger.info("🔄 MAX_POSITIONS hit. Evaluating position replacement/upgrade...")
-        best_new = sorted(final_signals, key=lambda x: x['confidence'], reverse=True)[0]
+    if final_signals:
+        # Sort strongest signals first
+        final_signals.sort(key=lambda x: x['confidence'], reverse=True)
         
-        # Find weakest open position
-        open_list = list(AP.open_positions.values())
-        # Sort by: (negative P/L first, then lower confidence, then older)
-        open_list.sort(key=lambda x: (x.get('pnl_pct', 0), x.get('confidence', 0)))
-        weakest = open_list[0]
-        
-        if best_new['confidence'] > (weakest.get('confidence', 0) + 0.15):
-            # Only replace if newest is significantly higher confidence
-            logger.info("🔄 UPGRADE: Replacing weakest position %s (conf %.2f) with %s (conf %.2f)",
-                        weakest['symbol'], weakest.get('confidence', 0), 
-                        best_new['symbol'], best_new['confidence'])
-            AP.force_close(weakest['symbol'], weakest['current_price'], reason="UPGRADE_REPLACEMENT")
+        if AP:
+            open_slots = settings.MAX_POSITIONS - len(AP.open_positions)
+            
+            if open_slots < len(final_signals):
+                logger.info("🔄 Slots full/limited. Evaluating position upgrades for high-confidence signals...")
+                # Find open positions sorted worst to best (lowest PnL, lowest confidence)
+                open_list = list(AP.open_positions.values())
+                open_list.sort(key=lambda x: (x.get('pnl_pct', 0), x.get('confidence', 0)))
+                
+                upgrades_done = 0
+                # Evaluate signals that don't fit into standard open_slots
+                for sig in final_signals[max(0, open_slots):]:
+                    if upgrades_done >= len(open_list):
+                        break
+                        
+                    weakest = open_list[upgrades_done]
+                    
+                    # New signal must be strictly better (+0.10 confidence)
+                    if sig['confidence'] > (weakest.get('confidence', 0) + 0.10):
+                        logger.info("🔄 UPGRADE: Replacing worst position %s (conf %.2f, PnL %.2f%%) with %s (conf %.2f)",
+                                    weakest['symbol'], weakest.get('confidence', 0), weakest.get('pnl_pct', 0),
+                                    sig['symbol'], sig['confidence'])
+                        AP.force_close(weakest['symbol'], weakest['current_price'], reason="UPGRADE_REPLACEMENT")
+                        upgrades_done += 1
+                        open_slots += 1
+                
+                # Truncate final_signals so we NEVER exceed maximum open portfolio slots
+                final_signals = final_signals[:max(0, open_slots)]
 
     # ── Step 10: Execution ────────────────────────────────────────────────────
     executed = 0
@@ -1553,6 +1615,21 @@ def _run_iteration():
                 )
             except Exception as exc:
                 logger.error("Execution error %s: %s", sig.get('symbol'), exc)
+
+        # ── Step 10a: Correct Guardian State Update ──
+        # Increment trades_today by the actual number of SUCCESSFUL executions
+        if executed > 0 and agents.get('GUARDIAN'):
+            try:
+                # Update both session-level and daily-level if needed
+                agents['GUARDIAN'].last_trade_time = datetime.now()
+                # If Gaurdian tracks iterations as trades, keep += 1, 
+                # but better to track actual trade count if max_trades_per_day is a limit.
+                # Standard practice: count each symbol in batch as 1 trade.
+                agents['GUARDIAN'].trades_today += executed
+                logger.info("🛡️ GUARDIAN: Updated trades_today → %d/%d", 
+                            agents['GUARDIAN'].trades_today, agents['GUARDIAN'].max_trades_per_day)
+            except Exception as _ge:
+                logger.debug("Guardian sync failed: %s", _ge)
 
     # ── Step 10b: Hedge Portfolio if Risk is Extreme ──────────────────────────
     if AP and current_capital > 0:

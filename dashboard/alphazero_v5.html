@@ -203,10 +203,11 @@ const CHARGES = {
 };
 
 function calcNetPnl(pos) {
-  const { entryPrice=0, cp=0, qty=0, tt="SWING" } = pos;
+  const { entryPrice=0, cp=0, qty=0, tt="SWING", dir="BUY", direction="BUY" } = pos;
+  const isLong = (dir || direction) === "BUY";
   const isIntraday = tt === "INTRADAY";
   const turnover   = (entryPrice + cp) * qty;
-  const grossPnl   = (cp - entryPrice) * qty;
+  const grossPnl   = isLong ? (cp - entryPrice) * qty : (entryPrice - cp) * qty;
   const brok  = CHARGES.brokerage * 2;
   const stt   = isIntraday ? cp*qty*CHARGES.stt_intraday : turnover*CHARGES.stt_delivery;
   const exc   = turnover * CHARGES.exchange_nse;
@@ -652,7 +653,7 @@ function OverviewTab({picks:rawPicks,positions:rawPositions,allSigs:rawSigs,eval
             const buys=sigs.filter(x=>x.signal===1).length;
             const sells=sigs.filter(x=>x.signal===-1).length;
             const rating=computeRating(s.confidence||0.5,buys,sells,s.score||0);
-            const stockNews=news.filter(n=>n.symbol===sym||n.related.includes(sym)).slice(0,2);
+            const stockNews=news.filter(n=>n.symbol===sym||(Array.isArray(n.related)&&n.related.includes(sym))).slice(0,2);
             return (
               <div key={sym} onClick={()=>onStock(s)}
                 style={{padding:"14px 16px",borderRight:i<4?`1px solid ${G.border}`:"none",cursor:"pointer",transition:"background .12s"}}
@@ -1313,7 +1314,7 @@ function NewsTab({news,picks}) {
   }
 
   const stockNews = sortedNews.filter(n=>n.symbol&&n.symbol!=='MARKET'&&n.symbol!=='GLOBAL');
-  const localNews = sortedNews.filter(n=>n.symbol==='MARKET'||(!n.symbol&&n.source&&(n.source.includes('NSE')||n.source.includes('India')||n.source.includes('Economic Times')||n.source.includes('Mint'))));
+  const localNews = sortedNews.filter(n=>n.symbol==='MARKET'||(!n.symbol&&typeof n.source==='string'&&(n.source.includes('NSE')||n.source.includes('India')||n.source.includes('Economic Times')||n.source.includes('Mint'))));
   const globalNews = sortedNews.filter(n=>n.category==='GLOBAL'||n.symbol==='GLOBAL'||(!n.symbol&&!localNews.includes(n)&&!stockNews.includes(n)));
 
   function GroupHeader({icon,title,count}) {
@@ -2298,8 +2299,11 @@ function App() {
           if(msg.candidates) setCandidates(msg.candidates);
           if(msg.positions)  setPos(msg.positions);
           if(msg.signals)    setAllSigs(msg.signals);
-          if(msg.macro_status) setSysState(prev=>({...prev, macro_status: msg.macro_status})); // Dual update
-          if(msg.intel)      setSysState(prev=>({...prev, intel: msg.intel}));
+          if(msg.apData)     setApData(msg.apData);
+          if(msg.evalStats)  setEvalStats(prev => ({...prev, ...msg.evalStats}));
+          if(msg.system && msg.system.agents) setAgentKpi(msg.system.agents);
+          if(msg.macro_status) setSysState(prev => ({...prev, macro_status: msg.macro_status}));
+          if(msg.intel)      setSysState(prev => ({...prev, intel: msg.intel}));
         };
         ws.onclose=()=>{if(alive){setConn("offline");setTimeout(()=>{if(alive)connect();},5000);}};
         ws.onerror=()=>{if(alive)setConn("offline");};
