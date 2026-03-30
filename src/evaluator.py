@@ -85,8 +85,20 @@ class EvaluationEngine:
     # ── DB setup ──────────────────────────────────────────────────────────
 
     def _init_db(self) -> sqlite3.Connection:
+        # Prevent locked WAL / SHM files from crashing Windows initialization.
+        # Clean them up if they exist before attempting to connect.
+        try:
+            wal_path = DB_PATH.with_suffix('.db-wal')
+            shm_path = DB_PATH.with_suffix('.db-shm')
+            for p in (wal_path, shm_path):
+                if p.exists():
+                    p.unlink(missing_ok=True)
+        except Exception as e:
+            logger.debug("LENS: could not pre-clean WAL files: %s", e)
+
+        # Fall back to standard DELETE journal instead of WAL
         conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, timeout=30)
-        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA journal_mode=DELETE")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.execute("""CREATE TABLE IF NOT EXISTS signals (
             id TEXT PRIMARY KEY, symbol TEXT, strategy_id TEXT,
