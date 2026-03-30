@@ -144,12 +144,18 @@ class CandleBar:
 def _yf_fix_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     FIX: yfinance >= 0.2.x returns MultiIndex columns like
-         ('Open', 'RELIANCE.NS') — flatten to lowercase single-level.
+         ('Open', 'RELIANCE.NS') — flatten to lowercase single-level
+         and handle accidental duplicate columns.
     """
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = [col[0].lower() for col in df.columns]
     else:
         df.columns = [c.lower() for c in df.columns]
+    
+    # DEDUPLICATION: Remove any duplicate column names (keep first)
+    if df.columns.duplicated().any():
+        df = df.loc[:, ~df.columns.duplicated()]
+        
     return df
 
 def _yf_download(symbol: str, start: str, end: str,
@@ -164,18 +170,26 @@ def _yf_download(symbol: str, start: str, end: str,
     if not YF_AVAILABLE:
         return None
     ticker = symbol if symbol.endswith(".NS") else symbol + ".NS"
+    
     for attempt in range(retries):
         try:
+            # We remove the custom session to let yf handle curl_cffi requirements
             df = yf.download(ticker, start=start, end=end,
-                             interval=interval, progress=False, auto_adjust=True)
+                             interval=interval, progress=False, auto_adjust=True,
+                             timeout=20)
             if df is None or df.empty:
                 return None
+            # Ensure single-level columns and NO DUPLICATES
             df = _yf_fix_columns(df)
-            # Ensure required columns exist
-            for col in ('open','high','low','close','volume'):
-                if col not in df.columns:
-                    return None
-            df = df[['open','high','low','close','volume']].copy()
+            
+            # Robust extraction: Only keep required OHLCV columns
+            req = ['open','high','low','close','volume']
+            df = df[[c for c in df.columns if c in req]].copy()
+            
+            # If still duplicates (multi-ticker), slice the first set
+            if df.columns.duplicated().any():
+                df = df.loc[:, ~df.columns.duplicated()]
+            
             df.index = pd.to_datetime(df.index)
             df['datetime'] = df.index
             df['symbol']   = symbol
@@ -183,7 +197,7 @@ def _yf_download(symbol: str, start: str, end: str,
             return df.reset_index(drop=True)
         except Exception as e:
             wait = 2 ** attempt
-            logger.warning(f"yfinance attempt {attempt+1}/{retries} failed for {symbol}: {e} — retrying in {wait}s")
+            logger.warning(f"yfinance {symbol} hang/fail: {e} - retrying {attempt+1}/{retries}")
             time.sleep(wait)
     return None
 
@@ -655,13 +669,13 @@ class DataFetcher:
             logger.debug(f"Cache hit: {symbol} {interval}")
             return df
 
-        # 2. OpenAlgo
+        # 2. OpenAlgo (Fastest, professional)
         df = _oa_historical(symbol, start, end, interval)
         if df is not None and not df.empty:
             save_ohlcv(symbol, interval, df, start, end)
             return df
 
-        # 3. NSE Direct API (daily only)
+        # 3. NSE Direct API (daily only) — VERY ROBUST
         if interval in ("1d", "D"):
             try:
                 s = datetime.strptime(start, "%Y-%m-%d").date()
@@ -670,16 +684,22 @@ class DataFetcher:
                 if df is not None and not df.empty:
                     save_ohlcv(symbol, interval, df, start, end)
                     return df
-            except Exception:
-                pass
+            except Exception: pass
 
-        # 4. yfinance (with MultiIndex fix + retry)
+        # 4. Stooq (daily ONLY) — Free and great backfill fallback
+        if interval in ("1d", "D"):
+            df = _stooq_historical(symbol, start, end)
+            if df is not None and not df.empty:
+                save_ohlcv(symbol, interval, df, start, end)
+                return df
+
+        # 5. yfinance (Good for intraday, but can hang on weekends)
         df = _yf_download(symbol, start, end, interval)
         if df is not None and not df.empty:
             save_ohlcv(symbol, interval, df, start, end)
             return df
 
-        # 5. Alpha Vantage
+        # 6. Alpha Vantage (Premium/Fallback)
         df = _av_historical(symbol, interval)
         if df is not None and not df.empty:
             # Filter to requested date range
@@ -696,7 +716,7 @@ class DataFetcher:
                 save_ohlcv(symbol, interval, df, start, end)
                 return df
 
-        logger.warning(f"No data found for {symbol} {interval} {start}→{end}")
+        logger.warning(f"No data found for {symbol} {interval} {start} -> {end}")
         return None
 
     # ── Fundamentals ──────────────────────────────────────────────────────────

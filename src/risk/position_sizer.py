@@ -73,24 +73,28 @@ def optimal_size(
     avg_win_pct:  float = 0.03,
     avg_loss_pct: float = 0.015,
     risk_pct:     float = 0.01,
+    regime:       str   = "TRENDING",
 ) -> Dict:
     """
     Combined: take the more conservative of Kelly and ATR sizing.
-
-    Returns:
-        qty          : shares to buy
-        kelly_qty    : Kelly-derived quantity
-        atr_qty      : ATR-derived quantity
-        capital_used : ₹ invested
-        stop_loss    : ATR-based stop loss price
-        target       : 3:1 R:R target price
     """
     kqty = kelly_size(capital, entry_price, win_prob, avg_win_pct, avg_loss_pct)
     aqty = atr_size(capital, entry_price, atr, risk_pct)
     qty  = min(kqty, aqty) if (kqty > 0 and aqty > 0) else max(kqty, aqty)
     qty  = max(1, qty)
-    sl   = round(entry_price - 1.5 * atr, 2) if atr > 0 else round(entry_price * 0.975, 2)
-    tgt  = round(entry_price + 3.0 * atr, 2) if atr > 0 else round(entry_price * 1.06,  2)
+    
+    # Scale: Ensure position is large enough to cover the ₹70 flat broker fee.
+    # We want (Target - Entry) * qty > 100 on average.
+    # Alternatively, just increase quantity so absolute position size > 15000 if capital allows.
+    min_trade_val = 15000.0
+    if (qty * entry_price) < min_trade_val and capital >= min_trade_val:
+        qty = int(min_trade_val / entry_price)
+
+    sl_mult = 3.0 if regime == "SIDEWAYS" else 1.5
+    tgt_mult = 6.0 if regime == "SIDEWAYS" else 3.0
+
+    sl   = round(entry_price - sl_mult * atr, 2) if atr > 0 else round(entry_price * (0.95 if regime == "SIDEWAYS" else 0.975), 2)
+    tgt  = round(entry_price + tgt_mult * atr, 2) if atr > 0 else round(entry_price * (1.10 if regime == "SIDEWAYS" else 1.06), 2)
 
     return {
         'qty':          qty,
@@ -117,11 +121,6 @@ def scale_by_vix(qty: int, vix: float) -> int:
 class PositionSizer:
     """
     Stateful position sizer that adapts Kelly fractions per-strategy.
-
-    Usage:
-        sizer = PositionSizer(total_capital=1_000_000)
-        result = sizer.size('EMA_Cross', entry_price=2400, atr=30)
-        sizer.record_trade('EMA_Cross', pnl=1500)
     """
 
     def __init__(
@@ -143,6 +142,7 @@ class PositionSizer:
         atr:         float,
         vix:         float = 15.0,
         macro_status: str = "LIVE",
+        regime:       str = "TRENDING",
     ) -> Dict:
         """
         Compute position size for a strategy.
@@ -160,7 +160,7 @@ class PositionSizer:
         else:
             wp, aw, al = 0.55, 0.03, 0.015
 
-        result       = optimal_size(self.capital, entry_price, atr, wp, aw, al, self.risk_per_trade)
+        result       = optimal_size(self.capital, entry_price, atr, wp, aw, al, self.risk_per_trade, regime)
         result['qty'] = scale_by_vix(result['qty'], vix)
         
         # Apply Macro Reliability discounts

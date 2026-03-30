@@ -547,6 +547,31 @@ function PositionsTab({positions,mode,apData={}}) {
   const [showCharges,setShowCharges]=useState(null);
   const [innerTab,setInnerTab]=useState("open");
 
+  const handleCommand = async (cmd, payload) => {
+    try {
+      let auth_token = new URLSearchParams(window.location.search).get("token") || localStorage.getItem("dash_token") || "";
+      if (!auth_token) {
+        auth_token = prompt("Enter DASHBOARD_SECRET to authorize this action:");
+        if (!auth_token) return; // cancelled
+        localStorage.setItem("dash_token", auth_token);
+      }
+      
+      const res = await fetch(BACKEND+"/api/command", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({command:cmd, auth_token, ...payload})
+      });
+      const data = await res.json();
+      
+      if (res.status === 403 || (data.detail && data.detail.includes("Unauthorized"))) {
+         localStorage.removeItem("dash_token");
+      }
+      
+      alert(data.result || data.detail || JSON.stringify(data));
+    } catch(err) {
+      alert("Command failed: " + err.message);
+    }
+  };
+
   const open=positions.filter(p=>p.status==="OPEN");
   const closed=positions.filter(p=>p.status==="CLOSED").slice(-10);
 
@@ -601,7 +626,7 @@ function PositionsTab({positions,mode,apData={}}) {
                   <table style={{width:"100%",borderCollapse:"collapse"}}>
                     <thead>
                       <tr style={{background:G.bg}}>
-                        {["Symbol","Strategy","TT","Entry ₹","CMP ₹","SL ₹","Target ₹","Qty","Gross P&L","Net P&L","Status","Opened"].map(h=>(
+                        {["Symbol","Strategy","TT","Entry ₹","CMP ₹","SL ₹","Target ₹","Qty","Gross P&L","Net P&L","Status","Opened","Action"].map(h=>(
                           <th key={h} style={{color:G.textSec,fontSize:10,padding:"9px 14px",
                             textAlign:"left",fontWeight:500,borderBottom:`1px solid ${G.border}`,
                             whiteSpace:"nowrap",fontFamily:"monospace"}}>{h}</th>
@@ -657,6 +682,13 @@ function PositionsTab({positions,mode,apData={}}) {
                                 :<span style={{color:G.textMut,fontSize:10}}>Normal</span>}
                             </td>
                             <td style={{padding:"11px 14px",color:G.textMut,fontSize:10,fontFamily:"monospace"}}>{pos.time??pos.openedAt??"-"}</td>
+                            <td style={{padding:"11px 14px"}}>
+                              <div style={{display:"flex",gap:4}}>
+                                <button onClick={()=> { const n=prompt("New Qty for "+pos.symbol, pos.qty); if(n) handleCommand("set_qty", {symbol:pos.symbol, qty:parseInt(n)}) }} style={{background:G.blue+"20",color:G.blue,border:"none",padding:"3px 6px",borderRadius:4,cursor:"pointer",fontSize:9,fontWeight:700}} title="Edit Quantity">QTY</button>
+                                <button onClick={()=> { const n=prompt("New SL for "+pos.symbol, pos.sl); if(n) handleCommand("set_sl", {symbol:pos.symbol, sl:parseFloat(n)}) }} style={{background:G.yellow+"20",color:G.yellow,border:"none",padding:"3px 6px",borderRadius:4,cursor:"pointer",fontSize:9,fontWeight:700}} title="Edit Stop Loss">SL</button>
+                                <button onClick={()=> { if(confirm("Force Sell "+pos.symbol+"?")) handleCommand("force_sell", {symbol:pos.symbol}) }} style={{background:G.red+"20",color:G.red,border:"none",padding:"3px 6px",borderRadius:4,cursor:"pointer",fontSize:9,fontWeight:700}} title="Force Sell immediately">SELL</button>
+                              </div>
+                            </td>
                           </tr>
                         );
                       })}

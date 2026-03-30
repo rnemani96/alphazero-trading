@@ -43,15 +43,67 @@ class TelegramQueryBot:
             return "System state not available."
 
     def _handle_message(self, text: str):
-        if not text.lower().startswith("/query"):
+        text_lower = text.lower().strip()
+        
+        # Admin Commands for Manual Risk Override
+        if text_lower.startswith("/set_qty"):
+            parts = text.split()
+            if len(parts) == 3:
+                symbol = parts[1].upper()
+                try:
+                    qty = int(parts[2])
+                    from src.risk.active_portfolio import get_active_portfolio
+                    ap = get_active_portfolio()
+                    
+                    found = False
+                    # Search by symbol key prefix in case of Trade_ID appendages
+                    for k, v in ap.open_positions.items():
+                        if k.startswith(symbol + ":") or k == symbol:
+                            v['quantity'] = qty
+                            ap._save_state()
+                            self._send_message(f"✅ Quantity for {symbol} updated to {qty}")
+                            found = True
+                            # Optional: Tell MERCURY broker to adjust if we want full sync
+                            break
+                    if not found:
+                        self._send_message(f"❌ {symbol} not found in open positions.")
+                except ValueError:
+                    self._send_message("❌ Invalid quantity. Use: /set_qty RELIANCE 50")
             return
             
-        query = text[6:].strip()
+        if text_lower.startswith("/set_sl"):
+            parts = text.split()
+            if len(parts) == 3:
+                symbol = parts[1].upper()
+                try:
+                    sl = float(parts[2])
+                    from src.risk.active_portfolio import get_active_portfolio
+                    ap = get_active_portfolio()
+                    
+                    found = False
+                    for k, v in ap.open_positions.items():
+                        if k.startswith(symbol + ":") or k == symbol:
+                            # Use native API which handles JSON saving too
+                            ap.adjust_stop_loss(k, sl)
+                            self._send_message(f"✅ Stop loss for {symbol} updated to ₹{sl}")
+                            found = True
+                            break
+                    if not found:
+                        self._send_message(f"❌ {symbol} not found in open positions.")
+                except ValueError:
+                    self._send_message("❌ Invalid stop loss price. Use: /set_sl RELIANCE 2500.5")
+            return
+
+        if text_lower.startswith("/query"):
+            query = text[6:].strip()
+        else:
+            query = text.strip()
+            
         if not query:
-            self._send_message("Please provide a question. Example: /query Why did we lose money on TCS?")
+            self._send_message("Please provide a question or use commands:\n/set_qty <SYMBOL> <QTY>\n/set_sl <SYMBOL> <PRICE>\nExample: Why did we lose money on TCS?")
             return
             
-        self._send_message("🕵️‍♂️ AlphaZero is analyzing your query...")
+        self._send_message("🕵️‍♂️ AlphaZero is analyzing... (Commands available: /set_qty <SYM> <QTY>, /set_sl <SYM> <PRICE>)")
         
         state_str = self._get_system_state()
         

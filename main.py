@@ -1347,7 +1347,7 @@ def _run_iteration():
 
             # Size position
             macro_status = _state.get('macro_status', 'LIVE')
-            size_result = _sizer.size(strat, price, atr, vix, macro_status)
+            size_result = _sizer.size(strat, price, atr, vix, macro_status, regime)
             qty         = size_result['qty']
             
             # Risk-based Exposure Control

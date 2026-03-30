@@ -289,7 +289,7 @@ function ConnBanner({status}) {
 }
 
 // ─── TopNav ───────────────────────────────────────────────────────────────
-function TopNav({regime,indices,paperPnl,time,connStatus,mode}) {
+function TopNav({regime,indices,paperPnl,time,connStatus,mode,initial_capital}) {
   const R=REGIME[regime]??REGIME.TRENDING;
   const nChange=(indices.nifty??0)-24150,bChange=(indices.banknifty??0)-51840;
   return (
@@ -319,6 +319,12 @@ function TopNav({regime,indices,paperPnl,time,connStatus,mode}) {
         VIX <span style={{color:(indices.vix??0)>22?G.red:G.green,fontWeight:700}}>{(indices.vix??14.2).toFixed(1)}</span>
       </span>
       <div style={{flex:1}}/>
+      <div style={{textAlign:"right",borderRight:`1px solid ${G.border}`,paddingRight:16}}>
+        <div style={{color:G.textMut,fontSize:9,fontFamily:"monospace",letterSpacing:".08em"}}>TOTAL CAPITAL</div>
+        <div style={{color:G.textSec,fontSize:13,fontWeight:700,fontFamily:"monospace"}}>
+          ₹{((mode==="LIVE"?initial_capital:1000000)??0).toLocaleString("en-IN",{maximumFractionDigits:0})}
+        </div>
+      </div>
       <div style={{textAlign:"right"}}>
         <div style={{color:G.textMut,fontSize:9,fontFamily:"monospace",letterSpacing:".08em"}}>NET P&L (after charges)</div>
         <div style={{color:(paperPnl??0)>=0?G.green:G.red,fontSize:13,fontWeight:700,fontFamily:"monospace"}}>
@@ -1730,7 +1736,7 @@ export default function App() {
   const [events,setEvents]         = useState([]);
   const [selectedStock,setSelected]= useState(null);
   const [ NSE_UNIVERSE, setNseUniverse ] = useState([]);
-  const [systemState,setSysState]  = useState({status:"RUNNING",mode:"PAPER",iteration:0,uptime_s:0});
+  const [systemState,setSysState]  = useState({status:"RUNNING",mode:"PAPER",iteration:0,uptime_s:0,initial_capital:1000000});
 
   // ── NEW: Active Portfolio state ──────────────────────────────────────────
   const [apData,setApData]=useState({
@@ -1977,7 +1983,7 @@ export default function App() {
       fontSize:13,display:"flex",flexDirection:"column",overflow:"hidden"}}>
 
       <ConnBanner status={connStatus}/>
-      <TopNav regime={regime} indices={indices} paperPnl={totalNetPnl} time={now} connStatus={connStatus} mode={systemState.mode}/>
+      <TopNav regime={regime} indices={indices} paperPnl={totalNetPnl} time={now} connStatus={connStatus} mode={systemState.mode} initial_capital={systemState.initial_capital}/>
       <TabBar active={tab} setActive={setTab} counts={tabCounts}/>
 
       <div style={{flex:1,padding:"20px 24px",width:"100%",overflowY:"auto",overflowX:"hidden"}}>

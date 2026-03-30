@@ -104,6 +104,8 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
 
     @app.get("/api/status")
     async def status():
+        from dotenv import load_dotenv
+        load_dotenv()
         agent_statuses = {}
         for name, agent in _agents_ref.items():
             try:
@@ -117,6 +119,7 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
             "market_open": is_market_open(),
             "next_open": next_market_open().isoformat(),
             "mode": os.getenv('MODE', 'PAPER'),
+            "initial_capital": float(os.getenv('INITIAL_CAPITAL', '1000000')),
             "agents": agent_statuses,
             "timestamp": datetime.now().isoformat(),
         })
@@ -209,6 +212,56 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
         elif cmd in ("resume", "/resume"):
             if guardian: guardian.resume()
             return {"result": "Resumed"}
+            
+        from src.risk.active_portfolio import get_active_portfolio
+        ap = get_active_portfolio()
+        
+        # Risk Management Overrides
+        if cmd == "set_qty":
+            symbol = payload.get("symbol", "").upper()
+            try:
+                qty = int(payload.get("qty", 0))
+                found = False
+                for k, v in ap.open_positions.items():
+                    if k.startswith(symbol + ":") or k == symbol:
+                        v['quantity'] = qty
+                        ap._save_state()
+                        found = True
+                        break
+                if found: return {"result": f"Quantity for {symbol} updated to {qty}"}
+                return {"result": f"{symbol} not found", "error": True}
+            except Exception as e:
+                return {"result": str(e), "error": True}
+                
+        elif cmd == "set_sl":
+            symbol = payload.get("symbol", "").upper()
+            try:
+                sl = float(payload.get("sl", 0))
+                found = False
+                for k in ap.open_positions.keys():
+                    if k.startswith(symbol + ":") or k == symbol:
+                        ap.adjust_stop_loss(k, sl)
+                        found = True
+                        break
+                if found: return {"result": f"SL for {symbol} updated to {sl}"}
+                return {"result": f"{symbol} not found", "error": True}
+            except Exception as e:
+                return {"result": str(e), "error": True}
+                
+        elif cmd == "force_sell":
+            symbol = payload.get("symbol", "").upper()
+            try:
+                found = False
+                for k in list(ap.open_positions.keys()):
+                    if k.startswith(symbol + ":") or k == symbol:
+                        ap.force_close(k, reason="Manual Force Close via Dashboard")
+                        found = True
+                        break
+                if found: return {"result": f"{symbol} forcefully closed"}
+                return {"result": f"{symbol} not found", "error": True}
+            except Exception as e:
+                return {"result": str(e), "error": True}
+
         return {"result": "Unknown command"}
 
     @app.websocket("/ws")
@@ -266,6 +319,7 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
                             "type": "status",
                             "system": {
                                 "status": "RUNNING", "mode": os.getenv('MODE', 'PAPER'),
+                                "initial_capital": float(os.getenv('INITIAL_CAPITAL', '1000000')),
                                 "timestamp": datetime.now().isoformat(), "agents": agent_statuses,
                             },
                             "regime": status_data.get("regime", "TRENDING"),

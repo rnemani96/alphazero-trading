@@ -282,7 +282,7 @@ class ActivePortfolio:
                 target = pos["target"]
                 sl     = pos["stop_loss"]
                 side   = pos.get("direction", "BUY")
-                is_long = (side == "BUY")
+                is_long = (target >= ep) if target else (side == "BUY")
 
                 # ── Update current price & P&L (Direction Aware) ─────────────────
                 if is_long:
@@ -399,11 +399,12 @@ class ActivePortfolio:
             ep  = pos["entry_price"]
             qty = pos["quantity"]
             side = pos.get("direction", "BUY")
+            target = pos.get("target", ep)
             
-            if side == "BUY":
-                pnl = (current_price - ep) * qty
-            else:
+            if target < ep:
                 pnl = (ep - current_price) * qty
+            else:
+                pnl = (current_price - ep) * qty
                 
             pos["current_price"]  = round(current_price, 2)
             pos["unrealised_pnl"] = round(pnl, 2)

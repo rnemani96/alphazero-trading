@@ -30,3 +30,15 @@ models/*
 # Database
 *.db
 *.sqlite
+
+# Training Data
+data/training_data/*
+data/historical/*
+data/cache/*
+data/sentiment/*
+data/transcripts/*
+*.parquet
+*.h5
+*.pkl
+*.npy
+*.npz
