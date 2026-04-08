@@ -537,11 +537,17 @@ def build_causal_features(prices: "pd.DataFrame",
 
     all_samples = []
     valid_dates = daily_ret.index[25:]
+    n_available_stocks = len(closes.columns)
+    # Adaptive minimum: 10% of universe, floored at 20.
+    # Prevents incremental runs (narrow date windows) from producing 0 samples.
+    MIN_STOCKS_PER_DAY = max(20, int(n_available_stocks * 0.10))
+    logger.info("  Per-day minimum stock threshold: %d (10%% of %d universe)",
+                MIN_STOCKS_PER_DAY, n_available_stocks)
     
     for dt in valid_dates:
         try:
             day_ret = daily_ret.loc[dt].dropna()
-            if len(day_ret) < 50: continue
+            if len(day_ret) < MIN_STOCKS_PER_DAY: continue
             
             # --- Sampling ---
             # 1. Extreme (40)

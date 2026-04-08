@@ -132,7 +132,14 @@ def load_ohlcv(symbol: str, interval: str,
             return None
 
     try:
-        df = pd.read_parquet(path)
+        # ── OPTIMIZATION: Memory-mapped Parquet loading ──
+        # This allows lightning-fast access to large historical files.
+        df = pd.read_parquet(
+            path, 
+            engine="pyarrow", 
+            memory_map=True,
+            columns=['datetime', 'open', 'high', 'low', 'close', 'volume', 'symbol', 'source']
+        )
         if start:
             df = df[df["datetime"] >= pd.Timestamp(start)]
         if end:

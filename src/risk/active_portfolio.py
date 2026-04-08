@@ -331,28 +331,40 @@ class ActivePortfolio:
                     })
                     logger.info("🚀 SCALE-OUT: %s %s 1R reached! Selling 50%% (%d shares).", side, sym, reduced_qty)
 
-                # ── Dynamic Trailing Logic ──
+                # ── Dynamic Adaptive Trailing & Profit Preservation ──────────────
                 atr = pos.get("atr", ep * 0.02)
-                trail_buffer = max(ep * 0.03, 2.5 * atr)
+                
+                # ADAPTIVE TIGHTENING: The more we gain, the tighter we lock.
+                trail_mult = 2.5
+                if pnl_pct >= 3.0:    trail_mult = 1.0
+                elif pnl_pct >= 2.0:  trail_mult = 1.5
+                
+                trail_buffer = max(ep * 0.015, trail_mult * atr)
                 
                 if is_long:
                     trail_sl = round(pos["highest_price"] - trail_buffer, 2)
                     if trail_sl > pos.get("trailing_stop", 0):
-                        old_ts = pos.get("trailing_stop", sl)
                         pos["trailing_stop"] = trail_sl
                         updated_stops.append({"symbol": sym, "new_sl": trail_sl, "broker_id": pos.get("broker_id")})
+                    
+                    # ── Requirement #8: 'In-Hand' Protection ──────────────────
+                    if pnl_pct > 1.25 and price < (ep * 1.005):
+                        close_status = PositionStatus.STOPPED
+                        reason = f"Profit Preservation: Protecting {pnl_pct:.1f}% gain. Closing at break-even+."
                 else:
                     trail_sl = round(pos["lowest_price"] + trail_buffer, 2)
                     if trail_sl < pos.get("trailing_stop", float('inf')):
-                        old_ts = pos.get("trailing_stop", sl)
                         pos["trailing_stop"] = trail_sl
                         updated_stops.append({"symbol": sym, "new_sl": trail_sl, "broker_id": pos.get("broker_id")})
+                    
+                    if pnl_pct > 1.25 and price > (ep * 0.995):
+                        close_status = PositionStatus.STOPPED
+                        reason = f"Profit Preservation (Short): Protecting {pnl_pct:.1f}% gain."
 
                 # ── Check exit conditions ──────────────────────────────────────
-                reason = None
-                close_status = None
-                
-                if is_long:
+                if not close_status:
+                    reason = None
+                    if is_long:
                     eff_sl = max(sl, pos.get("trailing_stop", 0))
                     if price >= target:
                         reason = f"Target ₹{target:.2f} reached! P&L: ₹{pnl:+.0f}"

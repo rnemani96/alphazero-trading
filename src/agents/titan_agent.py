@@ -130,6 +130,14 @@ class TitanAgent(BaseAgent):
         self._min_confidence   = float(config.get('TITAN_MIN_CONFIDENCE',   _MIN_CONFIDENCE))
         self._min_agreement    = int(config.get('TITAN_MIN_AGREEMENT',      _MIN_AGREEMENT))
 
+        # Block list for upcoming earnings (Risk management via stock selection)
+        self.earnings_blocker = None 
+        try:
+            from src.agents.earnings_calendar_agent import EarningsCalendarAgent
+            self.earnings_blocker = EarningsCalendarAgent(event_bus, config)
+        except Exception:
+            pass
+
         # Performance tracking
         self.signals_generated  = 0
         self.signals_emitted    = 0
@@ -185,6 +193,13 @@ class TitanAgent(BaseAgent):
 
         for symbol, ind_data in market_data.items():
             try:
+                # ── Risk Blocker: Upcoming Earnings ───────────────────────────
+                if self.earnings_blocker:
+                    upcoming = self.earnings_blocker.get_upcoming_earnings([symbol], max_days=2)
+                    if upcoming:
+                        logger.debug("TITAN: skipping %s — EARNINGS RISK (within 2 days)", symbol)
+                        continue
+
                 sig = self._process_symbol(
                     symbol, ind_data, effective_regime, weights,
                     float(hermes_scores.get(symbol, 0.0)) if hermes_scores else 0.0,
@@ -231,10 +246,10 @@ class TitanAgent(BaseAgent):
         if r == "TRENDING":
             return 0.50, 2
         elif r == "SIDEWAYS" or r == "NEUTRAL":
-            # Loose — mean reversion strategies dominate; conf is inherently lower
-            return 0.25, 1
+            # Bar raised: must have higher confidence and better agreement in choppy markets
+            return 0.40, 2
         elif r == "VOLATILE":
-            return 0.40, 1
+            return 0.45, 2
         return max(0.28, (getattr(self, '_min_confidence', 0.52) - 0.15)), 1
 
     def _process_symbol(
@@ -313,12 +328,40 @@ class TitanAgent(BaseAgent):
         buy_conf  = buy_score  / total_w
         sell_conf = sell_score / total_w
 
-        # ── Signal Boosting Logic ─────────────────────────────────────────────
+        # ── Cross-Agent Quality Gate ──────────────────────────────────────────
+        # In non-trending markets, we require confirmation from other agents 
+        # to ensure we are picking the 'Best of the Best' stocks.
+        if regime in ('SIDEWAYS', 'VOLATILE', 'NEUTRAL'):
+            # Filter 1: Sentiment (HERMES) - Must be at least slightly positive
+            if sentiment < 0.1:
+                return None
+            # Filter 2: Momentum (SIGMA) - Must be in top tier rank
+            if momentum < 0.60:
+                return None
+            # Filter 3: Sector (ATLAS) - Must be in an outperforming sector
+            if sector_strength < 0.55:
+                return None
+
+        # ── Signal Boosting Logic (Reward High-Quality Agreement) ─────────────
         conviction = 0.0
-        if sentiment > 0.2:       conviction += 0.05   # HERMES Bullish
-        if momentum > 0.6:        conviction += 0.05   # SIGMA Momentum
-        if sector_strength > 0.5: conviction += 0.05   # ATLAS Sector
+        if sentiment > 0.3:       conviction += 0.05   # HERMES Strong Bullish
+        if momentum > 0.7:        conviction += 0.05   # SIGMA High Momentum
+        if sector_strength > 0.7: conviction += 0.05   # ATLAS Strong Sector
         
+        # ── Requirement #9: News Catalyst Matcher ───────
+        news_headlines = str(extra.get('headlines', '')).upper()
+        catalysts = ['ORDER', 'DEAL', 'CONTRACT', 'PROFIT', 'DIVIDEND', 'AWARD', 'EXPANSION']
+        if any(cat in news_headlines for cat in catalysts):
+            conviction += 0.10  # 10% boost for 'Fundamental Why'
+            reasons.append(f"Catalyst: Detected news keyword match.")
+
+        # ── Requirement #9: LSTM Pattern Recognition ───────
+        lstm_score = extra.get('lstm_confidence', 0.5)
+        if lstm_score > 0.8:
+            conviction += 0.10
+            reasons.append("Pattern: LSTM detects strong geometric sequence.")
+
+        # Aggregate Result
         buy_conf  = min(1.0, buy_conf + conviction)
         sell_conf = min(1.0, sell_conf + conviction)
 
@@ -328,7 +371,7 @@ class TitanAgent(BaseAgent):
         sell_count = sum(1 for s in raw_signals if getattr(s, 'signal', 0) < 0
                          and getattr(s, 'confidence', 0) >= 0.45)
 
-        if buy_conf >= sell_conf and buy_count >= sell_count:
+        if buy_conf >= sell_conf and (buy_conf > 0.5 or buy_count >= min_aggr):
             if buy_conf  < min_conf: return None
             if buy_count  < min_aggr: return None
             action = 'BUY'

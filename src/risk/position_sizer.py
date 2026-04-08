@@ -74,27 +74,45 @@ def optimal_size(
     avg_loss_pct: float = 0.015,
     risk_pct:     float = 0.01,
     regime:       str   = "TRENDING",
+    confidence:   float = 0.5,
 ) -> Dict:
     """
     Combined: take the more conservative of Kelly and ATR sizing.
+    Scales risk_pct based on confidence (0.5=norm, 0.9=2x).
     """
+    # Dynamic Risk Scaling from 0.5% (low conf) to 2.0% (max conf)
+    effective_risk = risk_pct * (confidence * 2.0)
+    effective_risk = max(0.005, min(0.02, effective_risk))
+    
     kqty = kelly_size(capital, entry_price, win_prob, avg_win_pct, avg_loss_pct)
-    aqty = atr_size(capital, entry_price, atr, risk_pct)
+    aqty = atr_size(capital, entry_price, atr, effective_risk)
     qty  = min(kqty, aqty) if (kqty > 0 and aqty > 0) else max(kqty, aqty)
     qty  = max(1, qty)
     
-    # Scale: Ensure position is large enough to cover the ₹70 flat broker fee.
-    # We want (Target - Entry) * qty > 100 on average.
-    # Alternatively, just increase quantity so absolute position size > 15000 if capital allows.
-    min_trade_val = 15000.0
-    if (qty * entry_price) < min_trade_val and capital >= min_trade_val:
-        qty = int(min_trade_val / entry_price)
+    # ── Strict Risk Adherence ────────────────────────────────────────────────
+    # We NO LONGER force ₹15,000 value. Adhering to the ATR risk budget (1% capital)
+    # is the absolute priority to prevent account bleeding.
+    
+    # Check if the position is too tiny to be worth the fees (floor ₹5,000)
+    # but ONLY if the risk remains under a 1.5% cap of capital.
+    min_viable_val = 5000.0
+    if (qty * entry_price) < min_viable_val:
+        if capital >= min_viable_val:
+            test_qty = int(min_viable_val / entry_price)
+            test_risk = abs(entry_price - (entry_price - 1.5 * atr)) * test_qty
+            if test_risk <= (capital * 0.015): # Max 1.5% risk allowed for floor
+                qty = test_qty
+            else:
+                # If even 1 share is too risky or floor exceeds budget, we skip.
+                if (qty * entry_price) < 2000: # Dead floor
+                    qty = 0
 
-    sl_mult = 3.0 if regime == "SIDEWAYS" else 1.5
-    tgt_mult = 6.0 if regime == "SIDEWAYS" else 3.0
+    # Tighten Stop Losses in SIDEWAYS to 2x ATR (was 3x) to cut losers faster.
+    sl_mult  = 2.0 if regime == "SIDEWAYS" else 1.5
+    tgt_mult = 4.0 if regime == "SIDEWAYS" else 3.0
 
-    sl   = round(entry_price - sl_mult * atr, 2) if atr > 0 else round(entry_price * (0.95 if regime == "SIDEWAYS" else 0.975), 2)
-    tgt  = round(entry_price + tgt_mult * atr, 2) if atr > 0 else round(entry_price * (1.10 if regime == "SIDEWAYS" else 1.06), 2)
+    sl   = round(entry_price - sl_mult * atr, 2) if atr > 0 else round(entry_price * (0.97 if regime == "SIDEWAYS" else 0.975), 2)
+    tgt  = round(entry_price + tgt_mult * atr, 2) if atr > 0 else round(entry_price * (1.05 if regime == "SIDEWAYS" else 1.06), 2)
 
     return {
         'qty':          qty,
@@ -104,6 +122,7 @@ def optimal_size(
         'stop_loss':    sl,
         'target':       tgt,
         'risk_amount':  round(abs(entry_price - sl) * qty, 2),
+        'risk_pct':     round((abs(entry_price - sl) * qty / capital) * 100, 2) if capital > 0 else 0,
     }
 
 
@@ -143,10 +162,12 @@ class PositionSizer:
         vix:         float = 15.0,
         macro_status: str = "LIVE",
         regime:       str = "TRENDING",
+        confidence:   float = 0.5,
     ) -> Dict:
         """
         Compute position size for a strategy.
         Uses historical win-rate if enough data (≥15 trades), else default.
+        Now scales by 'confidence' score for High-Conviction setups.
         """
         with self._lock:
             hist = list(self._history.get(strategy, []))
@@ -160,7 +181,11 @@ class PositionSizer:
         else:
             wp, aw, al = 0.55, 0.03, 0.015
 
-        result       = optimal_size(self.capital, entry_price, atr, wp, aw, al, self.risk_per_trade, regime)
+        # Boost wp/aw slightly for ultra-high confidence signals (>0.9)
+        if confidence > 0.9:
+            wp = min(0.70, wp + 0.05)
+
+        result       = optimal_size(self.capital, entry_price, atr, wp, aw, al, self.risk_per_trade, regime, confidence)
         result['qty'] = scale_by_vix(result['qty'], vix)
         
         # Apply Macro Reliability discounts

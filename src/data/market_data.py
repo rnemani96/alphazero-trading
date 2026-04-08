@@ -621,12 +621,19 @@ class DataFetcher:
 
     def __init__(self, cfg: Optional[Dict] = None):
         self.cfg = cfg or {}
+        self._quote_cache: Dict[str, Dict] = {}
+        self._cache_ttl = 5  # 5 second memory cache
 
     # ── Live Quote ────────────────────────────────────────────────────────────
     def get_quote(self, symbol: str) -> Optional[Dict]:
         """
-        Get live/latest price. Chain: OpenAlgo → yfinance → Bhav Copy.
+        Get live/latest price. Chain: Cache -> OpenAlgo → yfinance → Bhav Copy.
         """
+        now = time.time()
+        if symbol in self._quote_cache:
+            entry = self._quote_cache[symbol]
+            if (now - entry['ts']) < self._cache_ttl:
+                return entry['q']
         # 1. OpenAlgo (MODE=LIVE only)
         mode = self.cfg.get('MODE', os.getenv('MODE', 'PAPER')).upper()
         if mode == 'LIVE':

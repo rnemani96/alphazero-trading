@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT))
 
 from src.data.market_data import DataFetcher
 from src.data.universe import get_nifty500_symbols
+from src.data.indicators import add_all_indicators
 
 # Setup Logging
 logging.basicConfig(
@@ -113,7 +114,23 @@ def main():
                 try:
                     df = future.result(timeout=120)
                     if df is not None and not df.empty:
-                        successful_this_phase.append(sym)
+                        # ── AUTOMATED FEATURE ENGINEERING (KEEP READY FOR TRAINING) ──
+                        try:
+                            # 1. Add Indicators
+                            df_features = add_all_indicators(df)
+                            
+                            # 2. Save to Training Ready Store
+                            save_dir = ROOT / "data" / "training_ready" / tf_name
+                            save_dir.mkdir(parents=True, exist_ok=True)
+                            save_path = save_dir / f"{sym}.parquet"
+                            
+                            df_features.to_parquet(save_path, index=False)
+                            successful_this_phase.append(sym)
+                        except Exception as fe:
+                            logger.error(f"  [!] Feature engineering failed for {sym}: {fe}")
+                            # Still count as successful if raw data is saved
+                            successful_this_phase.append(sym)
+
                         if i % 20 == 0:
                             logger.info(f"    [{len(successful_this_phase)}/200] Progress: {sym} ({tf_name})")
                 except Exception:

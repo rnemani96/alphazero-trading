@@ -36,9 +36,9 @@ class TrailingStopManager:
         self.config = config or {}
 
         # Configuration
-        self.activation_profit_pct = self.config.get('ACTIVATION_PROFIT_PCT', 0.02)
+        self.activation_profit_pct = self.config.get('ACTIVATION_PROFIT_PCT', 0.012)
         self.trail_atr_multiplier  = self.config.get('TRAIL_ATR_MULTIPLIER', 1.5)
-        self.trail_pct             = self.config.get('TRAIL_PCT', 0.03)
+        self.trail_pct             = self.config.get('TRAIL_PCT', 0.02) # Tighter 2% trail
 
         # Track trailing stops for each position
         self.trailing_stops     = {}
@@ -96,63 +96,54 @@ class TrailingStopManager:
             else:  # SHORT
                 profit_pct = (entry_price - current_price) / entry_price
             
-            # Only activate trailing if in profit
-            if profit_pct >= self.activation_profit_pct:
-                
-                # Get ATR for symbol
-                atr = market_data.get(symbol, {}).get('atr', entry_price * 0.02)
-                
-                # Calculate new trailing stop
-                if position['side'] == 'LONG':
-                    # ATR-based trailing
-                    atr_stop = current_price - (atr * self.trail_atr_multiplier)
+                # 1. Break-even move (Safety Logic)
+                # Move to break-even as soon as we hit 0.8% profit to prevent losses
+                if profit_pct >= 0.008:
+                    be_stop = round(entry_price * 1.001 if position['side'] == 'LONG' else entry_price * 0.999, 2)
+                    if position['side'] == 'LONG':
+                        current_stop = max(current_stop, be_stop)
+                    else:
+                        current_stop = min(current_stop, be_stop)
+
+                # 2. Main Trailing Activation (Adaptive Tightening)
+                if profit_pct >= self.activation_profit_pct:
                     
-                    # Percentage-based trailing
-                    pct_stop = current_price * (1 - self.trail_pct)
+                    # DYNAMIC TIGHTENING: The more we win, the tighter we lock!
+                    effective_trail = self.trail_pct # Base 2%
+                    if profit_pct >= 0.030:    effective_trail = 0.005 # Tighten to 0.5% at 3% profit
+                    elif profit_pct >= 0.020:  effective_trail = 0.010 # Tighten to 1.0% at 2% profit
                     
-                    # Use the higher of the two
-                    new_stop = max(atr_stop, pct_stop)
+                    # Get ATR for symbol
+                    atr = market_data.get(symbol, {}).get('atr', entry_price * 0.01)
                     
-                    # Only raise stops, never lower
-                    if new_stop > current_stop:
-                        updated_stops[symbol] = {
-                            'old_stop': current_stop,
-                            'new_stop': new_stop,
-                            'method': 'ATR' if new_stop == atr_stop else 'PERCENTAGE',
-                            'locked_profit': new_stop - entry_price,
-                            'locked_profit_pct': (new_stop - entry_price) / entry_price
-                        }
+                    # Calculate new trailing stop
+                    if position['side'] == 'LONG':
+                        atr_stop = current_price - (atr * self.trail_atr_multiplier)
+                        pct_stop = current_price * (1 - effective_trail)
+                        new_stop = max(atr_stop, pct_stop)
                         
-                        logger.info(
-                            f"📈 {symbol} - Trailing stop RAISED: "
-                            f"₹{current_stop:.2f} → ₹{new_stop:.2f} "
-                            f"(Locking {updated_stops[symbol]['locked_profit_pct']:.1%} profit)"
-                        )
-                
-                else:  # SHORT position
-                    # ATR-based trailing
-                    atr_stop = current_price + (atr * self.trail_atr_multiplier)
+                        if new_stop > current_stop:
+                            updated_stops[symbol] = {
+                                'old_stop': current_stop,
+                                'new_stop': new_stop,
+                                'method': 'ADAPTIVE',
+                                'locked_profit_pct': (new_stop - entry_price) / entry_price
+                            }
+                            logger.info(f"📈 {symbol} Adaptive Trail: {new_stop:.2f} (Locking {updated_stops[symbol]['locked_profit_pct']:.1%})")
                     
-                    # Percentage-based trailing
-                    pct_stop = current_price * (1 + self.trail_pct)
-                    
-                    # Use the lower of the two
-                    new_stop = min(atr_stop, pct_stop)
-                    
-                    # Only lower stops for shorts, never raise
-                    if new_stop < current_stop:
-                        updated_stops[symbol] = {
-                            'old_stop': current_stop,
-                            'new_stop': new_stop,
-                            'method': 'ATR' if new_stop == atr_stop else 'PERCENTAGE',
-                            'locked_profit': entry_price - new_stop,
-                            'locked_profit_pct': (entry_price - new_stop) / entry_price
-                        }
+                    else:  # SHORT
+                        atr_stop = current_price + (atr * self.trail_atr_multiplier)
+                        pct_stop = current_price * (1 + effective_trail)
+                        new_stop = min(atr_stop, pct_stop)
                         
-                        logger.info(
-                            f"📉 {symbol} - Trailing stop LOWERED (SHORT): "
-                            f"₹{current_stop:.2f} → ₹{new_stop:.2f}"
-                        )
+                        if new_stop < current_stop:
+                            updated_stops[symbol] = {
+                                'old_stop': current_stop,
+                                'new_stop': new_stop,
+                                'method': 'ADAPTIVE',
+                                'locked_profit_pct': (entry_price - new_stop) / entry_price
+                            }
+                            logger.info(f"📉 {symbol} Adaptive Trail (SHORT): {new_stop:.2f}")
         
         return updated_stops
     

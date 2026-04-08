@@ -39,6 +39,7 @@ sys.path.insert(0, str(ROOT))
 
 from src.data.universe import get_nifty500_symbols
 from src.data.market_data import DataFetcher
+from src.data.indicators import add_all_indicators
 from src.agents.karma_agent import KarmaAgent
 from src.agents.titan_agent import TitanAgent
 from src.event_bus.event_bus import EventBus
@@ -147,9 +148,23 @@ class HistoricalDeepTrainer:
             df = self.fetcher.get_historical(symbol, start_date, end_date, interval=conf["interval"])
             if df is None or df.empty:
                 return pd.DataFrame()
-            
+
             # Normalize column names to lowercase
             df.columns = [str(c).lower() for c in df.columns]
+
+            # ── Feature Engineering ───────────────────────────────────────────
+            # Ensure required OHLCV columns are present before enrichment
+            required = {'open', 'high', 'low', 'close', 'volume'}
+            if required.issubset(set(df.columns)):
+                try:
+                    df = add_all_indicators(df)
+                    logger.debug(f"    [{symbol}] Features added: {len(df.columns)} columns, {len(df)} rows")
+                except Exception as fe:
+                    logger.warning(f"    [{symbol}] Feature engineering failed: {fe} — using raw OHLCV")
+            else:
+                missing = required - set(df.columns)
+                logger.warning(f"    [{symbol}] Skipping feature engineering: missing columns {missing}")
+
             return df
         except Exception as e:
             logger.error(f"    Failed to fetch {symbol}: {e}")
@@ -182,10 +197,12 @@ class HistoricalDeepTrainer:
                         # SET A STRICT TIMEOUT ON EACH FETCH TO PREVENT STALLS (Requirement: Reason for Stall fix)
                         df = future.result(timeout=60) 
                         
-                        if not df.empty and len(df) > 50:
+                        # 60-row minimum: EMA-200 needs ~200 bars, but even EMA-50
+                        # needs 60+ rows to have meaningful values after warmup.
+                        if not df.empty and len(df) > 60:
                             if 'datetime' in df.columns:
                                 df = df.rename(columns={"datetime": "timestamp"})
-                            
+
                             candles = df.to_dict("records")
                             tf_data[sym] = candles
                             

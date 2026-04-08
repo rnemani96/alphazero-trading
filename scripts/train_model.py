@@ -39,8 +39,10 @@ def fetch_historical_data(symbols, months=8):
     
     for sym in symbols:
         try:
+            # Yahoo Finance requires .NS suffix for NSE-listed stocks
+            yf_ticker = sym if sym.endswith(".NS") else f"{sym}.NS"
             logger.info(f"Downloading {sym}...")
-            df = yf.download(sym, start=start_date.strftime("%Y-%m-%d"), end=end_date.strftime("%Y-%m-%d"), progress=False)
+            df = yf.download(yf_ticker, start=start_date.strftime("%Y-%m-%d"), end=end_date.strftime("%Y-%m-%d"), progress=False)
             
             if len(df) < 50:
                 logger.warning(f"Not enough data for {sym}. Skipping...")
@@ -98,8 +100,10 @@ def train_model(df):
     X = df[features]
     y = df['target']
     
-    # Split chronologically or randomly
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Chronological split — NEVER shuffle price data; future must not leak into train
+    split = int(len(X) * 0.8)
+    X_train, X_test = X.iloc[:split], X.iloc[split:]
+    y_train, y_test = y.iloc[:split], y.iloc[split:]
     
     model = RandomForestClassifier(n_estimators=100, max_depth=8, min_samples_split=10, random_state=42, n_jobs=-1)
     

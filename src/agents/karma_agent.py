@@ -235,10 +235,11 @@ class KarmaAgent(BaseAgent):
             # ── Strategy weight update (half-gradient) ────────────────────────
             strat_key = self._map_strategy(strategy)
             if strat_key in self.strategy_weights:
-                lr    = 0.015
-                delta = lr * (1.0 if won else -0.7)   # asymmetric — reward wins more
+                lr    = 0.012
+                # Symmetric learning: punish losses as much as we reward wins
+                delta = lr * (1.0 if won else -1.0)
                 self.strategy_weights[strat_key] = max(
-                    0.30, min(2.0, self.strategy_weights[strat_key] + delta)
+                    0.20, min(3.0, self.strategy_weights[strat_key] + delta)
                 )
                 st = self.strategy_stats[strat_key]
                 st['total_pnl'] += pnl

@@ -182,6 +182,8 @@ agents['EARNINGS'] = _load_agent('EARNINGS','src.agents.llm_earnings_analyzer', 
 agents['EARNINGS_CALENDAR'] = _load_agent('EARNINGS_CALENDAR', 'src.agents.earnings_calendar_agent', 'EarningsCalendarAgent', eb, _cfg)
 agents['STRATEGY'] = _load_agent('STRATEGY','src.agents.llm_strategy_generator','StrategyGenerator',      eb, _cfg)
 agents['SENTINEL'] = _load_agent('SENTINEL', 'src.agents.sentinel', 'SentinelAgent', eb, _cfg)
+agents['ORACLE_V2']= _load_agent('ORACLE_V2','src.agents.oracle_v2',           'OracleV2Agent',          eb, _cfg)
+agents['SHADOW']   = _load_agent('SHADOW',   'src.agents.lstm_agent',           'LSTMAgent',              eb, _cfg)
 
 active_agents = {k: v for k, v in agents.items() if v is not None}
 logger.info("Agents online: %d / 18", len(active_agents))
@@ -1736,6 +1738,29 @@ def _run_nightly_tasks():
         # This triggers a parallel stress-test on training data
         engine.run_stress_test(training_syms, hist_data)
 
+        # ── Requirement #9: Automated Model Showdown ────────────────
+        try:
+            from scripts.ai_model_showdown import run_showdown
+            logger.info("🏆 Starting Nightly AI Model Showdown...")
+            run_showdown()
+        except Exception as e:
+            logger.error(f"Nightly Model Showdown failed: {e}")
+
+        # ── Automated Model Forge (Retraining) ──────────────────
+        try:
+            from scripts.train_committee import main as train_models
+            logger.info("⚒️ Starting Nightly AI Model Retraining...")
+            train_models()
+        except Exception as e:
+            logger.error(f"Nightly Model Retraining failed: {e}")
+
+        # ── Automated System Maintenance (Cleanup) ──────────────────
+        try:
+            from scripts.system_cleanup import run_cleanup
+            run_cleanup()
+        except Exception as e:
+            logger.error(f"Nightly Cleanup failed: {e}")
+
         logger.info("🌙 Nightly tasks completed successfully.")
 
         # 5. Export full trade history to Excel for review
@@ -1859,7 +1884,24 @@ signal.signal(signal.SIGTERM, _shutdown)
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+def _pre_flight_check():
+    """Requirement: Systematic & Perfect Startup."""
+    from pathlib import Path
+    logger.info("🛠️ PERFORMING SYSTEM PRE-FLIGHT CHECK...")
+    dirs = [
+        "models", "logs", "data/cache/ohlcv", 
+        "data/training_ready/15m", "data/training_ready/1h", "data/training_ready/1d"
+    ]
+    for d in dirs:
+        p = Path(ROOT) / d
+        if not p.exists():
+            p.mkdir(parents=True, exist_ok=True)
+            logger.info(f"   CREATED: {d}")
+            
+    logger.info("✅ PRE-FLIGHT CHECK COMPLETE. SYSTEM STRIKE-READY.")
+
 def main():
+    _pre_flight_check()
     logger.info("=" * 70)
     logger.info("AlphaZero Capital v4.0")
     logger.info("MODE: %s | Capital: ₹%s | Agents: %d/18",
@@ -1876,6 +1918,19 @@ def main():
                 "✓" if _mc_engine else "✗",
                 "✓" if _sgx else "✗")
     logger.info("═" * 70)
+
+    # Start Harvester Daemon (Requirement: One-script execution)
+    def _run_harvester():
+        try:
+            from scripts.data_daemon import harvest_loop
+            logger.info("📡 Starting Background Data Harvester Thread...")
+            harvest_loop()
+        except Exception as e:
+            logger.error(f"Harvester Thread failed: {e}")
+
+    import threading
+    h_thread = threading.Thread(target=_run_harvester, daemon=True, name="AlphaHarvester")
+    h_thread.start()
 
     # Start dashboard + browser
     _start_dashboard()
