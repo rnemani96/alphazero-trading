@@ -3,7 +3,18 @@
 All notable changes to the AlphaZero Capital project will be documented in this file.
 **Rule:** Every new feature or fix MUST be accompanied by the date of implementation.
 
-## [7.5.0] - 2026-04-08
+## [7.7.0] - 2026-04-08
+### 🔬 Ensemble Intelligence (SOTA 2026 Alignment)
+- **Ensemble Consensus Gate**: 
+  - Upgraded the signal orchestrator to a **Majority-Vote Committee**. 
+  - New logic requires at least 2/3 agreement between **Neural (LSTM)**, **Boosting (LGBM)**, and **Rule-based (TITAN)** architectures before a high-conviction signal is approved.
+- **Bayesian Hyperparameter Tuner**: 
+  - Implemented `scripts/tune_hyperparams.py` using **Optuna**.
+  - Enables per-symbol optimization, allowing the system to find the unique mathematical "sweet spot" (RSI/EMA/Thresholds) for every stock in the Nifty 500.
+- **Performance Benchmarking**: Integrated automated logic to penalize signals when architectures are in "Discord" (low agreement), drastically reducing false-positive breakouts.
+
+---
+
 ### 🧠 Autonomous Intelligence (The Final Forge)
 - **Committee Model Forge**: 
   - Implemented `scripts/train_committee.py` to handle production-ready training of **LightGBM** and **PyTorch LSTM** models.

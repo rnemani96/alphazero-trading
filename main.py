@@ -1413,30 +1413,30 @@ def _run_iteration():
         action = sig.get('action', 'BUY').upper()
         is_buy = (action == 'BUY')
 
-        # Dynamic AlphaZero v5.0 entry confidence thresholds
-        MIN_ENTRY_CONF = 0.55 if regime == "TRENDING" else 0.60 if regime == "SIDEWAYS" else 0.70
+        # ── SOTA 2026: ENSEMBLE CONSENSUS GATE ──────────────────
+        # According to research, combining LGBM (Oracle), LSTM (Shadow), 
+        # and Rules (Titan) produces the most robust signal.
+        oracle_conf = sig.get('oracle_confidence', 0.5)
+        lstm_conf   = sig.get('lstm_confidence',   0.5)
+        titan_conf  = sig.get('confidence',        0.5)
         
-        # RELAXED for testing/recovery
-        if sig.get('confidence', 0) < MIN_ENTRY_CONF:
-            logger.debug(f"SIGNAL REJECTED: {sym} - Confidence {sig.get('confidence', 0):.2f} < {MIN_ENTRY_CONF}")
-            continue
-            
-        # ── Market Open Volatility Filter (9:15-9:45 AM IST) ──
-        # Block new entries during initial 30 min to avoid volatility noise
-        now = datetime.now(IST)
-        if now.hour == 9 and 15 <= now.minute < 45:
-            logger.info(f"SIGNAL REJECTED: {sym} - Blocked during Market Open Volatility (9:15-9:45 AM)")
-            continue
-            
-        # ── Time-of-Day Volatility Gap (12:00 PM to 1:30 PM IST) ──
-        # Instead of completely blocking this low-liquidity zone, we tighten the criteria
-        # to ensure that only very high conviction breakout patterns make it through.
-        now = datetime.now(IST)
-        in_lunch_zone = (12 <= now.hour < 13) or (now.hour == 13 and now.minute <= 30)
-        if in_lunch_zone and sig.get('confidence', 0) < 0.80:
-            logger.info(f"SIGNAL REJECTED: {sym} - Normal confidence {sig.get('confidence', 0):.2f} blocked during 12:00-1:30 PM Lunch Zone (requires >= 0.80)")
-            continue
-            
+        # 🤝 ENSEMBLE VOTE (Majority Wins)
+        architectures_bullish = 0
+        if oracle_conf > 0.60: architectures_bullish += 1
+        if lstm_conf   > 0.60: architectures_bullish += 1
+        if titan_conf  > 0.55: architectures_bullish += 1
+        
+        # If at least 2 architectures agree, we integrate their scores
+        if architectures_bullish >= 2:
+            ensemble_conf = (oracle_conf * 0.35) + (lstm_conf * 0.35) + (titan_conf * 0.30)
+            sig['confidence'] = ensemble_conf
+            sig['reason'] = sig.get('reason', '') + f" | Ensemble Consensus ({architectures_bullish}/3)"
+        else:
+            # If architecture discord is high, penalize confidence
+            logger.debug(f"ENSEMBLE DISCORD: {sym} (Agreement: {architectures_bullish}/3). Penalizing signal.")
+            sig['confidence'] *= 0.8
+            if sig['confidence'] < MIN_ENTRY_CONF: continue
+
         # Requirement #3.1: Multi-Timeframe Confirmation (Direction-Aware)
         if not _check_mtf_confirmation(sym, action):
             logger.info(f"SIGNAL REJECTED: {sym} - MTF Alignment Failed")
