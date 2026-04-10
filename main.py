@@ -37,6 +37,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 IST = ZoneInfo("Asia/Kolkata")
+from pathlib import Path
+ROOT = Path(__file__).resolve().parent
 
 from logging.handlers import RotatingFileHandler
 
