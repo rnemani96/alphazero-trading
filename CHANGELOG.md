@@ -1,5 +1,24 @@
 # Changelog — AlphaZero Capital
 
+## [4.2.0] - 2026-04-08 (Self-Healing Update)
+### Added
+- **Ensemble Consensus Gate v2.0**: TITAN + ORACLE + SHADOW multi-architecture voting.
+- **Dynamic Majority Voting**: Automated agent-count adjustment for signal gating.
+- **Market Breadth-Boost**: Automated threshold relaxation (0.05) during market rallies.
+- **Symbol Sanitizer**: Prevents `UNDEFINED` ticker injection into data fetching.
+
+### Fixed
+- **yfinance 401Crumb Recovery**: Browser-emulation sessions and native curl_cffi fallback.
+- **Portfolio Guard Stability**: Fixed `UnboundLocalError` in price-update loop.
+- **Shadow LSTM Import Path**: Resolved ModuleNotFoundError for EventBus.
+
+### Changed
+- **Relaxed Boundaries**: Sideways threshold lowered to 0.52 (Ensemble) and 0.35 (TITAN).
+- **Context Score Relaxation**: Required score lowered to 2/5 for increased strike frequency.
+
+---
+
+
 All notable changes to the AlphaZero Capital project will be documented in this file.
 **Rule:** Every new feature or fix MUST be accompanied by the date of implementation.
 

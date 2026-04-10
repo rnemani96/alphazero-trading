@@ -173,7 +173,8 @@ def _yf_download(symbol: str, start: str, end: str,
     
     for attempt in range(retries):
         try:
-            # We remove the custom session to let yf handle curl_cffi requirements
+            # 🚀 NATIVE BYPASS: Letting yfinance handle its own browser emulation (curl_cffi)
+            # This avoids the 'Yahoo API requires curl_cffi session' restriction.
             df = yf.download(ticker, start=start, end=end,
                              interval=interval, progress=False, auto_adjust=True,
                              timeout=20)

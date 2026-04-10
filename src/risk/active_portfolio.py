@@ -341,6 +341,9 @@ class ActivePortfolio:
                 
                 trail_buffer = max(ep * 0.015, trail_mult * atr)
                 
+                close_status = None
+                reason = None
+                
                 if is_long:
                     trail_sl = round(pos["highest_price"] - trail_buffer, 2)
                     if trail_sl > pos.get("trailing_stop", 0):
@@ -365,21 +368,22 @@ class ActivePortfolio:
                 if not close_status:
                     reason = None
                     if is_long:
-                    eff_sl = max(sl, pos.get("trailing_stop", 0))
-                    if price >= target:
-                        reason = f"Target ₹{target:.2f} reached! P&L: ₹{pnl:+.0f}"
-                        close_status = PositionStatus.TARGET
-                    elif price <= eff_sl:
-                        reason = f"Stop-loss ₹{eff_sl:.2f} hit. P&L: ₹{pnl:+.0f}"
-                        close_status = PositionStatus.STOPPED
-                else:
-                    eff_sl = min(sl, pos.get("trailing_stop", float('inf')))
-                    if price <= target:
-                        reason = f"Short Target ₹{target:.2f} reached! P&L: ₹{pnl:+.0f}"
-                        close_status = PositionStatus.TARGET
-                    elif price >= eff_sl:
-                        reason = f"Short SL ₹{eff_sl:.2f} hit. P&L: ₹{pnl:+.0f}"
-                        close_status = PositionStatus.STOPPED
+                        eff_sl = max(sl, pos.get("trailing_stop", 0))
+                        if price >= target:
+                            reason = f"Target ₹{target:.2f} reached! P&L: ₹{pnl:+.0f}"
+                            close_status = PositionStatus.TARGET
+                        elif price <= eff_sl:
+                            reason = f"Stop-loss ₹{eff_sl:.2f} hit. P&L: ₹{pnl:+.0f}"
+                            close_status = PositionStatus.STOPPED
+                    else:
+                        # Shorting logic: SL is ABOVE, Target is BELOW
+                        eff_sl = min(sl, pos.get("trailing_stop", float('inf')))
+                        if price <= target:
+                            reason = f"Short Target ₹{target:.2f} reached! P&L: ₹{pnl:+.0f}"
+                            close_status = PositionStatus.TARGET
+                        elif price >= eff_sl:
+                            reason = f"Short SL ₹{eff_sl:.2f} hit. P&L: ₹{pnl:+.0f}"
+                            close_status = PositionStatus.STOPPED
                 
                 if not close_status and pos["days_open"] >= pos.get("max_days", 30):
                     reason       = f"Max holding period {pos['max_days']} days reached."

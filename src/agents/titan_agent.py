@@ -247,7 +247,7 @@ class TitanAgent(BaseAgent):
             return 0.50, 2
         elif r == "SIDEWAYS" or r == "NEUTRAL":
             # Bar raised: must have higher confidence and better agreement in choppy markets
-            return 0.40, 2
+            return 0.35, 2
         elif r == "VOLATILE":
             return 0.45, 2
         return max(0.28, (getattr(self, '_min_confidence', 0.52) - 0.15)), 1

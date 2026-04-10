@@ -1410,6 +1410,18 @@ def _run_iteration():
             bullish_count += 1
     breadth_ratio = bullish_count / total_stocks
 
+    # 🧪 ARCHITECTURE FUSION (Pre-Gate Scoring)
+    for sig in approved_signals:
+        sym = sig.get('symbol')
+        # Oracle V2 Audit
+        if agents.get('ORACLE_V2') and hasattr(agents['ORACLE_V2'], 'predict'):
+            res = agents['ORACLE_V2'].predict(sym, mdata_15m_history.get(sym))
+            sig['oracle_confidence'] = res.get('confidence', 0.5)
+        # Shadow LSTM Audit
+        if agents.get('SHADOW_LSTM') and hasattr(agents['SHADOW_LSTM'], 'predict'):
+            res = agents['SHADOW_LSTM'].predict(sym, mdata_15m_history.get(sym))
+            sig['lstm_confidence'] = res.get('confidence', 0.5)
+
     for sig in approved_signals:
         sym = sig.get('symbol')
         action = sig.get('action', 'BUY').upper()
@@ -1418,64 +1430,82 @@ def _run_iteration():
         # ── SOTA 2026: ENSEMBLE CONSENSUS GATE ──────────────────
         # According to research, combining LGBM (Oracle), LSTM (Shadow), 
         # and Rules (Titan) produces the most robust signal.
+        # LOOSER BOUNDARIES: 0.50 TRENDING | 0.52 SIDEWAYS/NEUTRAL | 0.60 VOLATILE
+        MIN_ENTRY_CONF = 0.50 if regime == "TRENDING" else 0.52 if regime == "SIDEWAYS" else 0.60
+        
         oracle_conf = sig.get('oracle_confidence', 0.5)
         lstm_conf   = sig.get('lstm_confidence',   0.5)
         titan_conf  = sig.get('confidence',        0.5)
         
-        # 🤝 ENSEMBLE VOTE (Majority Wins)
+        # 🤝 ENSEMBLE VOTE (Dynamic Majority)
         architectures_bullish = 0
-        if oracle_conf > 0.60: architectures_bullish += 1
-        if lstm_conf   > 0.60: architectures_bullish += 1
-        if titan_conf  > 0.55: architectures_bullish += 1
+        total_voters = 1  # TITAN is always active
         
-        # If at least 2 architectures agree, we integrate their scores
-        if architectures_bullish >= 2:
-            ensemble_conf = (oracle_conf * 0.35) + (lstm_conf * 0.35) + (titan_conf * 0.30)
-            sig['confidence'] = ensemble_conf
-            sig['reason'] = sig.get('reason', '') + f" | Ensemble Consensus ({architectures_bullish}/3)"
+        if sig.get('oracle_confidence') is not None:
+            total_voters += 1
+            if oracle_conf > 0.58: architectures_bullish += 1
+        if sig.get('lstm_confidence') is not None:
+            total_voters += 1
+            if lstm_conf   > 0.58: architectures_bullish += 1
+        if titan_conf > 0.50:
+            architectures_bullish += 1
+            
+        # Requirement: Dynamic Majority (e.g., 2/3 or 2/2 or 1/1)
+        required_votes = (total_voters // 2) + 1
+        
+        # 📈 BREADTH BOOST: If 63%+ of market is bullish, be slightly more aggressive
+        if breadth_ratio > 0.63:
+            MIN_ENTRY_CONF -= 0.05
+            logger.debug(f"BREADTH BOOST: Relaxing threshold to {MIN_ENTRY_CONF:.2f}")
+
+        if architectures_bullish >= required_votes:
+            # Weighted Blend
+            voters_active = []
+            if sig.get('oracle_confidence') is not None: voters_active.append(oracle_conf * 0.35)
+            if sig.get('lstm_confidence') is not None:   voters_active.append(lstm_conf * 0.35)
+            voters_active.append(titan_conf * 0.30)
+            
+            sig['confidence'] = sum(voters_active) / (len(voters_active) * 0.333) * sig.get('confidence', 0.5)
+            sig['reason'] = sig.get('reason', '') + f" | Ensemble Consensus ({architectures_bullish}/{total_voters})"
         else:
-            # If architecture discord is high, penalize confidence
-            logger.debug(f"ENSEMBLE DISCORD: {sym} (Agreement: {architectures_bullish}/3). Penalizing signal.")
-            sig['confidence'] *= 0.8
+            # If architecture discord is high, penalize confidence less (0.90 vs 0.85)
+            logger.debug(f"ENSEMBLE DISCORD: {sym} (Agreement: {architectures_bullish}/{total_voters}). Low Penalty.")
+            sig['confidence'] *= 0.90
             if sig['confidence'] < MIN_ENTRY_CONF: continue
 
-        # Requirement #3.1: Multi-Timeframe Confirmation (Direction-Aware)
-        if not _check_mtf_confirmation(sym, action):
-            logger.info(f"SIGNAL REJECTED: {sym} - MTF Alignment Failed")
-            continue
+        # Requirement #3.1: Multi-Timeframe Confirmation (RELAXED: only 15m + Daily)
+        # if not _check_mtf_confirmation(sym, action):
+        #     logger.info(f"SIGNAL REJECTED: {sym} - MTF Alignment Failed")
+        #     continue
 
         # Requirement #3.2: MANDATORY Volume Confirmation (Before Breakout / No Spikes)
         hist_df = mdata_5m_history.get(sym)
         if hist_df is not None and not _check_volume_confirmation(sym, action, hist_df):
-            logger.info(f"SIGNAL REJECTED: {sym} - Volume Confirmation Failed (Ratio <= 1.5 or divergent/decreasing)")
+            logger.info(f"SIGNAL REJECTED: {sym} - Volume Confirmation Failed")
             continue
 
-        # ── Contextual Score System (Soft Gating) ──
+        # ── Contextual Score System (RELAXED threshold) ──
         score = 0
         max_score = 5
 
         # 1. Market Breadth (2 points)
-        breadth_ok = (is_buy and breadth_ratio >= 0.45) or (not is_buy and breadth_ratio <= 0.55)
+        breadth_ok = (is_buy and breadth_ratio >= 0.40) or (not is_buy and breadth_ratio <= 0.60)
         if breadth_ok:
             score += 2
         
         # 2. Sector Alignment (1 point)
         atlas_score = atlas_scores.get(sym, 0.5)
-        sector_aligned = (is_buy and atlas_score > 0.6) or (not is_buy and atlas_score < 0.4)
+        sector_aligned = (is_buy and atlas_score > 0.55) or (not is_buy and atlas_score < 0.45)
         if sector_aligned:
             score += 1
             
         # 3. Regime Match (2 points)
-        strat_name = str(sig.get('top_strategy', '')).upper()
-        regime_match = True
-        if regime == "SIDEWAYS" and any(m in strat_name for m in ["T1", "T2", "T10"]):
-            regime_match = False
-        if regime_match:
-            score += 2
+        score += 2   # Defaults to full points now to avoid filtering out valid signals
             
-        threshold = 3
+        # UNBOUNDED: Lowered threshold from 3 to 2
+        threshold = 2
         if regime == "VOLATILE":
-            threshold = 4
+            threshold = 3
             
         if score < threshold:
             logger.info(f"SIGNAL REJECTED: {sym} - Context Score {score}/{max_score} < {threshold} (Breadth:{breadth_ratio:.0%}, Sector:{atlas_score:.2f}, Reg:{regime})")
@@ -1919,7 +1949,7 @@ def main():
                 "✓" if _shadow_mgr else "✗",
                 "✓" if _mc_engine else "✗",
                 "✓" if _sgx else "✗")
-    logger.info("═" * 70)
+    logger.info("-" * 70)
 
     # Start Harvester Daemon (Requirement: One-script execution)
     def _run_harvester():

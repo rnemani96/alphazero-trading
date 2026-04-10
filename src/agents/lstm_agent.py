@@ -16,7 +16,10 @@ import pandas as pd
 from typing import Dict, Optional
 from datetime import datetime
 
-from .event_bus.event_bus import BaseAgent
+try:
+    from src.event_bus.event_bus import BaseAgent
+except ImportError:
+    from ..event_bus.event_bus import BaseAgent
 
 logger = logging.getLogger("LSTM_AGENT")
 
