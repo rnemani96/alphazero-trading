@@ -36,7 +36,7 @@ class TrailingStopManager:
         self.config = config or {}
 
         # Configuration
-        self.activation_profit_pct = self.config.get('ACTIVATION_PROFIT_PCT', 0.012)
+        self.activation_profit_pct = self.config.get('ACTIVATION_PROFIT_PCT', 0.008) # Lowered from 1.2% to 0.8%
         self.trail_atr_multiplier  = self.config.get('TRAIL_ATR_MULTIPLIER', 1.5)
         self.trail_pct             = self.config.get('TRAIL_PCT', 0.02) # Tighter 2% trail
 

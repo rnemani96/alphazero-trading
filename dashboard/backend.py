@@ -222,10 +222,12 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
             try:
                 qty = int(payload.get("qty", 0))
                 found = False
-                for k, v in ap.open_positions.items():
+                for k in ap.open_positions.keys():
                     if k.startswith(symbol + ":") or k == symbol:
-                        v['quantity'] = qty
-                        ap._save_state()
+                        parts = k.split(":")
+                        s = parts[0]
+                        tt = parts[1] if len(parts) > 1 else "SWING"
+                        ap.adjust_quantity(s, qty, trade_type=tt)
                         found = True
                         break
                 if found: return {"result": f"Quantity for {symbol} updated to {qty}"}
@@ -240,7 +242,11 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
                 found = False
                 for k in ap.open_positions.keys():
                     if k.startswith(symbol + ":") or k == symbol:
-                        ap.adjust_stop_loss(k, sl)
+                        # Correctly split key if it contains trade_type (e.g. "RELIANCE:SWING")
+                        parts = k.split(":")
+                        s = parts[0]
+                        tt = parts[1] if len(parts) > 1 else "SWING"
+                        ap.adjust_stop_loss(s, sl, trade_type=tt)
                         found = True
                         break
                 if found: return {"result": f"SL for {symbol} updated to {sl}"}

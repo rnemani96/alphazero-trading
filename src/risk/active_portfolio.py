@@ -348,19 +348,26 @@ class ActivePortfolio:
                     trail_sl = round(pos["highest_price"] - trail_buffer, 2)
                     if trail_sl > pos.get("trailing_stop", 0):
                         pos["trailing_stop"] = trail_sl
+                        # Visibility fix: update the main stop_loss field so it reflects in dashboard
+                        # Requirements: Never move stop-loss down for LONGs
+                        if trail_sl > pos.get("stop_loss", 0):
+                            pos["stop_loss"] = trail_sl
                         updated_stops.append({"symbol": sym, "new_sl": trail_sl, "broker_id": pos.get("broker_id")})
                     
                     # ── Requirement #8: 'In-Hand' Protection ──────────────────
-                    if pnl_pct > 1.25 and price < (ep * 1.005):
+                    if pnl_pct > 0.8 and price < (ep * 1.005):
                         close_status = PositionStatus.STOPPED
                         reason = f"Profit Preservation: Protecting {pnl_pct:.1f}% gain. Closing at break-even+."
                 else:
                     trail_sl = round(pos["lowest_price"] + trail_buffer, 2)
                     if trail_sl < pos.get("trailing_stop", float('inf')):
                         pos["trailing_stop"] = trail_sl
+                        # Visibility fix: update the main stop_loss field (never move UP for SHORTs)
+                        if trail_sl < pos.get("stop_loss", float('inf')):
+                            pos["stop_loss"] = trail_sl
                         updated_stops.append({"symbol": sym, "new_sl": trail_sl, "broker_id": pos.get("broker_id")})
                     
-                    if pnl_pct > 1.25 and price > (ep * 0.995):
+                    if pnl_pct > 0.8 and price > (ep * 0.995):
                         close_status = PositionStatus.STOPPED
                         reason = f"Profit Preservation (Short): Protecting {pnl_pct:.1f}% gain."
 
@@ -458,6 +465,18 @@ class ActivePortfolio:
                 pos["sl_pct"]    = round((pos["entry_price"] - new_sl) / pos["entry_price"] * 100, 2)
                 self._save()
                 logger.info("[ActivePortfolio] %s SL adjusted: ₹%.2f → ₹%.2f", symbol, old, new_sl)
+
+    def adjust_quantity(self, symbol: str, new_qty: int, trade_type: str = "SWING"):
+        """Manually adjust quantity for an open position."""
+        with self._lock:
+            key = f"{symbol}:{trade_type}"
+            pos = self.positions.get(key)
+            if pos and pos.get("status") == PositionStatus.OPEN:
+                old = pos["quantity"]
+                pos["quantity"] = new_qty
+                pos["invested_amount"] = round(pos["entry_price"] * new_qty, 2)
+                self._save()
+                logger.info("[ActivePortfolio] %s quantity adjusted: %d → %d", symbol, old, new_qty)
 
     # ── Summary / Dashboard API ───────────────────────────────────────────────
 

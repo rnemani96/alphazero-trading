@@ -550,14 +550,14 @@ def _aggregate_signals(
         MIN_AGG_CONF = 0.55
         MIN_AGREEMENT = 2
     elif regime == "SIDEWAYS":
-        MIN_AGG_CONF = 0.60
-        MIN_AGREEMENT = 2
+        MIN_AGG_CONF = 0.48   # Relaxed from 0.60 to capture more trades
+        MIN_AGREEMENT = 1     # Relaxed from 2 to allow single high-confidence signals
     elif regime == "VOLATILE":
-        MIN_AGG_CONF = 0.65
+        MIN_AGG_CONF = 0.60   # Slightly tighter for safety
         MIN_AGREEMENT = 2
     else:
-        MIN_AGG_CONF = 0.60
-        MIN_AGREEMENT = 2
+        MIN_AGG_CONF = 0.55
+        MIN_AGREEMENT = 1
 
     TITAN_W  = 0.45
     NEXUS_W  = 0.30
@@ -618,7 +618,7 @@ def _aggregate_signals(
         # Strategy gating by regime: Penalize trend followers in sideways
         strat_name = str(sig.get('top_strategy', '')).upper()
         if regime == "SIDEWAYS" and any(m in strat_name for m in ["T1", "T2", "T10"]):
-            agg_conf *= 0.7   # 30% penalty for trend strategies in chops
+            agg_conf *= 0.9   # Reduced penalty from 0.7 to 0.9 to allow strong signals through
             logger.debug("AGGREGATE: %s penalized (Trend strat in Side market)", sym)
 
         # Logic for 'agreement' (AlphaZero v5.0 Aggression Scaling)
