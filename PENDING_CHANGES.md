@@ -41,4 +41,9 @@
 - **Unified Order Book**: Aggregated view across all connected brokers (Paper + Live).
 - **Execution Analytics**: Automated post-trade slippage analysis vs. VWAP.
 
+## Pending: Phase 6 — Auto-Evolving Architecture (Evolution 2.0) [HIGH PRIORITY] 🚀
+- **Ensemble + Thompson Sampling**: Orchestrate capital allocation across multiple sub-agents (Mean Reversion, Trend Following) using Thompson Sampling for optimal exploration/exploitation. (Target: +20-30% Sharpe)
+- **Online Fine-Tuning**: Implement immediate model weight updates on live data, incorporating Experience Replay buffering to prevent catastrophic forgetting.
+- **Genetic Algorithm (GA)**: Macro-level evolution loop to mutate hyperparameters and model architectures, run every 100 epochs.
+
 *Current build: AlphaZero v5.0.1 (Stable)*

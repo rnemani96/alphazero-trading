@@ -150,6 +150,10 @@ class IndicatorEngine:
         # Linear Regression Slope (20)
         df['lr_slope20'] = _lr_slope(close, 20)
 
+        # Distance features (needed for CommitteeTrainer)
+        df['ema20_dist'] = (close - df['ema20']) / df['ema20']
+        df['ema50_dist'] = (close - df['ema50']) / df['ema50']
+
         self._df = df
         return self
 
@@ -231,6 +235,9 @@ class IndicatorEngine:
 
         # Average volume
         df['avg_volume'] = vol.rolling(20).mean()
+        
+        # Volume Ratio (relative to 20-period moving average)
+        df['volume_ratio'] = vol / (df['avg_volume'] + 1e-9)
 
         self._df = df
         return self

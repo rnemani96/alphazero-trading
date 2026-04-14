@@ -30,5 +30,10 @@
 - [x] **Fundamental Data**: Integrated yfinance/MSD and Screener.in data into Stock Modal. (Req #2.2)
 - [x] **Volume & Candle Analysis**: Automated detection of patterns and volume profiles. (Req #4)
 
+## Phase 6: Auto-Evolving Architecture (Evolution 2.0) [HIGH PRIORITY]
+- [ ] **Ensemble + Thompson Sampling**: Orchestrate capital allocation across multiple sub-agents (Mean Reversion, Trend Following) using Thompson Sampling for optimal exploration/exploitation. (Target: +20-30% Sharpe)
+- [ ] **Online Fine-Tuning**: Implement immediate model weight updates on live data, incorporating Experience Replay buffering to prevent catastrophic forgetting.
+- [ ] **Genetic Algorithm (GA)**: Macro-level evolution loop to mutate hyperparameters and model architectures, run every 100 epochs.
+
 ---
 *Status Update: System is now running v5.0 core logic with nightly intelligence updates active.*

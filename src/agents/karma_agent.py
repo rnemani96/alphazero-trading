@@ -273,6 +273,22 @@ class KarmaAgent(BaseAgent):
             if len(self.performance_history) > 300:
                 self.performance_history.pop(0)
 
+            # ── Experience Replay Buffering (Online Fine-Tuning) ──────────────
+            import random
+            if len(self.performance_history) >= 10:
+                batch_size = min(5, len(self.performance_history))
+                replay_batch = random.sample(self.performance_history, batch_size)
+                for rep in replay_batch:
+                    rep_strat_key = self._map_strategy(rep['strategy'])
+                    if rep_strat_key in self.strategy_weights:
+                        rep_won = (rep['outcome'] == 'WIN')
+                        # Use a smaller learning rate for replay to prevent catastrophic forgetting
+                        rep_lr = 0.005
+                        rep_delta = rep_lr * (1.0 if rep_won else -1.0)
+                        self.strategy_weights[rep_strat_key] = max(
+                            0.20, min(3.0, self.strategy_weights[rep_strat_key] + rep_delta)
+                        )
+
             # ── Pattern discovery ─────────────────────────────────────────────
             self._discover_patterns(symbol, strategy, regime, pnl)
 

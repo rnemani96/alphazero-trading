@@ -40,10 +40,7 @@ from datetime import datetime, timedelta, date
 from dataclasses import dataclass, asdict
 from typing import Optional, List, Dict, Any
 
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:
-    from backports.zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import numpy as np
@@ -711,8 +708,24 @@ class DataFetcher:
         df = _av_historical(symbol, interval)
         if df is not None and not df.empty:
             # Filter to requested date range
-            df = df[(df['datetime'] >= pd.Timestamp(start)) &
-                    (df['datetime'] <= pd.Timestamp(end))]
+            # Timezone-aware filtering fix with robust fallback
+            try:
+                dt_col = df['datetime']
+                col_tz = dt_col.dt.tz if hasattr(dt_col, 'dt') else None
+                
+                s_ts = pd.Timestamp(start)
+                if col_tz is not None and s_ts.tz is None: s_ts = s_ts.tz_localize(col_tz)
+                
+                e_ts = pd.Timestamp(end)
+                if col_tz is not None and e_ts.tz is None: e_ts = e_ts.tz_localize(col_tz)
+                
+                df = df[(df['datetime'] >= s_ts) & (df['datetime'] <= e_ts)]
+            except Exception:
+                # Fallback: naive comparison
+                df_naive = pd.to_datetime(df['datetime']).dt.tz_localize(None)
+                df = df[(df_naive >= pd.Timestamp(start).tz_localize(None)) & 
+                        (df_naive <= pd.Timestamp(end).tz_localize(None))]
+
             if not df.empty:
                 save_ohlcv(symbol, interval, df, start, end)
                 return df

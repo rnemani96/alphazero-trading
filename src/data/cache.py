@@ -27,10 +27,7 @@ from typing import Optional, Dict, List
 import pandas as pd
 import numpy as np
 
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:
-    from backports.zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger("DataCache")
 IST = ZoneInfo("Asia/Kolkata")
@@ -140,10 +137,32 @@ def load_ohlcv(symbol: str, interval: str,
             memory_map=True,
             columns=['datetime', 'open', 'high', 'low', 'close', 'volume', 'symbol', 'source']
         )
-        if start:
-            df = df[df["datetime"] >= pd.Timestamp(start)]
-        if end:
-            df = df[df["datetime"] <= pd.Timestamp(end)]
+        if not df.empty and 'datetime' in df.columns:
+            # FIX: Avoid timezone comparison mismatch (Invalid comparison between datetime64[us, UTC] and Timestamp)
+            try:
+                col_tz = df["datetime"].dt.tz
+                if start:
+                    s_ts = pd.Timestamp(start)
+                    if col_tz is not None and s_ts.tz is None:
+                        s_ts = s_ts.tz_localize(col_tz)
+                    elif col_tz is not None and s_ts.tz is not None:
+                        s_ts = s_ts.tz_convert(col_tz)
+                    df = df[df["datetime"] >= s_ts]
+                if end:
+                    e_ts = pd.Timestamp(end)
+                    if col_tz is not None and e_ts.tz is None:
+                        e_ts = e_ts.tz_localize(col_tz)
+                    elif col_tz is not None and e_ts.tz is not None:
+                        e_ts = e_ts.tz_convert(col_tz)
+                    df = df[df["datetime"] <= e_ts]
+            except Exception as e:
+                # ULTRA-ROBUST FALLBACK: strip timezones from both sides for comparison
+                logger.debug(f"Timezone normalisation fallback for {symbol}: {e}")
+                if start:
+                    df = df[pd.to_datetime(df["datetime"]).dt.tz_localize(None) >= pd.Timestamp(start).tz_localize(None)]
+                if end:
+                    df = df[pd.to_datetime(df["datetime"]).dt.tz_localize(None) <= pd.Timestamp(end).tz_localize(None)]
+
         logger.debug(f"Cache hit: {symbol} {interval} → {len(df)} rows")
         return df if not df.empty else None
     except Exception as e:

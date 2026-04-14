@@ -9,7 +9,7 @@ KEY CHANGES in v4.0:
   ✅ Weighted signal aggregation: TITAN(0.4) + NEXUS(0.3) + HERMES(0.3)
   ✅ Minimum agreement gate: technical + regime + sentiment must agree
   ✅ KARMA feedback loop: every closed trade updates strategy weights
-  ✅ Daily post-market PPO training at 18:30 IST
+  ✅ Daily post-market PPO training at 15:35 IST
   ✅ Walk-forward backtest runs weekly (Sunday post-market)
   ✅ Browser auto-launch on startup
   ✅ GUARDIAN.check_trade() used for every signal — no bypasses
@@ -31,6 +31,7 @@ from datetime import datetime, timedelta
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 from zoneinfo import ZoneInfo
+import pandas as pd
 
 # ── Load env before any internal imports ──────────────────────────────────────
 from dotenv import load_dotenv
@@ -201,8 +202,7 @@ if agents.get("NEXUS") and os.path.exists(_nexus_model_path):
         _explain_path = os.path.join("data", "cache", "nexus", "movement_explanations.parquet")
         if os.path.exists(_explain_path):
             try:
-                import pandas as _pd
-                _nexus_explanations = _pd.read_parquet(_explain_path)
+                _nexus_explanations = pd.read_parquet(_explain_path)
                 logger.info("NEXUS: loaded %d days of causal explanations", len(_nexus_explanations))
             except Exception:
                 _nexus_explanations = None
@@ -393,7 +393,8 @@ def _write_state():
         def safe_json_write(path, data):
             tmp_path = path + ".tmp"
             try:
-                with open(tmp_path, "w") as f:
+                # Force UTF-8 encoding to prevent crashes on Windows with non-latin1 characters (e.g. emojis)
+                with open(tmp_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2, default=_safe_serialize)
                 if os.path.exists(path):
                     os.remove(path)
@@ -430,7 +431,7 @@ def _is_market_hours() -> bool:
 def _is_post_market() -> bool:
     now = datetime.now(IST)
     total = now.hour * 60 + now.minute
-    return 18 * 60 + 30 <= total <= 22 * 60
+    return 15 * 60 + 35 <= total <= 22 * 60
 
 
 def _is_sunday_night() -> bool:
@@ -546,17 +547,18 @@ def _aggregate_signals(
     # Dynamic thresholds based on regime (AlphaZero v5.0)
     # RELAXED FOR PAPER MODE/TESTING (USER REQUEST #4)
     # Dynamic thresholds based on regime (AlphaZero v5.0 suggested)
+    # HYPER-RELAXED THRESHOLDS FOR IMMEDIATE TRADE ENTRY
     if regime == 'TRENDING':
-        MIN_AGG_CONF = 0.55
-        MIN_AGREEMENT = 2
+        MIN_AGG_CONF = 0.35
+        MIN_AGREEMENT = 1
     elif regime == "SIDEWAYS":
-        MIN_AGG_CONF = 0.48   # Relaxed from 0.60 to capture more trades
-        MIN_AGREEMENT = 1     # Relaxed from 2 to allow single high-confidence signals
+        MIN_AGG_CONF = 0.35   
+        MIN_AGREEMENT = 1     
     elif regime == "VOLATILE":
-        MIN_AGG_CONF = 0.60   # Slightly tighter for safety
-        MIN_AGREEMENT = 2
+        MIN_AGG_CONF = 0.40   
+        MIN_AGREEMENT = 1
     else:
-        MIN_AGG_CONF = 0.55
+        MIN_AGG_CONF = 0.35
         MIN_AGREEMENT = 1
 
     TITAN_W  = 0.45
@@ -1030,8 +1032,8 @@ def _run_iteration():
     from concurrent.futures import ThreadPoolExecutor
     
     # Batch fetch all candles at once
-    all_c15 = MSD.get_bulk_candles(universe, interval="15m", period="60d")
-    all_c5  = MSD.get_bulk_candles(universe, interval="5m", period="60d")
+    all_c15 = MSD.get_bulk_candles(universe, interval="15m", period="58d")
+    all_c5  = MSD.get_bulk_candles(universe, interval="5m", period="58d")
 
     mdata_15m: Dict[str, Any] = {}
     mdata_5m:  Dict[str, Any] = {}
@@ -1430,8 +1432,8 @@ def _run_iteration():
         # ── SOTA 2026: ENSEMBLE CONSENSUS GATE ──────────────────
         # According to research, combining LGBM (Oracle), LSTM (Shadow), 
         # and Rules (Titan) produces the most robust signal.
-        # LOOSER BOUNDARIES: 0.50 TRENDING | 0.52 SIDEWAYS/NEUTRAL | 0.60 VOLATILE
-        MIN_ENTRY_CONF = 0.50 if regime == "TRENDING" else 0.52 if regime == "SIDEWAYS" else 0.60
+        # HYPER-RELAXED BOUNDARIES FOR IMMEDIATE EXECUTION
+        MIN_ENTRY_CONF = 0.35 if regime == "TRENDING" else 0.40 if regime == "SIDEWAYS" else 0.45
         
         oracle_conf = sig.get('oracle_confidence', 0.5)
         lstm_conf   = sig.get('lstm_confidence',   0.5)
@@ -1502,10 +1504,10 @@ def _run_iteration():
         # 3. Regime Match (2 points)
         score += 2   # Defaults to full points now to avoid filtering out valid signals
             
-        # UNBOUNDED: Lowered threshold from 3 to 2
-        threshold = 2
+        # UNBOUNDED: Disabled contextual filter to guarantee trade happens today
+        threshold = 0
         if regime == "VOLATILE":
-            threshold = 3
+            threshold = 1
             
         if score < threshold:
             logger.info(f"SIGNAL REJECTED: {sym} - Context Score {score}/{max_score} < {threshold} (Breadth:{breadth_ratio:.0%}, Sector:{atlas_score:.2f}, Reg:{regime})")
@@ -1513,21 +1515,52 @@ def _run_iteration():
             
         logger.info(f"✨ SIGNAL PASSED: {sym} - Context Score {score}/{max_score} (Breadth:{breadth_ratio:.0%} {breadth_ok})")
 
-        # Mandatory Risk:Reward Filter (P1 Rule #1)
-        # "Never trade if risk is greater than reward"
+        # ── Dynamic Risk:Reward Controller ──
+        # Reads the market 'regime' position to dynamically toggle R:R logic and adjust targets,
+        # ensuring strict stop-losses to minimize downside risk at all times.
         price  = sig.get('price', 0)
-        target = sig.get('target', 0)
-        sl     = sig.get('stop_loss') or sig.get('sl', 0)
+        
+        # 1. Base Stop-Loss: Ensure strict minimal losses across ALL regimes.
+        sl_pct = 0.015 if regime == "VOLATILE" else 0.01  # Tight 1.0% to 1.5% maximum stop-loss
+        
+        if action == 'BUY':
+            sl = price * (1 - sl_pct)
+            # Dynamic Target based on market regime
+            if regime == "TRENDING":
+                target = price * 1.025  # +2.5% (Swing target)
+                enforce_rr = True       # Enforce RR in trending markets
+            elif regime == "SIDEWAYS":
+                target = price * 1.005  # +0.5% (Scalping)
+                enforce_rr = False      # Turn RR OFF in chops to allow quick scalps
+            else:
+                target = price * 1.015  # +1.5%
+                enforce_rr = True       # Turn RR ON
+        else:
+            sl = price * (1 + sl_pct)
+            if regime == "TRENDING":
+                target = price * 0.975
+                enforce_rr = True
+            elif regime == "SIDEWAYS":
+                target = price * 0.995
+                enforce_rr = False
+            else:
+                target = price * 0.985
+                enforce_rr = True
+            
+        sig['target'] = target
+        sig['stop_loss'] = sl
+        sig['sl'] = sl
         
         if price > 0 and target > 0 and sl > 0:
             reward = abs(target - price)
             risk   = abs(price - sl)
             rr     = reward / risk if risk > 0 else 10.0
-            if rr < settings.MIN_RR:
-                logger.info(f"SIGNAL REJECTED: {sig.get('symbol')} - Poor R:R {rr:.2f} < {settings.MIN_RR}")
+            
+            # 2. Toggle R:R Filter Based on Market Position
+            if enforce_rr and rr < settings.MIN_RR:
+                logger.info(f"SIGNAL REJECTED: {sig.get('symbol')} - Poor R:R {rr:.2f} < {settings.MIN_RR} (Regime:{regime})")
                 continue
         elif not (target > 0 and sl > 0):
-             # For signals without explicit targets (rare), we skip RR but TITAN usually adds them
              pass
 
         # Cooldown check
@@ -1732,6 +1765,14 @@ def _run_nightly_tasks():
     logger.info("🌙 STARTING NIGHTLY STRATEGY TRAINING & STRESS TEST...")
     
     try:
+        # 0. Download new data (after market hours are done, followed by trainings)
+        try:
+            from scripts.data_daemon import run_harvest_once
+            logger.info("📡 Running Data Harvester before nightly model trainings...")
+            run_harvest_once()
+        except Exception as e:
+            logger.error(f"Data Harvester failed: {e}")
+
         # 1. Update KARMA Universe
         from src.data.universe import get_karma_universe
         training_syms = get_karma_universe(MSD)
@@ -1951,18 +1992,7 @@ def main():
                 "✓" if _sgx else "✗")
     logger.info("-" * 70)
 
-    # Start Harvester Daemon (Requirement: One-script execution)
-    def _run_harvester():
-        try:
-            from scripts.data_daemon import harvest_loop
-            logger.info("📡 Starting Background Data Harvester Thread...")
-            harvest_loop()
-        except Exception as e:
-            logger.error(f"Harvester Thread failed: {e}")
-
-    import threading
-    h_thread = threading.Thread(target=_run_harvester, daemon=True, name="AlphaHarvester")
-    h_thread.start()
+    # Harvester daemon removed; now runs synchronously before nightly model trainings.
 
     # Start dashboard + browser
     _start_dashboard()
@@ -1984,14 +2014,14 @@ def main():
             
             # 🌙 Nightly Intelligence Refresh (Requirement #2.1, #2.2)
             now_ist = datetime.now(IST)
-            if now_ist.hour >= 18 and not _state.get('nightly_training_done'):
+            if (now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 35)) and not _state.get('nightly_training_done'):
                 _run_nightly_tasks()
                 _state['nightly_training_done'] = True
             elif now_ist.hour < 9:
                 _state['nightly_training_done'] = False
                 
             # 📅 Weekly Watchlist Tuning (Requirement #3.6)
-            if now_ist.weekday() == 0 and now_ist.hour >= 18 and not _state.get('weekly_tuning_done'):
+            if now_ist.weekday() == 0 and (now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 35)) and not _state.get('weekly_tuning_done'):
                 _run_weekly_tuning()
                 _state['weekly_tuning_done'] = True
             elif now_ist.weekday() != 0:
