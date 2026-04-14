@@ -292,8 +292,10 @@ def _write_state():
                 return obj.isoformat()
             return str(obj)
 
-        with open(STATE_FILE, "w") as f:
-            json.dump(_state, f, indent=2, default=_safe_serialize)
+        with _state_lock:
+            with open(STATE_FILE, "w", encoding="utf-8") as f:
+                json.dump(_state, f, indent=2, default=_safe_serialize)
+                
         # Extract summaries from core components
         ap_summary = AP.get_summary() if AP else {}
         lens_summary = agents['LENS'].get_performance_summary() if agents.get('LENS') else {}
@@ -331,6 +333,14 @@ def _write_state():
                 today_pnl += p.get("realised_pnl", 0.0)
                 today_trades.append(p)
 
+        # ── Fetch Holiday Status ───────────────────────────────────────────
+        holiday_status = {}
+        try:
+            from src.data.holidays import get_holiday_status
+            holiday_status = get_holiday_status()
+        except ImportError:
+            pass
+
         status = {
             "picks":       _state.get("selected_stocks", []),
             "regime":      _state.get("regime", "TRENDING"),
@@ -357,6 +367,7 @@ def _write_state():
             "near_sl":          ap_summary.get("near_sl", []),
             "history":          ap_summary.get("history", []),
             "active_portfolio": ap_summary,
+            "holiday":          holiday_status,
             "iteration":   _state.get("iteration", 0),
             "positions":   normalized_positions,
             "open_positions": normalized_positions,
@@ -391,21 +402,25 @@ def _write_state():
         
         # Atomic Safe-Write (Prevents dashboard from reading partial files)
         def safe_json_write(path, data):
-            tmp_path = path + ".tmp"
+            import threading
+            tmp_path = path + f".{threading.get_ident()}.tmp"
             try:
                 # Force UTF-8 encoding to prevent crashes on Windows with non-latin1 characters (e.g. emojis)
                 with open(tmp_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2, default=_safe_serialize)
-                if os.path.exists(path):
-                    os.remove(path)
-                os.rename(tmp_path, path)
+                os.replace(tmp_path, path)  # Atomic on Windows, overwrites if exists safely
             except Exception as e:
-                if os.path.exists(tmp_path): os.remove(tmp_path)
+                if os.path.exists(tmp_path): 
+                    try:
+                        os.remove(tmp_path)
+                    except Exception:
+                        pass
                 raise e
 
-        # Write files robustly
-        safe_json_write("logs/status.json", status)
-        safe_json_write("logs/signals.json", _state.get("latest_signals", []))
+        # Write files robustly under lock to prevent sharing violations
+        with _state_lock:
+            safe_json_write("logs/status.json", status)
+            safe_json_write("logs/signals.json", _state.get("latest_signals", []))
         
         # Notify Dashboard via EventBus to power WebSockets (P3 latency fix)
         if eb:
