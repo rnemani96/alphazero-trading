@@ -146,6 +146,9 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
     @app.get("/api/signals")
     async def signals(): return JSONResponse(_load_json("signals.json", []))
 
+    @app.get("/api/candidates")
+    async def candidates(): return JSONResponse(_load_json("candidates.json", []))
+
     @app.get("/api/sources")
     async def sources():
         return JSONResponse([

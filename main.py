@@ -563,17 +563,18 @@ def _aggregate_signals(
     # RELAXED FOR PAPER MODE/TESTING (USER REQUEST #4)
     # Dynamic thresholds based on regime (AlphaZero v5.0 suggested)
     # HYPER-RELAXED THRESHOLDS FOR IMMEDIATE TRADE ENTRY
+    # HYPER-RELAXED THRESHOLDS FOR MAXIMUM TRADE EXECUTION (User Request)
     if regime == 'TRENDING':
-        MIN_AGG_CONF = 0.35
+        MIN_AGG_CONF = 0.25   # Extremely loose
         MIN_AGREEMENT = 1
-    elif regime == "SIDEWAYS":
-        MIN_AGG_CONF = 0.35   
+    elif regime == "SIDEWAYS" or regime == "NEUTRAL":
+        MIN_AGG_CONF = 0.22   
         MIN_AGREEMENT = 1     
     elif regime == "VOLATILE":
-        MIN_AGG_CONF = 0.40   
+        MIN_AGG_CONF = 0.35   
         MIN_AGREEMENT = 1
     else:
-        MIN_AGG_CONF = 0.35
+        MIN_AGG_CONF = 0.25
         MIN_AGREEMENT = 1
 
     TITAN_W  = 0.45
@@ -640,6 +641,16 @@ def _aggregate_signals(
 
         # Logic for 'agreement' (AlphaZero v5.0 Aggression Scaling)
         agreement_count = sum([1 for c in [tc, nexus_conf, hermes_conf] if c >= 0.5])
+        
+        # 🚀 MOMENTUM PRIORITY BOOST (User Request #2)
+        # If symbol is in the dynamic momentum watchlist, we give it a 15% boost
+        # to ensure we don't 'miss' the big movers.
+        from config.sectors import SYMBOL_TO_SECTOR
+        if SYMBOL_TO_SECTOR.get(sym) == 'MOMENTUM':
+            agg_conf = min(0.98, agg_conf + 0.15)
+            agreement_count += 1 # Virtual agreement boost
+            logger.info("🔥 MOMENTUM BOOST: %s (Priority Entry)", sym)
+
         if agreement_count >= 3:
             agg_conf = min(0.99, agg_conf * 1.1)  # 10% boost for unanimous agreement
 
@@ -878,18 +889,17 @@ def _build_universe() -> List[str]:
     """Return list of NSE symbols to scan this iteration."""
     try:
         from src.data.discovery import get_best_performing_stocks
-        stocks = get_best_performing_stocks(limit=40)
+        stocks = get_best_performing_stocks(limit=60)
         syms = list({s.get('symbol') for s in stocks if s.get('symbol')})
     except Exception:
         syms = []
 
-    # If discovery returned too few, supplement with top NIFTY 500
-    if len(syms) < 10:
-        try:
-            from src.data.universe import get_nifty500_symbols
-            syms += get_nifty500_symbols()[:40]
-        except Exception:
-            pass
+    # Supplement with Top 60 NIFTY 500 stocks for liquid momentum
+    try:
+        from src.data.universe import get_nifty500_symbols
+        syms += get_nifty500_symbols()[:60]
+    except Exception:
+        pass
 
     # Always include open positions
     if AP:
@@ -1106,6 +1116,40 @@ def _run_iteration():
     mdata = mdata_15m # fallback for legacy code
     _state['market_data'] = {s: {'ltp': prices.get(s, 0)} for s in universe}
 
+    # ── CRITICAL FALLBACK: load cached parquet when live candles fail ──────────
+    # If yfinance 401s / rate limits mean we have no enriched data, load from
+    # the nightly data_daemon's parquet cache so TITAN always has signal data.
+    if len(mdata_15m_history) < 5:
+        try:
+            import glob as _glob
+            parquet_dir = Path(ROOT) / "data" / "training_ready" / "15m"
+            parquet_files = list(parquet_dir.glob("*.parquet"))
+            _loaded = 0
+            for pf in parquet_files:
+                sym = pf.stem
+                if sym in mdata_15m_history:
+                    continue
+                try:
+                    df_p = pd.read_parquet(pf)
+                    df_p.columns = [c.lower() for c in df_p.columns]
+                    if 'close' in df_p.columns and len(df_p) >= 20:
+                        # Update last price if we have it
+                        if prices.get(sym, 0) > 0:
+                            df_p.iloc[-1, df_p.columns.get_loc('close')] = prices[sym]
+                        mdata_15m_history[sym] = df_p
+                        if sym not in mdata_15m:
+                            last = df_p.iloc[-1].to_dict()
+                            last['price'] = last.get('close', 0)
+                            mdata_15m[sym] = last
+                        _loaded += 1
+                except Exception:
+                    continue
+            if _loaded > 0:
+                logger.info("FALLBACK: Loaded %d symbols from parquet cache (live candles unavailable)", _loaded)
+                mdata = mdata_15m
+        except Exception as _fb_exc:
+            logger.debug("Parquet fallback failed: %s", _fb_exc)
+
     # Update positions with latest prices
     _update_positions({s: float(d.get('close', d.get('price', 0))) for s, d in mdata.items()})
 
@@ -1238,6 +1282,12 @@ def _run_iteration():
     
     if should_run_heavy and agents.get('SIGMA') and hasattr(agents['SIGMA'], 'score_stocks'):
         try:
+            # Fallback: if candle enrichment failed use price snapshot so SIGMA always scores
+            _score_src = mdata if mdata else {
+                sym: {'price_change_pct': 0, 'adx': 20, 'rsi': 50,
+                      'volume_zscore': 0, 'atr': 0, 'close': prices.get(sym, 1)}
+                for sym in universe if prices.get(sym, 0) > 0
+            }
             candidates = [
                 {
                     'symbol':           sym,
@@ -1252,7 +1302,7 @@ def _run_iteration():
                     'delivery_pct':     min(1.0, float(_state.get('intelligence', {}).get(sym, {}).get('volume', {}).get('delivery_pct', 45.0)) / 100),
                     'historical_sharpe': agents['KARMA'].get_symbol_performance(sym) if agents.get('KARMA') else 0.5,
                 }
-                for sym, d in mdata.items()
+                for sym, d in _score_src.items()
             ]
             
             # SIGMA scoring
@@ -1260,6 +1310,13 @@ def _run_iteration():
             sigma_scores = {s['symbol']: s['sigma_score'] for s in scored_sigma}
             _state['sigma_scores'] = sigma_scores
             _state['candidates']   = scored_sigma
+            
+            # Save candidates for Dashboard visibility (User Request)
+            try:
+                with open("logs/candidates.json", "w") as f:
+                    # Only save top 50 to keep JSON light
+                    json.dump(scored_sigma[:50], f, indent=2)
+            except Exception: pass
             
             # ATLAS scoring
             if agents.get('ATLAS'):
@@ -1285,11 +1342,22 @@ def _run_iteration():
             # Pass multi-agent scores to TITAN for internal boosting
             # CRITICAL FIX: Pass the historical DataFrames (mdata_15m_history) rather than snapshots
             # This unlocks the 45-strategy engine in src/titan.py
+            # ── Requirement #9: Pattern Recognition (LSTM) ──
+            lstm_scores = {}
+            if agents.get('SHADOW_LSTM'):
+                for sym, df in mdata_15m_history.items():
+                    res = agents['SHADOW_LSTM'].predict(sym, df)
+                    lstm_scores[sym] = res.get('confidence', 0.5)
+
+            headlines = _state.get('latest_news', [])
+
             raw_15m = agents['TITAN'].generate_signals(
                 mdata_15m_history, regime, 
                 hermes_scores=sentiment_scores,
                 sigma_scores=sigma_scores,
                 atlas_scores=atlas_scores,
+                headlines=headlines,
+                lstm_scores=lstm_scores,
                 timeframe="15m"
             )
             raw_5m  = agents['TITAN'].generate_signals(
@@ -1297,6 +1365,8 @@ def _run_iteration():
                 hermes_scores=sentiment_scores,
                 sigma_scores=sigma_scores,
                 atlas_scores=atlas_scores,
+                headlines=headlines,
+                lstm_scores=lstm_scores,
                 timeframe="5m"
             )
 
@@ -1368,9 +1438,19 @@ def _run_iteration():
 
             # Size position
             macro_status = _state.get('macro_status', 'LIVE')
-            size_result = _sizer.size(strat, price, atr, vix, macro_status, regime)
+            is_intraday_sig = sig.get('tt') == 'INTRADAY' or sig.get('type') == 'SCALP'
+            size_result = _sizer.size(
+                strat, price, atr, vix, macro_status, regime, 
+                confidence=sig.get('confidence', 0.5),
+                is_intraday=is_intraday_sig
+            )
             qty         = size_result['qty']
             
+            # If sizer returned 0, it means the trade is unviable due to charges/fees
+            if qty <= 0:
+                logger.info(f"🚫 UNVIABLE: {sym} (Expected charges ₹{size_result.get('expected_charges', 0):.0f} exceed profit threshold)")
+                continue
+                
             # Risk-based Exposure Control
             current_exposure_pct = 0.0
             if AP and current_capital > 0:
@@ -1378,11 +1458,12 @@ def _run_iteration():
                 current_exposure_pct = total_invested / current_capital
                 
             if vix > 22 and current_exposure_pct > 0.60:
-                logger.info("🛡️ EXPOSURE CONTROL: VIX > 22 and Exposure > 60%%. Reducing size by 30%% for %s", sym)
+                logger.info("🛡️ EXPOSURE CONTROL: VIX > 22 and Exposure > 60% Reducing size by 30% for %s", sym)
                 qty = int(qty * 0.70)
-                if qty == 0:
-                    qty = 1  # Minimum 1 share if price permits
+                if qty == 0: qty = 1
             
+            # Update signal with sizing results and charges
+            sig.update(size_result)
             sig['quantity'] = qty
             sig['qty']      = qty
 
@@ -1540,26 +1621,28 @@ def _run_iteration():
         
         if action == 'BUY':
             sl = price * (1 - sl_pct)
-            # Dynamic Target based on market regime
+            # Dynamic Target based on market regime (Aggressive Momentum Tuning)
             if regime == "TRENDING":
-                target = price * 1.025  # +2.5% (Swing target)
-                enforce_rr = True       # Enforce RR in trending markets
+                # Aim for a portion of the aggressive 18% target
+                target = price * (1 + (settings.DEFAULT_TARGET_PCT / 100.0) * 0.4) # ~7.2%
+                enforce_rr = True
             elif regime == "SIDEWAYS":
-                target = price * 1.005  # +0.5% (Scalping)
-                enforce_rr = False      # Turn RR OFF in chops to allow quick scalps
+                # Even in sideways, aim for safe 3.5% move
+                target = price * 1.035
+                enforce_rr = False  # Scalping logic
             else:
-                target = price * 1.015  # +1.5%
-                enforce_rr = True       # Turn RR ON
+                target = price * 1.050 # 5% move
+                enforce_rr = True
         else:
             sl = price * (1 + sl_pct)
             if regime == "TRENDING":
-                target = price * 0.975
+                target = price * (1 - (settings.DEFAULT_TARGET_PCT / 100.0) * 0.4) # ~7.2% short
                 enforce_rr = True
             elif regime == "SIDEWAYS":
-                target = price * 0.995
+                target = price * 0.965  # 3.5% short
                 enforce_rr = False
             else:
-                target = price * 0.985
+                target = price * 0.950  # 5% short
                 enforce_rr = True
             
         sig['target'] = target
@@ -1988,7 +2071,59 @@ def _pre_flight_check():
             
     logger.info("✅ PRE-FLIGHT CHECK COMPLETE. SYSTEM STRIKE-READY.")
 
+def _momentum_scanner_thread():
+    """Background thread to dynamically update the MOMENTUM watchlist every 10 minutes."""
+    import time
+    import json
+    import os
+    while _state.get("running", True):
+        try:
+            from src.data.multi_source_data import get_msd
+            msd = get_msd()
+            if msd:
+                symbols = ['ZOMATO', 'JIOFIN', 'IREDA', 'IRFC', 'HAL', 'TRENT', 'BSE', 'DIXON', 'VBL', 'POLYCAB', 'RVNL', 'MAZDOCK', 'BEL', 'SUZLON', 'KALYANKJIL', 'ANGELONE', 'CDSL', 'KPITTECH', 'TATAELXSI', 'LTTS', 'PERSISTENT', 'RELIANCE', 'TCS', 'HDFCBANK', 'ICICIBANK', 'INFY']
+                quotes = msd.get_bulk_quotes(symbols)
+                gainers = []
+                for sym, q in quotes.items():
+                    pct = q.get('percent_change', q.get('change_pct', 0))
+                    if isinstance(pct, (int, float)):
+                        gainers.append((sym, pct))
+                
+                # Sort and pick top 12
+                gainers.sort(key=lambda x: x[1], reverse=True)
+                top_12 = [g[0] for g in gainers[:12]]
+                
+                if top_12:
+                    out_path = os.path.join(ROOT, 'config', 'dynamic_watchlist.json')
+                    with open(out_path, 'w') as f:
+                        json.dump({"MOMENTUM": top_12}, f, indent=2)
+                    
+                    # Live memory injection into SECTORS!
+                    from config.sectors import SECTORS, SYMBOL_TO_SECTOR
+                    SECTORS['MOMENTUM'] = top_12
+                    for sym in top_12:
+                        SYMBOL_TO_SECTOR[sym] = 'MOMENTUM'
+                    
+                    logger.info("🔥 Live Momentum Scanner injected top gainers: %s", top_12)
+                    
+                    # Proactive cache warmup: Fetch candles for new symbols so they are strike-ready
+                    # for the next TITAN iteration (Requirement #2)
+                    try:
+                        logger.info("📡 Warming up historical data for new momentum leaders...")
+                        msd.get_bulk_candles(top_12, interval='15m', bars=100)
+                        msd.get_bulk_candles(top_12, interval='5m', bars=100)
+                    except Exception:
+                        pass
+        except Exception as e:
+            logger.debug("Momentum scanner failed: %s", e)
+            
+        time.sleep(600)  # Sleep for 10 minutes (600 seconds)
+
 def main():
+    import threading
+    t = threading.Thread(target=_momentum_scanner_thread, daemon=True)
+    t.start()
+    
     _pre_flight_check()
     logger.info("=" * 70)
     logger.info("AlphaZero Capital v4.0")

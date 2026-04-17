@@ -137,10 +137,26 @@ _UPSTOX_ISIN: Dict[str, str] = {
 _YF_MAP: Dict[str, str] = {}  # auto-generated below
 
 
+# Index Mapping Table (NSE -> Yahoo Finance)
+_INDEX_MAP = {
+    "NIFTY 50": "^NSEI",
+    "NIFTY BANK": "^NSEBANK",
+    "BANKNIFTY": "^NSEBANK",
+    "NIFTY NEXT 50": "^NSMIDCP",
+    "INDIA VIX": "^INDIAVIX",
+    "NIFTY": "^NSEI",
+    "VIX": "^INDIAVIX"
+}
+
 def _to_yf(sym: str) -> str:
     sym = str(sym).split(":")[0].strip().upper()
-    if not sym or "UNDEFINED" in sym:
+    if not sym or "UNDEFINED" in sym or sym == "NONE" or sym == "NULL":
         return "^NSEI"  # Safe default (Nifty 50)
+    
+    # Check index map
+    if sym in _INDEX_MAP:
+        return _INDEX_MAP[sym]
+        
     if sym in _YF_MAP:
         return _YF_MAP[sym]
     if sym.endswith(".NS") or sym.startswith("^"):
@@ -266,6 +282,12 @@ class MultiSourceData:
         self._ncache: Dict[str, Tuple[float, List[NewsItem]]] = {}
 
         self._funder_cache: Dict[str, Tuple[float, Dict]] = {}
+        
+        # Initialize yfinance session to stabilize 'Invalid Crumb' issues
+        self._yf_session = None
+        if REQUESTS_OK:
+            self._yf_session = _req.Session()
+            self._yf_session.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
         
         # Initialize tokens from env/globals
         self._upstox_token = _UPSTOX_TOKEN
@@ -539,7 +561,7 @@ class MultiSourceData:
             yfi = {"1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m", "1h": "1h", "1d": "1d"}.get(interval, "1d")
             
             # yfinance.download handles bulk fetching in one request
-            data = yf.download(yf_syms, period=period, interval=yfi, group_by='ticker', threads=True, progress=False)
+            data = yf.download(yf_syms, period=period, interval=yfi, group_by='ticker', threads=True, progress=False, session=self._yf_session)
             
             result = {}
             for sym, yfsym in zip(symbols, yf_syms):
@@ -795,26 +817,74 @@ class MultiSourceData:
         if not _RL["yfinance"].acquire(timeout=3):
             return None
         try:
-            tk = yf.Ticker(_to_yf(symbol))
+            yf_sym = _to_yf(symbol)
+            tk = yf.Ticker(yf_sym, session=self._yf_session)
             fi = tk.fast_info
-            ltp = getattr(fi, "last_price", None) or getattr(fi, "regularMarketPrice", None)
+            
+            # Fallback chain for price
+            ltp = None
+            try:
+                ltp = getattr(fi, "last_price", None) or getattr(fi, "regularMarketPrice", None)
+            except Exception:
+                pass
+                
             if not ltp:
-                return None
-            prev = getattr(fi, "previous_close", ltp)
+                # Heavy weight fallback: fetch last bars
+                hist = tk.history(period="1d", interval="1m")
+                if hist.empty:
+                    hist = tk.history(period="5d", interval="1d")
+                
+                if not hist.empty:
+                    ltp = hist['Close'].iloc[-1]
+                    prev = hist['Close'].iloc[-2] if len(hist) > 1 else ltp
+                    open_p, high_p, low_p = hist['Open'].iloc[-1], hist['High'].iloc[-1], hist['Low'].iloc[-1]
+                    vol = hist['Volume'].iloc[-1]
+                else:
+                    return None
+            else:
+                prev = getattr(fi, "previous_close", ltp)
+                open_p = getattr(fi, "open", ltp)
+                high_p = getattr(fi, "day_high", ltp)
+                low_p = getattr(fi, "day_low", ltp)
+                vol = getattr(fi, "last_volume", 0)
+
             chg  = ltp - prev
             return {
                 "ltp":        round(float(ltp), 2),
-                "open":       round(float(getattr(fi, "open", ltp)), 2),
-                "high":       round(float(getattr(fi, "day_high", ltp)), 2),
-                "low":        round(float(getattr(fi, "day_low", ltp)), 2),
+                "open":       round(float(open_p), 2),
+                "high":       round(float(high_p), 2),
+                "low":        round(float(low_p), 2),
                 "close":      round(float(prev), 2),
-                "volume":     int(getattr(fi, "last_volume", 0)),
+                "volume":     int(vol),
                 "change":     round(float(chg), 2),
                 "change_pct": round(float(chg / prev * 100) if prev else 0, 2),
                 "source":     "YFINANCE",
             }
         except Exception as e:
             logger.debug("[yfinance] quote error for %s: %s", symbol, e)
+            
+        # ULTIMATE FALLBACK: nsepython (Slow but official NSE data)
+        try:
+            if NSE_PY_OK:
+                import nsepython
+                quote = nsepython.nse_quote(symbol)
+                if quote and 'lastPrice' in quote:
+                    ltp = float(quote['lastPrice'])
+                    prev = float(quote.get('previousClose', ltp))
+                    return {
+                        "ltp":        round(ltp, 2),
+                        "open":       round(float(quote.get('open', ltp)), 2),
+                        "high":       round(float(quote.get('dayHigh', ltp)), 2),
+                        "low":        round(float(quote.get('dayLow', ltp)), 2),
+                        "close":      round(prev, 2),
+                        "volume":     int(quote.get('totalTradedVolume', 0)),
+                        "change":     round(ltp - prev, 2),
+                        "change_pct": round((ltp - prev) / prev * 100 if prev else 0, 2),
+                        "source":     "NSE_DIRECT",
+                    }
+        except Exception as ne:
+            logger.debug("[nse_direct] fallback failed for %s: %s", symbol, ne)
+            
         return None
 
     def _yf_bulk_quote(self, symbols: List[str]) -> Dict[str, Dict]:
@@ -822,32 +892,47 @@ class MultiSourceData:
             return {}
         try:
             yf_syms = [_to_yf(s) for s in symbols]
-            tickers  = yf.Tickers(" ".join(yf_syms))
-            result   = {}
+            # Use yf.download for more reliable bulk OHLCV snapshots
+            data = yf.download(yf_syms, period="1d", interval="1m", progress=False, group_by='ticker', session=self._yf_session)
+            
+            if data.empty:
+                data = yf.download(yf_syms, period="5d", interval="1d", progress=False, group_by='ticker', session=self._yf_session)
+                
+            result = {}
             for sym, yfsym in zip(symbols, yf_syms):
                 try:
-                    tk  = tickers.tickers.get(yfsym)
-                    if not tk:
+                    if yfsym not in data.columns.get_level_values(0):
+                        # Fallback to single quote if missing in bulk
+                        q = self._yf_quote(sym)
+                        if q: result[sym] = q
                         continue
-                    fi  = tk.fast_info
-                    ltp = getattr(fi, "last_price", None)
-                    if ltp:
-                        prev = getattr(fi, "previous_close", ltp)
-                        result[sym] = {
-                            "ltp":        round(float(ltp), 2),
-                            "open":       round(float(getattr(fi, "open", ltp)), 2),
-                            "high":       round(float(getattr(fi, "day_high", ltp)), 2),
-                            "low":        round(float(getattr(fi, "day_low", ltp)), 2),
-                            "close":      round(float(prev), 2),
-                            "volume":     int(getattr(fi, "last_volume", 0)),
-                            "change_pct": round((ltp - prev) / prev * 100 if prev else 0, 2),
-                            "source":     "YFINANCE",
-                        }
+                        
+                    df = data[yfsym].dropna()
+                    if df.empty:
+                        q = self._yf_quote(sym)
+                        if q: result[sym] = q
+                        continue
+
+                    ltp = df['Close'].iloc[-1]
+                    prev = df['Close'].iloc[-2] if len(df) > 1 else ltp
+                    
+                    result[sym] = {
+                        "ltp":        round(float(ltp), 2),
+                        "open":       round(float(df['Open'].iloc[-1]), 2),
+                        "high":       round(float(df['High'].iloc[-1]), 2),
+                        "low":        round(float(df['Low'].iloc[-1]), 2),
+                        "close":      round(float(prev), 2),
+                        "volume":     int(df['Volume'].iloc[-1]),
+                        "change_pct": round((ltp - prev) / prev * 100 if prev else 0, 2),
+                        "source":     "YFINANCE",
+                    }
                 except Exception:
                     pass
             return result
         except Exception as e:
             logger.debug("[yfinance] bulk quote error: %s", e)
+            return {}
+
         return {}
 
     def _yf_candles(self, symbol: str, period: str, interval: str) -> Optional[List[CandleBar]]:
@@ -859,7 +944,7 @@ class MultiSourceData:
         if not _RL["yfinance"].acquire(timeout=3):
             return None
         try:
-            tk  = yf.Ticker(_to_yf(symbol))
+            tk  = yf.Ticker(_to_yf(symbol), session=self._yf_session)
             yfi = {"1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m", "1h": "1h", "1d": "1d", "1wk": "1wk"}.get(interval, "1d")
             df  = tk.history(period=period, interval=yfi, auto_adjust=True)
             if df.empty:

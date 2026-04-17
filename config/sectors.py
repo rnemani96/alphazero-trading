@@ -19,6 +19,26 @@ SECTORS = {
     'FINANCE':  ['BAJFINANCE', 'BAJAJFINSV', 'HDFC', 'MUTHOOTFIN', 'CHOLAFIN'],
 }
 
+import os
+import json
+
+# Load dynamic watchlist if it exists
+_WATCHLIST_PATH = os.path.join(os.path.dirname(__file__), 'dynamic_watchlist.json')
+try:
+    if os.path.exists(_WATCHLIST_PATH):
+        with open(_WATCHLIST_PATH, 'r') as f:
+            dynamic_data = json.load(f)
+            for sector, symbols in dynamic_data.items():
+                sector_upper = sector.upper()
+                if sector_upper in SECTORS:
+                    for sym in symbols:
+                        if sym not in SECTORS[sector_upper]:
+                            SECTORS[sector_upper].append(sym)
+                else:
+                    SECTORS[sector_upper] = symbols
+except Exception as e:
+    print(f"[Warning] Failed to load dynamic watchlist: {e}")
+
 # Flat reverse lookup: symbol → sector (built once at import time)
 SYMBOL_TO_SECTOR = {
     symbol: sector

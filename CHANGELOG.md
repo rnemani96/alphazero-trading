@@ -1,5 +1,31 @@
 # Changelog — AlphaZero Capital
 
+## [8.0.0] - 2026-04-17 (High-Frequency & Charge-Aware Update)
+### 🚀 Performance & Scale (User-Driven)
+- **Universe Expansion**: Increased daily scanning universe to **120 symbols** (60 high-volume performers + 60 Nifty 50 momentum/liquid stocks).
+- **High-Frequency Scans**: Reduced iteration sleep time to **5 minutes** (300s) for faster market reaction and breakout capture.
+- **Capacity Scaling**: Increased concurrent position limit to **25** and daily trade capacity to **50**.
+
+### 🛡️ Risk & Profitability (Charge-Aware Logic)
+- **Charge Calculator**: Implemented a new core module `src/risk/charge_calculator.py` for precise Indian market tax/fee modeling (STT, GST, SEBI, Stamp Duty, DP).
+- **Net-Profit Viability Filter**: Integrated charge-awareness into the `PositionSizer`. The system now automatically skips signals where expected charges eat >15% of gross profit.
+- **Minimum Quantity Floor**: Implemented logic to calculate the minimum quantity required to ensure a trade is mathematically profitable after all fees.
+- **Guardian Risk Relaxation**: Relaxed hard risk gates to enable higher trade frequency:
+    - Min Risk:Reward ratio lowered to **1.2** (was 2.0).
+    - Max daily loss limit increased to **5%** (was 2%).
+    - Max position sizing increased to **10%** (was 5%).
+
+### 📊 Dashboard & Monitoring
+- **Live Discovery Feed**: Implemented real-time export of top 50 candidates to `logs/candidates.json`.
+- **Candidates API**: Added a new `/api/candidates` endpoint to the dashboard backend for continuous monitoring of profitable stock scans.
+- **Transparency**: Every signal now carries `expected_charges` and `net_pnl_projection` metadata for full visibility of transaction costs.
+
+### ⚙️ Signal Aggregation
+- **Hyper-Relaxed Thresholds**: Lowered ensemble entry confidence requirements to **0.22 - 0.35** (from 0.55+) across all regimes to maximize today's trade capture.
+- **Agreement Relaxation**: Reduced mandatory architecture agreement to **1/1** (was 2/3) for high-conviction signals during trending markets.
+
+---
+
 ## [4.2.0] - 2026-04-08 (Self-Healing Update)
 ### Added
 - **Ensemble Consensus Gate v2.0**: TITAN + ORACLE + SHADOW multi-architecture voting.

@@ -35,5 +35,10 @@
 - [ ] **Online Fine-Tuning**: Implement immediate model weight updates on live data, incorporating Experience Replay buffering to prevent catastrophic forgetting.
 - [ ] **Genetic Algorithm (GA)**: Macro-level evolution loop to mutate hyperparameters and model architectures, run every 100 epochs.
 
+## Phase 7: Interactive Chatbot Integration & Manual Override (Future) 🤖
+- [ ] **Chatbot Backend**: Implement LLM Agent (OpenAI/Gemini) with tool-calling capabilities (`analyze_stock`, `add_to_watchlist`, `execute_trade`).
+- [ ] **Dashboard Chat UI**: Add a Chat Widget to `dashboard/App.jsx` with markdown support for rendering analysis and charts.
+- [ ] **Manual Trade execution**: Create an event bus override that allows the chatbot to bypass automated scheduling to inject high-priority trades on-demand.
+
 ---
 *Status Update: System is now running v5.0 core logic with nightly intelligence updates active.*

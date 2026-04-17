@@ -71,8 +71,8 @@ class Settings:
     MAX_DAILY_LOSS_PCT: float     = float(os.getenv('MAX_DAILY_LOSS_PCT',     '0.02'))
     MAX_POSITION_SIZE_PCT: float  = float(os.getenv('MAX_POSITION_SIZE_PCT',  '0.05'))
     MAX_SECTOR_EXPOSURE_PCT: float= float(os.getenv('MAX_SECTOR_EXPOSURE_PCT','0.30'))
-    MAX_POSITIONS: int            = int(os.getenv('MAX_POSITIONS',            '10'))
-    MAX_TRADES_PER_DAY: int       = int(os.getenv('MAX_TRADES_PER_DAY',       '20'))
+    MAX_POSITIONS: int            = int(os.getenv('MAX_POSITIONS',            '25'))
+    MAX_TRADES_PER_DAY: int       = int(os.getenv('MAX_TRADES_PER_DAY',       '50'))
     CONSECUTIVE_LOSS_LIMIT: int   = int(os.getenv('CONSECUTIVE_LOSS_LIMIT',   '3'))
     MIN_RR: float                 = float(os.getenv('MIN_RR',                 '1.0'))
 
@@ -80,18 +80,20 @@ class Settings:
     # Once a swing/positional position is open, hold it until target OR stop hit.
     # New stocks are NOT added until a slot frees up (configurable).
     HOLD_UNTIL_TARGET: bool       = os.getenv('HOLD_UNTIL_TARGET', 'true').lower() == 'true'
-    DEFAULT_TARGET_PCT: float     = float(os.getenv('DEFAULT_TARGET_PCT',  '6.0'))  # 6% default target
-    DEFAULT_SL_PCT: float         = float(os.getenv('DEFAULT_SL_PCT',      '2.5'))  # 2.5% default SL
+    DEFAULT_TARGET_PCT: float     = float(os.getenv('DEFAULT_TARGET_PCT',  '18.0')) # 18% Aggressive target
+    DEFAULT_SL_PCT: float         = float(os.getenv('DEFAULT_SL_PCT',      '2.5'))  # Keep initial SL tight
+
     MAX_SWING_DAYS: int           = int(os.getenv('MAX_SWING_DAYS',        '30'))   # force close after N days
     MAX_POSITIONAL_DAYS: int      = int(os.getenv('MAX_POSITIONAL_DAYS',   '90'))
 
     # ── Trailing Stops ─────────────────────────────────────────────────────
-    ACTIVATION_PROFIT_PCT: float  = float(os.getenv('ACTIVATION_PROFIT_PCT', '0.02'))
-    TRAIL_ATR_MULTIPLIER: float   = float(os.getenv('TRAIL_ATR_MULTIPLIER',  '1.5'))
-    TRAIL_PCT: float              = float(os.getenv('TRAIL_PCT',             '0.03'))
+    # Protect profits earlier and tighten the leash.
+    ACTIVATION_PROFIT_PCT: float  = float(os.getenv('ACTIVATION_PROFIT_PCT', '0.025')) # Activate trailing sooner
+    TRAIL_ATR_MULTIPLIER: float   = float(os.getenv('TRAIL_ATR_MULTIPLIER',  '1.2'))   # Tighter ATR multiple
+    TRAIL_PCT: float              = float(os.getenv('TRAIL_PCT',             '0.02'))  # Trailing 2% behind HWM
 
     # ── Timing ─────────────────────────────────────────────────────────────
-    ITERATION_SLEEP_SEC: int      = int(os.getenv('ITERATION_SLEEP_SEC',   '900'))  # 15 min default
+    ITERATION_SLEEP_SEC: int      = int(os.getenv('ITERATION_SLEEP_SEC',   '300'))  # 5 min scans
     MARKET_OPEN_HOUR: int         = int(os.getenv('MARKET_OPEN_HOUR',       '9'))
     MARKET_OPEN_MIN: int          = int(os.getenv('MARKET_OPEN_MIN',        '15'))
     MARKET_CLOSE_HOUR: int        = int(os.getenv('MARKET_CLOSE_HOUR',      '15'))

@@ -23,6 +23,7 @@ import threading
 from typing import Dict, List, Optional
 
 from ..utils.stats import kelly_fraction
+from .charge_calculator import calculate_charges, get_minimum_viable_quantity
 
 logger = logging.getLogger("PositionSizer")
 
@@ -75,10 +76,12 @@ def optimal_size(
     risk_pct:     float = 0.01,
     regime:       str   = "TRENDING",
     confidence:   float = 0.5,
+    is_intraday:  bool  = False,
 ) -> Dict:
     """
     Combined: take the more conservative of Kelly and ATR sizing.
     Scales risk_pct based on confidence (0.5=norm, 0.9=2x).
+    Now integrates Charge-Aware sizing (User Requirement).
     """
     # Dynamic Risk Scaling from 0.5% (low conf) to 2.0% (max conf)
     effective_risk = risk_pct * (confidence * 2.0)
@@ -89,30 +92,40 @@ def optimal_size(
     qty  = min(kqty, aqty) if (kqty > 0 and aqty > 0) else max(kqty, aqty)
     qty  = max(1, qty)
     
-    # ── Strict Risk Adherence ────────────────────────────────────────────────
-    # We NO LONGER force ₹15,000 value. Adhering to the ATR risk budget (1% capital)
-    # is the absolute priority to prevent account bleeding.
-    
-    # Check if the position is too tiny to be worth the fees (floor ₹5,000)
-    # but ONLY if the risk remains under a 1.5% cap of capital.
-    min_viable_val = 5000.0
-    if (qty * entry_price) < min_viable_val:
-        if capital >= min_viable_val:
-            test_qty = int(min_viable_val / entry_price)
-            test_risk = abs(entry_price - (entry_price - 1.5 * atr)) * test_qty
-            if test_risk <= (capital * 0.015): # Max 1.5% risk allowed for floor
-                qty = test_qty
-            else:
-                # If even 1 share is too risky or floor exceeds budget, we skip.
-                if (qty * entry_price) < 2000: # Dead floor
-                    qty = 0
-
     # Tighten Stop Losses in SIDEWAYS to 2x ATR (was 3x) to cut losers faster.
     sl_mult  = 2.0 if regime == "SIDEWAYS" else 1.5
     tgt_mult = 4.0 if regime == "SIDEWAYS" else 3.0
 
     sl   = round(entry_price - sl_mult * atr, 2) if atr > 0 else round(entry_price * (0.97 if regime == "SIDEWAYS" else 0.975), 2)
     tgt  = round(entry_price + tgt_mult * atr, 2) if atr > 0 else round(entry_price * (1.05 if regime == "SIDEWAYS" else 1.06), 2)
+
+    # ── Charge-Aware Floor Logic ────────────────────────────────────────────────
+    # If the quantity is too low, the flat brokerage (₹40 roundtrip) + Taxes 
+    # will make the trade unviable. We find the MINIMUM quantity that makes 
+    # the trade 'profitable' after all fees.
+    min_qty = get_minimum_viable_quantity(entry_price, tgt, is_intraday)
+    
+    if qty < min_qty:
+        # Increase marginally to min_qty ONLY IF risk is still within 2% capital
+        test_risk_pct = (abs(entry_price - sl) * min_qty / capital)
+        if test_risk_pct <= 0.02: 
+            qty = min_qty
+        else:
+            # If we can't afford the 'min_qty' risk-wise, this trade is not viable
+            # due to fees/taxes.
+            if qty * entry_price < 5000:
+                qty = 0
+
+    # Sanity check: if qty is 0, return zeroed result
+    if qty == 0:
+        return {
+            'qty': 0, 'kelly_qty': kqty, 'atr_qty': aqty, 
+            'capital_used': 0, 'stop_loss': sl, 'target': tgt, 
+            'risk_amount': 0, 'risk_pct': 0, 'expected_charges': 0, 'expected_net_pnl': 0
+        }
+
+    # Final Charge Calculation for Metadata
+    fees = calculate_charges(qty, entry_price, tgt, is_intraday)
 
     return {
         'qty':          qty,
@@ -123,6 +136,9 @@ def optimal_size(
         'target':       tgt,
         'risk_amount':  round(abs(entry_price - sl) * qty, 2),
         'risk_pct':     round((abs(entry_price - sl) * qty / capital) * 100, 2) if capital > 0 else 0,
+        'expected_charges': fees['total'],
+        'expected_net_pnl': fees['net_pnl'],
+        'break_even':       fees['break_even']
     }
 
 
@@ -163,6 +179,7 @@ class PositionSizer:
         macro_status: str = "LIVE",
         regime:       str = "TRENDING",
         confidence:   float = 0.5,
+        is_intraday:  bool  = False,
     ) -> Dict:
         """
         Compute position size for a strategy.
@@ -184,8 +201,12 @@ class PositionSizer:
         # Boost wp/aw slightly for ultra-high confidence signals (>0.9)
         if confidence > 0.9:
             wp = min(0.70, wp + 0.05)
+            
+        # Detect intraday if not explicitly passed
+        if not is_intraday:
+            is_intraday = strategy.upper().startswith("INTRADAY") or strategy.upper().find("SCALP") >= 0
 
-        result       = optimal_size(self.capital, entry_price, atr, wp, aw, al, self.risk_per_trade, regime, confidence)
+        result       = optimal_size(self.capital, entry_price, atr, wp, aw, al, self.risk_per_trade, regime, confidence, is_intraday)
         result['qty'] = scale_by_vix(result['qty'], vix)
         
         # Apply Macro Reliability discounts

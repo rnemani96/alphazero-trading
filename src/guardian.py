@@ -13,19 +13,19 @@ logger = logging.getLogger("GUARDIAN")
 
 @dataclass
 class RiskConfig:
-    max_daily_loss_pct:     float = 0.02   # 2% of portfolio → full shutdown
-    max_position_pct:       float = 0.05   # max 5% per position
-    max_sector_pct:         float = 0.30   # max 30% per sector
-    max_positions:          int   = 10
-    max_trades_per_day:     int   = 20
-    consecutive_loss_limit: int   = 3      # 3 losses → 30-min cooldown
-    cooldown_minutes:       int   = 30
-    min_rr_ratio:           float = 2.0    # min risk:reward
-    vix_reduce_threshold:   float = 20.0   # reduce size by 50%
-    vix_halt_threshold:     float = 30.0   # no new entries
-    min_trade_gap_minutes:  int   = 5
-    no_trade_open_mins:     int   = 5      # no trade 9:15–9:20
-    no_trade_close_mins:    int   = 5      # no trade 15:25–15:30
+    max_daily_loss_pct:     float = 0.05   # 5% of portfolio
+    max_position_pct:       float = 0.10   # max 10% per position
+    max_sector_pct:         float = 0.40   # max 40% per sector
+    max_positions:          int   = 25
+    max_trades_per_day:     int   = 50
+    consecutive_loss_limit: int   = 5      # 5 losses → cooldown
+    cooldown_minutes:       int   = 15
+    min_rr_ratio:           float = 1.2    # Relaxed R:R
+    vix_reduce_threshold:   float = 22.0   
+    vix_halt_threshold:     float = 35.0   
+    min_trade_gap_minutes:  int   = 1
+    no_trade_open_mins:     int   = 1      
+    no_trade_close_mins:    int   = 2      
 
 
 @dataclass

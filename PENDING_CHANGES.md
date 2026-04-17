@@ -45,5 +45,9 @@
 - **Ensemble + Thompson Sampling**: Orchestrate capital allocation across multiple sub-agents (Mean Reversion, Trend Following) using Thompson Sampling for optimal exploration/exploitation. (Target: +20-30% Sharpe)
 - **Online Fine-Tuning**: Implement immediate model weight updates on live data, incorporating Experience Replay buffering to prevent catastrophic forgetting.
 - **Genetic Algorithm (GA)**: Macro-level evolution loop to mutate hyperparameters and model architectures, run every 100 epochs.
+## Pending: Phase 7 — Interactive Chatbot Integration & Manual Override (Future) 🤖
+- **Chatbot Backend**: Implement LLM Agent (OpenAI/Gemini) with tool-calling capabilities to perform deep-dive analysis on user-requested tickers.
+- **Dashboard Chat UI**: Integrate conversational AI interface on the frontend for real-time portfolio management and queries.
+- **Manual Trade Execution**: Connect chatbot commands directly to the `execution` pipeline (paper/live) bypassing normal agent scheduling for immediate action.
 
 *Current build: AlphaZero v5.0.1 (Stable)*

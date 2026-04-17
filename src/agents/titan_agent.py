@@ -154,6 +154,8 @@ class TitanAgent(BaseAgent):
         hermes_scores: Optional[Dict[str, float]] = None,
         sigma_scores: Optional[Dict[str, float]] = None,
         atlas_scores: Optional[Dict[str, float]] = None,
+        headlines: Optional[List[str]] = None,
+        lstm_scores: Optional[Dict[str, float]] = None,
         timeframe: str = "15m",
     ) -> List[Dict[str, Any]]:
 
@@ -206,7 +208,11 @@ class TitanAgent(BaseAgent):
                     float(sigma_scores.get(symbol, 0.5)) if sigma_scores else 0.5,
                     float(atlas_scores.get(symbol, 0.5)) if atlas_scores else 0.5,
                     dyn_conf, dyn_aggr,
-                    timeframe,
+                    extra={
+                        'headlines': headlines or [],
+                        'lstm_confidence': lstm_scores.get(symbol, 0.5) if lstm_scores else 0.5
+                    },
+                    timeframe=timeframe,
                 )
                 if sig:
                     signals.append(sig)
@@ -246,8 +252,8 @@ class TitanAgent(BaseAgent):
         if r == "TRENDING":
             return 0.50, 2
         elif r == "SIDEWAYS" or r == "NEUTRAL":
-            # Bar raised: must have higher confidence and better agreement in choppy markets
-            return 0.35, 2
+            # Bar relaxed: allow more trades in choppy markets if they show momentum
+            return 0.28, 1
         elif r == "VOLATILE":
             return 0.45, 2
         return max(0.28, (getattr(self, '_min_confidence', 0.52) - 0.15)), 1
@@ -263,6 +269,7 @@ class TitanAgent(BaseAgent):
         sector_strength: float,
         min_conf: float,
         min_aggr: int,
+        extra: Dict[str, Any] = None,
         timeframe: str = "15m",
     ) -> Optional[Dict[str, Any]]:
         """Run strategies for one symbol and aggregate into a single signal."""
@@ -332,14 +339,14 @@ class TitanAgent(BaseAgent):
         # In non-trending markets, we require confirmation from other agents 
         # to ensure we are picking the 'Best of the Best' stocks.
         if regime in ('SIDEWAYS', 'VOLATILE', 'NEUTRAL'):
-            # Filter 1: Sentiment (HERMES) - Must be at least slightly positive
-            if sentiment < 0.1:
+            # Filter 1: Sentiment (HERMES) - Must be at least neutral
+            if sentiment < 0.0:
                 return None
-            # Filter 2: Momentum (SIGMA) - Must be in top tier rank
-            if momentum < 0.60:
+            # Filter 2: Momentum (SIGMA) - Relaxed threshold to capture emerging leaders
+            if momentum < 0.45:
                 return None
-            # Filter 3: Sector (ATLAS) - Must be in an outperforming sector
-            if sector_strength < 0.55:
+            # Filter 3: Sector (ATLAS) - Relaxed threshold
+            if sector_strength < 0.45:
                 return None
 
         # ── Signal Boosting Logic (Reward High-Quality Agreement) ─────────────
@@ -349,14 +356,15 @@ class TitanAgent(BaseAgent):
         if sector_strength > 0.7: conviction += 0.05   # ATLAS Strong Sector
         
         # ── Requirement #9: News Catalyst Matcher ───────
-        news_headlines = str(extra.get('headlines', '')).upper()
+        ctx = extra or {}
+        news_headlines = " ".join(ctx.get('headlines', [])).upper()
         catalysts = ['ORDER', 'DEAL', 'CONTRACT', 'PROFIT', 'DIVIDEND', 'AWARD', 'EXPANSION']
         if any(cat in news_headlines for cat in catalysts):
             conviction += 0.10  # 10% boost for 'Fundamental Why'
             reasons.append(f"Catalyst: Detected news keyword match.")
 
         # ── Requirement #9: LSTM Pattern Recognition ───────
-        lstm_score = extra.get('lstm_confidence', 0.5)
+        lstm_score = ctx.get('lstm_confidence', 0.5)
         if lstm_score > 0.8:
             conviction += 0.10
             reasons.append("Pattern: LSTM detects strong geometric sequence.")
@@ -406,8 +414,8 @@ class TitanAgent(BaseAgent):
         reward: float = abs(target - price)
         rr: float     = round(float(reward / risk), 2) if risk > 0 else 0.0
 
-        # Minimum R:R filter — relax to 1.5 in low-volatility/sideways
-        min_rr = 1.5 if regime in ('SIDEWAYS', 'NEUTRAL') else 1.8
+        # Minimum R:R filter — greatly relaxed per USER REQUEST to capture momentum
+        min_rr = 0.5 if regime in ('SIDEWAYS', 'NEUTRAL') else 1.0
         if rr < min_rr:
             return None
 
