@@ -54,7 +54,7 @@ def get_best_performing_stocks(limit: int = 40) -> List[Dict]:
         
     perf_data = []
     # Remove any unwanted symbols or handle formatting
-    symbols = [_clean_symbol(s) for s in symbols if s]
+    symbols = [_clean_symbol(s) for s in symbols if s and _clean_symbol(s).upper() not in ["UNDEFINED", "NONE", "NULL", "NAN", "N/A"]]
     yf_symbols = [f"{s}.NS" for s in symbols]
     
     # Chunk the download to avoid yfinance timeouts/limitations

@@ -69,10 +69,10 @@ class Settings:
 
     # ── Risk Parameters ────────────────────────────────────────────────────
     MAX_DAILY_LOSS_PCT: float     = float(os.getenv('MAX_DAILY_LOSS_PCT',     '0.02'))
-    MAX_POSITION_SIZE_PCT: float  = float(os.getenv('MAX_POSITION_SIZE_PCT',  '0.05'))
-    MAX_SECTOR_EXPOSURE_PCT: float= float(os.getenv('MAX_SECTOR_EXPOSURE_PCT','0.30'))
-    MAX_POSITIONS: int            = int(os.getenv('MAX_POSITIONS',            '25'))
-    MAX_TRADES_PER_DAY: int       = int(os.getenv('MAX_TRADES_PER_DAY',       '50'))
+    MAX_POSITION_SIZE_PCT: float  = float(os.getenv('MAX_POSITION_SIZE_PCT',  '0.03'))
+    MAX_SECTOR_EXPOSURE_PCT: float= float(os.getenv('MAX_SECTOR_EXPOSURE_PCT','0.35'))
+    MAX_POSITIONS: int            = int(os.getenv('MAX_POSITIONS',            '40'))
+    MAX_TRADES_PER_DAY: int       = int(os.getenv('MAX_TRADES_PER_DAY',       '100'))
     CONSECUTIVE_LOSS_LIMIT: int   = int(os.getenv('CONSECUTIVE_LOSS_LIMIT',   '3'))
     MIN_RR: float                 = float(os.getenv('MIN_RR',                 '1.0'))
 

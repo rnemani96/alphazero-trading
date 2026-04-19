@@ -78,12 +78,19 @@ USAGE
 """
 
 from __future__ import annotations
-import argparse, json, logging, os, re, sys, time
+import io
+import sys
+import argparse, json, logging, os, re, time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Any, Tuple
 import numpy as np
 import pandas as pd
+
+# Force UTF-8 encoding for stdout to prevent charmap errors on Windows
+if hasattr(sys.stdout, 'buffer'):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 try:
     import requests
 except ImportError:
@@ -269,6 +276,12 @@ def download_prices(symbols: List[str], years: int = 5,
     if pq.exists() and not fresh:
         try:
             existing = pd.read_parquet(pq)
+            # Ensure columns are normalized (lower case) for consistent access
+            if isinstance(existing.columns, pd.MultiIndex):
+                existing.columns = existing.columns.set_levels([l.lower() for l in existing.columns.levels[1]], level=1)
+            else:
+                existing.columns = [c.lower() for c in existing.columns]
+            
             last     = existing.index[-1]
             nxt      = (last + timedelta(days=1)).strftime("%Y-%m-%d")
             if nxt >= end:
@@ -843,9 +856,9 @@ def training_loop(years: int = 5, top_n: int = 50,
         rnd += 1
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         print()
-        print("╔" + "═" * 65 + "╗")
-        print(f"║  NEXUS CAUSAL TRAINING  Round #{rnd}   {ts}".ljust(67) + "║")
-        print("╚" + "═" * 65 + "╝")
+        print("+" + "-" * 65 + "+")
+        print(f"|  NEXUS CAUSAL TRAINING  Round #{rnd}   {ts}".ljust(67) + "|")
+        print("+" + "-" * 65 + "+")
 
         # 1. Dynamic universe (live from NSE)
         symbols = fetch_universe()

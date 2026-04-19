@@ -99,21 +99,26 @@ def optimal_size(
     sl   = round(entry_price - sl_mult * atr, 2) if atr > 0 else round(entry_price * (0.97 if regime == "SIDEWAYS" else 0.975), 2)
     tgt  = round(entry_price + tgt_mult * atr, 2) if atr > 0 else round(entry_price * (1.05 if regime == "SIDEWAYS" else 1.06), 2)
 
-    # ── Charge-Aware Floor Logic ────────────────────────────────────────────────
-    # If the quantity is too low, the flat brokerage (₹40 roundtrip) + Taxes 
-    # will make the trade unviable. We find the MINIMUM quantity that makes 
-    # the trade 'profitable' after all fees.
+    # ── Charge-Aware Floor Logic (Optimized for Viability) ──────────────────────
+    # User Requirement: Instead of blocking small trades, INCREASE quantity
+    # to ensure charges don't flush away the profits.
     min_qty = get_minimum_viable_quantity(entry_price, tgt, is_intraday)
     
     if qty < min_qty:
-        # Increase marginally to min_qty ONLY IF risk is still within 2% capital
+        # Increase marginally to min_qty to ensure viability
+        # We allow a slightly higher risk cap (3% vs 2%) for this 'viability boost'
         test_risk_pct = (abs(entry_price - sl) * min_qty / capital)
-        if test_risk_pct <= 0.02: 
+        if test_risk_pct <= 0.03: 
+            logger.info(f"⚡ VIABILITY BOOST: Increasing {sym if 'sym' in locals() else 'trade'} qty from {qty} to {min_qty} to cover charges (Risk: {test_risk_pct*100:.1f}%)")
             qty = min_qty
         else:
-            # If we can't afford the 'min_qty' risk-wise, this trade is not viable
-            # due to fees/taxes.
-            if qty * entry_price < 5000:
+            # Even if it exceeds 3% risk, we still try to take the trade with min_qty 
+            # if the user has enough capital, but we log a warning.
+            if min_qty * entry_price <= capital * 0.10: # Max 10% of total capital in one stock
+                logger.warning(f"⚠️ HIGH RISK VIABILITY: Forcing {min_qty} shares to cover charges. Risk: {test_risk_pct*100:.1f}%")
+                qty = min_qty
+            else:
+                # Absolute last resort: if we can't even afford 10% capital, then it's truly unviable
                 qty = 0
 
     # Sanity check: if qty is 0, return zeroed result

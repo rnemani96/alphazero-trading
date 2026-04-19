@@ -90,8 +90,8 @@ def get_minimum_viable_quantity(
     entry: float,
     target: float,
     is_intraday: bool = False,
-    min_profit_after_fees: float = 500.0, # Target ₹500 minimum net profit per trade
-    max_charge_pct: float = 0.15          # Charges shouldn't eat > 15% of GROSS profit
+    min_profit_after_fees: float = 100.0, # Target ₹100 minimum net profit per trade (relaxed from 500)
+    max_charge_pct: float = 0.30          # Charges shouldn't eat > 30% of GROSS profit (relaxed from 15%)
 ) -> int:
     """
     Search for a quantity that makes the trade mathematically 'worth it'.

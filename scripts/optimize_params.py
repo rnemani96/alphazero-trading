@@ -126,13 +126,15 @@ def optimize_all():
     
     # Fast bulk downloader
     logger.info("Downloading historical market data (1Y)...")
-    data = yf.download(UNIVERSE, start=start, end=end, progress=False, group_by="ticker")
+    yf_universe = [s + ".NS" if not s.endswith(".NS") else s for s in UNIVERSE]
+    data = yf.download(yf_universe, start=start, end=end, progress=False, group_by="ticker")
     
     for symbol in UNIVERSE:
+        yf_symbol = symbol + ".NS" if not symbol.endswith(".NS") else symbol
         # Extract stock specific DF
         try:
             if len(UNIVERSE) > 1:
-                df = data[symbol].dropna()
+                df = data[yf_symbol].dropna()
             else:
                 df = data.dropna()
                 

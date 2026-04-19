@@ -67,7 +67,7 @@ def _load_json(filename: str, default=None):
     try:
         fpath = _LOG_DIR / filename
         if fpath.exists():
-            with open(fpath) as f: return json.load(f)
+            with open(fpath, encoding="utf-8") as f: return json.load(f)
     except Exception: pass
     return default if default is not None else {}
 
@@ -99,7 +99,11 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
     # ── Routes ────────────────────────────────────────────────────────────────
     @app.get("/", response_class=HTMLResponse)
     async def root():
-        if _HTML.exists(): return HTMLResponse(content=_HTML.read_text(encoding="utf-8"))
+        if _HTML.exists():
+            try:
+                return HTMLResponse(content=_HTML.read_text(encoding="utf-8"))
+            except UnicodeDecodeError:
+                return HTMLResponse(content=_HTML.read_bytes().decode("utf-8", errors="replace"))
         return HTMLResponse(content="<h1>AlphaZero Capital</h1><p>Dashboard HTML not found.</p>")
 
     @app.get("/api/status")

@@ -1,5 +1,18 @@
 # Changelog — AlphaZero Capital
 
+## [8.1.0] - 2026-04-19 (Fully Dynamic Momentum & System Fixes)
+### 🚀 Dynamic Execution & Profit Maximization
+- **Fully Dynamic Momentum Scanner**: The background `_momentum_scanner_thread` was completely overhauled. Instead of relying on a hardcoded list of 26 stocks, the system now queries the entire **NIFTY 500**, calculates live intraday percentage gains, and injects the top 20 absolute best performers into the live trading engine.
+- **High-Frequency Market Sensing**: Scanner iteration delay was reduced from 10 minutes to **5 minutes**, ensuring AlphaZero catches fast-moving intraday momentum breakouts immediately.
+- **Momentum Confidence Priority**: The `TITAN` strategy engine now applies a **+15% immediate confidence boost** to any stock flagged by the dynamic momentum scanner, overriding standard hesitations and aggressively allocating capital to the day's winners.
+
+### 🛠️ Core System & Training Fixes
+- **NEXUS Regime Model Encoding**: Resolved a critical `UnicodeEncodeError` in `scripts/train_nexus.py` caused by non-Latin characters (like the ₹ symbol or emojis) crashing the XGBoost training pipeline. The pipeline now explicitly forces UTF-8 encoding.
+- **Parquet Cache Normalization Bug**: Fixed a bug where cached historical data downloaded by `data_daemon.py` had capitalized column names (e.g., 'Close', 'High'), which broke the training engine and caused training sets to report 0 samples. The caching layer now rigorously enforces lowercase column names.
+- **Optuna Download Suffix Bug**: Fixed `scripts/optimize_params.py` failing to download historical data from Yahoo Finance. Added logic to automatically append `.NS` to ticker symbols before requesting data, while ensuring the clean symbols (without `.NS`) are preserved when saving optimized parameters to the database.
+
+---
+
 ## [8.0.0] - 2026-04-17 (High-Frequency & Charge-Aware Update)
 ### 🚀 Performance & Scale (User-Driven)
 - **Universe Expansion**: Increased daily scanning universe to **120 symbols** (60 high-volume performers + 60 Nifty 50 momentum/liquid stocks).

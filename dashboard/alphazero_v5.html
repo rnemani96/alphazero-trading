@@ -1188,37 +1188,30 @@ function PositionsTab({positions:rawPositions,mode,apData={}}) {
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: SIGNALS
-// ═══════════════════════════════════════════════════════════════════════════
-function SignalsTab({signals,onStock,picks}) {
-  const [filter,setFilter]=useState("ALL");
-  const REGIMES=["ALL","TRENDING","SIDEWAYS","VOLATILE","RISK_OFF"];
-
-  // Helper to safely access REGIME properties with a fallback
-  const REGIME_SAFE = (regimeKey) => REGIME[regimeKey] || { color: G.textSec, icon: "" };
-
-  const filtered=filter==="ALL"?signals:signals.filter(s=>s.regime===filter);
-  return (
-    <div style={{display:"flex",flexDirection:"column",gap:16}}>
-      <div style={{display:"flex",gap:8}}>
-        {REGIMES.map(r=>{
-          const rc=REGIME_SAFE(r);
-          return (
-            <button key={r} onClick={()=>setFilter(r)} style={{
-              background:filter===r?rc.color+"22":"none",border:`1px solid ${filter===r?rc.color+"66":G.border}`,
-              color:filter===r?rc.color:G.textSec,borderRadius:6,padding:"4px 12px",fontSize:11,cursor:"pointer",transition:"all .15s"}}>
-              {rc.icon||""} {r}
-            </button>
-          );
-        })}
-      </div>
-      <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,overflow:"hidden"}}>
-        {filtered.length===0
-          ?<Empty icon="⚔️" title="No signals for this filter" sub="TITAN runs 45+ strategies on real NSE candles every 8 seconds."/>
-          :(
-            <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead>
-                <tr style={{background:G.bg}}>
-                  {["Symbol","Strategy","Direction","Category","Confidence","Regime","Signal Reason","Time"].map(h=>(
+// ═════════════════════════════════�                       <td style={{padding:"10px 14px",color:G.textSec,fontSize:11,fontFamily:"monospace"}}>{sig.qty || sig.quantity || 0}</td>
+                      <td style={{padding:"10px 14px",color:(sig.expected_net_pnl||0)>=0?G.teal:G.red,fontSize:11,fontWeight:700,fontFamily:"monospace"}}>
+                        ₹{(sig.expected_net_pnl||0).toLocaleString("en-IN",{maximumFractionDigits:0})}
+                      </td>
+                      <td style={{padding:"10px 14px",color:G.textMut,fontSize:10,fontFamily:"monospace"}}>₹{(sig.expected_charges||0).toLocaleString("en-IN",{maximumFractionDigits:0})}</td>
+                      <td style={{padding:"10px 14px"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <div style={{width:40,height:4,background:G.border,borderRadius:2,overflow:"hidden"}}>
+                            <div style={{width:`${(sig.confidence||0)*100}%`,height:"100%",
+                              background:(sig.confidence||0)>=0.75?G.green:(sig.confidence||0)>=0.55?G.yellow:G.red}}/>
+                          </div>
+                          <span style={{color:G.textSec,fontSize:10,fontFamily:"monospace"}}>{((sig.confidence||0)*100).toFixed(0)}%</span>
+                        </div>
+                      </td>
+                      <td style={{padding:"10px 14px"}}>
+                        {sig.regime&&<Tag label={sig.regime} color={REGIME_SAFE(sig.regime).color}/>}
+                      </td>
+                      <td style={{padding:"10px 14px",color:G.textMut,fontSize:11,maxWidth:200}}>
+                        <span style={{display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={sig.reasons&&sig.reasons.length>0?sig.reasons.join(", "):sig.reason||""}>
+                          {sig.reasons&&sig.reasons.length>0?sig.reasons[0]:sig.reason||"-"}
+                        </span>
+                      </td>
+                      <td style={{padding:"10px 14px",color:G.textMut,fontSize:10,fontFamily:"monospace",whiteSpace:"nowrap"}}>{sig.timestamp||sig.ts||sig.time||"-"}</td>
+Regime","Signal Reason","Time"].map(h=>(
                     <th key={h} style={{color:G.textSec,fontSize:10,padding:"9px 14px",textAlign:"left",
                       fontWeight:500,borderBottom:`1px solid ${G.border}`,fontFamily:"monospace",whiteSpace:"nowrap"}}>{h}</th>
                   ))}

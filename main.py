@@ -889,7 +889,7 @@ def _build_universe() -> List[str]:
     """Return list of NSE symbols to scan this iteration."""
     try:
         from src.data.discovery import get_best_performing_stocks
-        stocks = get_best_performing_stocks(limit=60)
+        stocks = get_best_performing_stocks(limit=100)
         syms = list({s.get('symbol') for s in stocks if s.get('symbol')})
     except Exception:
         syms = []
@@ -897,7 +897,7 @@ def _build_universe() -> List[str]:
     # Supplement with Top 60 NIFTY 500 stocks for liquid momentum
     try:
         from src.data.universe import get_nifty500_symbols
-        syms += get_nifty500_symbols()[:60]
+        syms += get_nifty500_symbols()[:100]
     except Exception:
         pass
 
@@ -905,7 +905,15 @@ def _build_universe() -> List[str]:
     if AP:
         syms += [str(k).split(':')[0] for k in AP.open_positions.keys()]
         
-    cleaned_syms = [str(s).split(':')[0].strip() for s in syms if s]
+    # Robust symbol filtering (Requirements #11, #12)
+    invalid = {"UNDEFINED", "NONE", "NULL", "NAN", "N/A", "UNDEFINED.NS"}
+    cleaned_syms = []
+    for s in syms:
+        if not s: continue
+        sym_str = str(s).split(':')[0].strip().upper()
+        if sym_str in invalid or not sym_str:
+            continue
+        cleaned_syms.append(sym_str)
     return list(dict.fromkeys(cleaned_syms))  # deduplicate, preserve order
 
 
@@ -2081,43 +2089,47 @@ def _momentum_scanner_thread():
             from src.data.multi_source_data import get_msd
             msd = get_msd()
             if msd:
-                symbols = ['ZOMATO', 'JIOFIN', 'IREDA', 'IRFC', 'HAL', 'TRENT', 'BSE', 'DIXON', 'VBL', 'POLYCAB', 'RVNL', 'MAZDOCK', 'BEL', 'SUZLON', 'KALYANKJIL', 'ANGELONE', 'CDSL', 'KPITTECH', 'TATAELXSI', 'LTTS', 'PERSISTENT', 'RELIANCE', 'TCS', 'HDFCBANK', 'ICICIBANK', 'INFY']
+                from src.data.universe import get_nifty500_symbols
+                # Dynamically scan the ENTIRE Nifty 500 for momentum
+                symbols = get_nifty500_symbols()
+                # If fetching all 500 is slow, msd.get_bulk_quotes handles it, but we can limit if needed.
                 quotes = msd.get_bulk_quotes(symbols)
+                
                 gainers = []
                 for sym, q in quotes.items():
                     pct = q.get('percent_change', q.get('change_pct', 0))
                     if isinstance(pct, (int, float)):
                         gainers.append((sym, pct))
                 
-                # Sort and pick top 12
+                # Sort and pick top 20 (widened opportunity net)
                 gainers.sort(key=lambda x: x[1], reverse=True)
-                top_12 = [g[0] for g in gainers[:12]]
+                top_20 = [g[0] for g in gainers[:20]]
                 
-                if top_12:
+                if top_20:
                     out_path = os.path.join(ROOT, 'config', 'dynamic_watchlist.json')
                     with open(out_path, 'w') as f:
-                        json.dump({"MOMENTUM": top_12}, f, indent=2)
+                        json.dump({"MOMENTUM": top_20}, f, indent=2)
                     
                     # Live memory injection into SECTORS!
                     from config.sectors import SECTORS, SYMBOL_TO_SECTOR
-                    SECTORS['MOMENTUM'] = top_12
-                    for sym in top_12:
+                    SECTORS['MOMENTUM'] = top_20
+                    for sym in top_20:
                         SYMBOL_TO_SECTOR[sym] = 'MOMENTUM'
                     
-                    logger.info("🔥 Live Momentum Scanner injected top gainers: %s", top_12)
+                    logger.info("🔥 Live Momentum Scanner injected top gainers: %s", top_20)
                     
                     # Proactive cache warmup: Fetch candles for new symbols so they are strike-ready
                     # for the next TITAN iteration (Requirement #2)
                     try:
                         logger.info("📡 Warming up historical data for new momentum leaders...")
-                        msd.get_bulk_candles(top_12, interval='15m', bars=100)
-                        msd.get_bulk_candles(top_12, interval='5m', bars=100)
+                        msd.get_bulk_candles(top_20, interval='15m', bars=100)
+                        msd.get_bulk_candles(top_20, interval='5m', bars=100)
                     except Exception:
                         pass
         except Exception as e:
             logger.debug("Momentum scanner failed: %s", e)
             
-        time.sleep(600)  # Sleep for 10 minutes (600 seconds)
+        time.sleep(300)  # Sleep for 5 minutes (300 seconds) to catch momentum faster
 
 def main():
     import threading
