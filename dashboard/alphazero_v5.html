@@ -179,7 +179,7 @@ const G = {
 const BACKEND = window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1") 
   ? window.location.origin 
   : "http://localhost:8001";
-const VERSION = "v5.1.0";
+const VERSION = "v5.2.0";
 const AUTHOR  = "AlphaZero Core";
 
 // ─── Theme Extensions ──────────────────────────────────────────────────────
@@ -595,10 +595,34 @@ function TabBar({active,setActive,counts}) {
   );
 }
 
+function StrategyRankings({strategies}) {
+  const sorted = Object.entries(strategies || {}).sort((a,b) => b[1].total_pnl - a[1].total_pnl);
+  if (sorted.length === 0) return null;
+  return (
+    <div style={{background:G.surface, border:`1px solid ${G.border}`, borderRadius:8, padding:"16px 18px", marginTop:20}}>
+      <div style={{color:G.text, fontSize:13, fontWeight:600, marginBottom:12, display:"flex", alignItems:"center", gap:8}}>
+        <span>🏆</span> Strategy Performance Rankings
+      </div>
+      <div style={{display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))", gap:10}}>
+        {sorted.map(([id, s]) => (
+          <div key={id} style={{background:G.bg, border:`1px solid ${G.border}`, borderRadius:6, padding:"10px 12px"}}>
+            <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+              <span style={{color:G.blue, fontWeight:700, fontSize:12}}>{id}</span>
+              <span style={{color:s.win_rate >= 50 ? G.green : G.red, fontSize:11, fontWeight:600}}>{s.win_rate}% WR</span>
+            </div>
+            <div style={{color:G.text, fontSize:14, fontWeight:700, fontFamily:"monospace"}}>₹{s.total_pnl.toLocaleString()}</div>
+            <div style={{color:G.textMut, fontSize:9}}>{s.trades} trades · avg ₹{s.avg_pnl}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // TAB: OVERVIEW
 // ═══════════════════════════════════════════════════════════════════════════
-function OverviewTab({picks:rawPicks,positions:rawPositions,allSigs:rawSigs,evalStats,indices,candleCache,news,onStock,candidates,NSE_UNIVERSE=[],apData={}}) {
+function OverviewTab({picks:rawPicks,positions:rawPositions,allSigs:rawSigs,evalStats,indices,candleCache,news,onStock,candidates,NSE_UNIVERSE=[],apData={},strategies}) {
   const positions = Array.isArray(rawPositions) ? rawPositions : Object.values(rawPositions || {});
   const picks = Array.isArray(rawPicks) ? rawPicks : Object.values(rawPicks || {});
   const allSigs = Array.isArray(rawSigs) ? rawSigs : Object.values(rawSigs || {});
@@ -688,6 +712,8 @@ function OverviewTab({picks:rawPicks,positions:rawPositions,allSigs:rawSigs,eval
           })}
         </div>
       </div>
+
+      <StrategyRankings strategies={strategies} />
 
       <div style={{display:"grid",gridTemplateColumns:"200px 1fr",gap:12}}>
         <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
@@ -2197,6 +2223,7 @@ function App() {
   const [fundamentals,setFundamentals]=useState({});
   const [news,setNews]=useState([]);
   const [macro,setMacro]=useState({});
+  const [strategies,setStrategies]=useState({});
   const [events,setEvents]=useState([]);
   const [selectedStock,setSelected]=useState(null);
   const [ NSE_UNIVERSE, setNseUniverse ] = useState(DEFAULT_NSE_UNIVERSE);
@@ -2280,6 +2307,7 @@ function App() {
       try{const r=await fetch(`${BACKEND}/api/portfolio`);if(r.ok)setApData(await r.json());}catch{}
       try{const r=await fetch(`${BACKEND}/api/sources`);if(r.ok)setDataSources(await r.json());}catch{}
       try{const r=await fetch(`${BACKEND}/api/universe`);if(r.ok)setNseUniverse(await r.json());}catch{}
+      try{const r=await fetch(`${BACKEND}/api/strategies`);if(r.ok)setStrategies(await r.json());}catch{}
     };
     f();const t=setInterval(f,15000);return()=>clearInterval(t);
   },[]);
@@ -2467,7 +2495,7 @@ function App() {
         {tab==="overview"&&
           <OverviewTab picks={picks} positions={positions} allSigs={allSigs}
             evalStats={evalStats} indices={indices} candleCache={candleCache}
-            news={news} onStock={setSelected} candidates={candidates} NSE_UNIVERSE={NSE_UNIVERSE} apData={apData}/>}
+            news={news} onStock={setSelected} candidates={candidates} NSE_UNIVERSE={NSE_UNIVERSE} apData={apData} strategies={strategies}/>}
         {tab==="positions"&&
           <PositionsTab positions={positions} mode={systemState.mode} apData={apData}/>}
         {tab==="signals"&&

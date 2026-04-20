@@ -566,16 +566,16 @@ def _aggregate_signals(
     # HYPER-RELAXED THRESHOLDS FOR IMMEDIATE TRADE ENTRY
     # HYPER-RELAXED THRESHOLDS FOR MAXIMUM TRADE EXECUTION (User Request)
     if regime == 'TRENDING':
-        MIN_AGG_CONF = 0.25   # Extremely loose
+        MIN_AGG_CONF = 0.15   # Extremely loose
         MIN_AGREEMENT = 1
     elif regime == "SIDEWAYS" or regime == "NEUTRAL":
-        MIN_AGG_CONF = 0.22   
+        MIN_AGG_CONF = 0.15   
         MIN_AGREEMENT = 1     
     elif regime == "VOLATILE":
-        MIN_AGG_CONF = 0.35   
+        MIN_AGG_CONF = 0.25   # Was 0.35
         MIN_AGREEMENT = 1
     else:
-        MIN_AGG_CONF = 0.25
+        MIN_AGG_CONF = 0.15
         MIN_AGREEMENT = 1
 
     TITAN_W  = 0.45
@@ -605,7 +605,7 @@ def _aggregate_signals(
         # Market Breadth check & Override (Cross-Sector Correlation)
         if act == 'BUY':
             # Market Breadth Override (A/D Ratio logic)
-            if bullish_pct < 0.50:
+            if bullish_pct < 0.30:  # Relaxed from 0.50 to 0.30
                 rejections["market_breadth"] += 1
                 logger.debug("AGGREGATE: %s rejected due to weak market breadth override (%.0f%% bullish)", sym, bullish_pct * 100)
                 continue
@@ -1891,6 +1891,14 @@ def _run_nightly_tasks():
         except Exception as e:
             logger.error(f"Data Harvester failed: {e}")
 
+        # ── Requirement #10: Automated Nightly Backtest ──
+        try:
+            from scripts.nightly_backtest import run_nightly_backtest
+            logger.info("📉 Starting Automated Nightly Backtest on recorded data...")
+            run_nightly_backtest()
+        except Exception as e:
+            logger.error(f"Nightly Backtest failed: {e}")
+
         # 1. Update KARMA Universe
         from src.data.universe import get_karma_universe
         training_syms = get_karma_universe(MSD)
@@ -2211,6 +2219,35 @@ def _monopoly_scanner_thread():
             if not _state.get("running", True): break
             time.sleep(600)
 
+def _market_recorder_thread():
+    """Background thread to continuously record 1-minute market data during hours."""
+    import subprocess
+    import time
+    import os
+    
+    recorder_path = os.path.join(ROOT, 'scripts', 'market_recorder.py')
+    while _state.get("running", True):
+        try:
+            logger.info("📡 Starting Market Recorder process...")
+            # Run the recorder script as a subprocess so it can manage its own lifecycle
+            process = subprocess.Popen([sys.executable, recorder_path])
+            
+            # Monitor the process while the main system is running
+            while _state.get("running", True) and process.poll() is None:
+                time.sleep(10)
+                
+            if process.poll() is not None:
+                logger.warning("Market Recorder process exited. Restarting in 60s...")
+                time.sleep(60)
+            else:
+                # Main system stopping
+                process.terminate()
+                process.wait()
+                
+        except Exception as e:
+            logger.error(f"Market Recorder thread error: {e}")
+            time.sleep(60)
+
 def main():
     import threading
     t = threading.Thread(target=_momentum_scanner_thread, daemon=True)
@@ -2218,6 +2255,9 @@ def main():
     
     t_mono = threading.Thread(target=_monopoly_scanner_thread, daemon=True)
     t_mono.start()
+    
+    t_rec = threading.Thread(target=_market_recorder_thread, daemon=True)
+    t_rec.start()
     
     _pre_flight_check()
     logger.info("=" * 70)

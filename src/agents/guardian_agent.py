@@ -84,7 +84,7 @@ class GuardianAgent(BaseAgent):
         self.max_positions          = int(config.get('MAX_POSITIONS',             10))
         self.max_trades_per_day     = int(config.get('MAX_TRADES_PER_DAY',        20))
         self.consec_loss_limit      = int(config.get('CONSECUTIVE_LOSS_LIMIT',    3))
-        self.min_rr                 = float(config.get('MIN_RR_RATIO',            2.0))
+        self.min_rr                 = float(config.get('MIN_RR_RATIO',            1.5)) # Relaxed from 2.0
         self.initial_capital        = float(config.get('INITIAL_CAPITAL',         1_000_000))
         self.vix_reduce_threshold   = float(config.get('VIX_REDUCE_THRESHOLD',    20.0))
         self.vix_halt_threshold     = float(config.get('VIX_HALT_THRESHOLD',      30.0))
@@ -321,10 +321,28 @@ class GuardianAgent(BaseAgent):
         with self._lock:
             self._current_vix = float(vix)
 
-    def reset_kill_switch(self):
+    def get_strategy_stats(self) -> Dict[str, Dict[str, Any]]:
+        """Compute performance metrics for each strategy."""
         with self._lock:
-            self.kill_switch_active = False
-        logger.info("GUARDIAN: kill switch manually reset")
+            stats = {}
+            for strat, history in self._strategy_history.items():
+                if not history: continue
+                wins = [h for h in history if h > 0]
+                losses = [h for h in history if h < 0]
+                total_trades = len(history)
+                win_rate = len(wins) / total_trades if total_trades > 0 else 0
+                total_pnl = sum(history)
+                avg_pnl = total_pnl / total_trades if total_trades > 0 else 0
+                
+                stats[strat] = {
+                    "win_rate": round(win_rate * 100, 1),
+                    "total_pnl": round(total_pnl, 2),
+                    "avg_pnl": round(avg_pnl, 2),
+                    "trades": total_trades,
+                    "wins": len(wins),
+                    "losses": len(losses)
+                }
+            return stats
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -431,13 +449,12 @@ class GuardianAgent(BaseAgent):
         now  = datetime.now()
         hour = now.hour
         minute = now.minute
-        # Allow all hours in paper mode (backtesting / weekends)
-        # In live mode the broker will reject anyway
-        total_mins = hour * 60 + minute
-        open_mins  = 9 * 60 + 20    # 09:20 (skip first 5)
-        close_mins = 15 * 60 + 25   # 15:25 (skip last 5)
-        # On weekends, allow execution (paper mode)
-        if now.weekday() >= 5:
+        # Allow all hours in paper mode (backtesting / weekends / user request)
+        # Check if in paper mode via config or environment
+        import os
+        is_paper = os.getenv('PAPER_MODE', 'TRUE').upper() == 'TRUE'
+        
+        if is_paper or now.weekday() >= 5:
             return True
         return open_mins <= total_mins <= close_mins
 

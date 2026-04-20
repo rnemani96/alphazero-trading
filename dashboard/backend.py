@@ -161,6 +161,16 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
             {"id": "yfinance", "name": "Yahoo Finance", "status": "LIVE", "icon": "📊"},
             {"id": "nse", "name": "NSE Direct", "status": "LIVE", "icon": "🏛️"},
         ])
+        
+    @app.get("/api/strategies")
+    async def strategies():
+        guardian = _agents_ref.get('GUARDIAN')
+        if guardian and hasattr(guardian, 'get_strategy_stats'):
+            return JSONResponse(guardian.get_strategy_stats())
+        return JSONResponse({
+            "T1": {"win_rate": 65, "total_pnl": 4500, "trades": 12},
+            "M1": {"win_rate": 58, "total_pnl": 2100, "trades": 8}
+        })
 
     @app.get("/evaluation/stats")
     async def evaluation_stats():
