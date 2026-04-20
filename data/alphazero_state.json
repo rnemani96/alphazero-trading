@@ -1,6 +1,6 @@
 {
   "active_portfolio": {},
-  "iteration": 1,
+  "iteration": 0,
   "regime": "NEUTRAL",
   "sentiment": 0.0,
   "sentiment_scores": {},
@@ -11,10 +11,9 @@
   "market_data": {},
   "net_pnl": 0.0,
   "daily_trades": 0,
-  "running": false,
+  "running": true,
   "last_backtest_date": null,
   "last_training_date": null,
   "last_wf_date": null,
-  "last_trade_time": {},
-  "latest_prices": {}
+  "last_trade_time": {}
 }

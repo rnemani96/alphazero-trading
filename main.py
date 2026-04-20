@@ -601,16 +601,21 @@ def _aggregate_signals(
         tc    = float(sig.get('confidence', 0.5))
         act   = sig.get('action', 'BUY')
         
-        # Market Breadth check (Cross-Sector Correlation)
+        # Market Breadth check & Override (Cross-Sector Correlation)
         if act == 'BUY':
-            if bullish_pct < 0.40:
+            # Market Breadth Override (A/D Ratio logic)
+            if bullish_pct < 0.50:
                 rejections["market_breadth"] += 1
-                logger.debug("AGGREGATE: %s rejected due to weak market breadth (%.0f%% bullish)", sym, bullish_pct * 100)
+                logger.debug("AGGREGATE: %s rejected due to weak market breadth override (%.0f%% bullish)", sym, bullish_pct * 100)
                 continue
-            elif bullish_pct < 0.50:
-                # Reduce confidence if alignment is weak
-                tc = tc * 0.90 
-
+            
+        # 🚀 VOLUME SENSITIVITY BOOST (User Request)
+        # Apply exponential confidence boost for high relative volume
+        rel_vol = float(sig.get('rel_vol', 1.0))
+        if act == 'BUY' and rel_vol > 3.0:
+            vol_boost = min(0.20, (rel_vol - 3.0) * 0.05)
+            tc = min(0.99, tc + vol_boost)
+            logger.info("🌊 VOLUME BOOST: %s (Rel Vol: %.1fx) -> +%.2f conf", sym, rel_vol, vol_boost)
         # NEXUS: regime compatibility
         regime_compat = _regime_compatible(act, regime)
         nexus_conf    = 0.7 if regime_compat else 0.3

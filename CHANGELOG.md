@@ -1,5 +1,14 @@
 # Changelog — AlphaZero Capital
 
+## [8.1.1] - 2026-04-20 (Dashboard UI Synchronization & Stability)
+### 📊 UI Synchronization & Dynamic State
+- **Dynamic Variable Injection**: Overhauled `alphazero_v5.html` and `App.jsx` to completely replace hardcoded mock values (e.g., initial capital, slot counts, win rates) with dynamic backend-driven variables (`apData`).
+- **Positions Tab Repair**: Rebuilt and safely integrated the `<PositionsTab>` UI component after fixing a major syntax corruption bug that was causing the Babel JSX parser to fail. Re-enabled live tracking of 'Trade History' and dynamic charge calculations.
+- **Signals Tab Repair**: Surgically restored the `<SignalsTab>` component to fix "JSX expressions must have one parent element" errors. The dashboard now properly renders all dynamic signals fed from the TITAN engine without crashing.
+- **Null-Safety Enhancements**: Added comprehensive null-coalescing (`??`) and optional chaining (`?.`) operators throughout the frontend code to ensure the dashboard remains stable even during backend data pipeline restarts or cold starts.
+
+---
+
 ## [8.1.0] - 2026-04-19 (Fully Dynamic Momentum & System Fixes)
 ### 🚀 Dynamic Execution & Profit Maximization
 - **Fully Dynamic Momentum Scanner**: The background `_momentum_scanner_thread` was completely overhauled. Instead of relying on a hardcoded list of 26 stocks, the system now queries the entire **NIFTY 500**, calculates live intraday percentage gains, and injects the top 20 absolute best performers into the live trading engine.

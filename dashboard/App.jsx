@@ -322,7 +322,7 @@ function TopNav({regime,indices,paperPnl,time,connStatus,mode,initial_capital}) 
       <div style={{textAlign:"right",borderRight:`1px solid ${G.border}`,paddingRight:16}}>
         <div style={{color:G.textMut,fontSize:9,fontFamily:"monospace",letterSpacing:".08em"}}>TOTAL CAPITAL</div>
         <div style={{color:G.textSec,fontSize:13,fontWeight:700,fontFamily:"monospace"}}>
-          ₹{((mode==="LIVE"?initial_capital:1000000)??0).toLocaleString("en-IN",{maximumFractionDigits:0})}
+          ₹{(initial_capital??0).toLocaleString("en-IN",{maximumFractionDigits:0})}
         </div>
       </div>
       <div style={{textAlign:"right"}}>
@@ -413,7 +413,7 @@ function OverviewTab({picks:rawPicks,positions:rawPositions,allSigs:rawSigs,eval
             <span style={{color:G.text,fontSize:13,fontWeight:600}}>APEX Selected Stocks</span>
             <Tag label="Click for full analysis" color={G.blue}/>
           </div>
-          <span style={{color:G.textMut,fontSize:10}}>Dynamic scan · 40s refresh · {NSE_UNIVERSE.length} stocks</span>
+          <span style={{color:G.textMut,fontSize:10}}>Dynamic scan · 40s refresh · NIFTY 500</span>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)"}}>
           {picks.length===0?Array(5).fill(null).map((_,i)=>(
@@ -479,7 +479,7 @@ function OverviewTab({picks:rawPicks,positions:rawPositions,allSigs:rawSigs,eval
           </div>
         </div>
         <div style={{background:G.surface,border:`1px solid ${G.border}`,borderRadius:8,padding:"16px 18px"}}>
-          <div style={{color:G.textSec,fontSize:11,fontWeight:600,marginBottom:12}}>NSE Universe — {NSE_UNIVERSE.length} stocks scanned</div>
+          <div style={{color:G.textSec,fontSize:11,fontWeight:600,marginBottom:12}}>NSE Universe — NIFTY 500 scanned</div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {picks.slice(0,5).map((st,i)=>{
               const candles=candleCache[st.s];

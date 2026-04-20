@@ -99,10 +99,22 @@ def optimal_size(
     sl   = round(entry_price - sl_mult * atr, 2) if atr > 0 else round(entry_price * (0.97 if regime == "SIDEWAYS" else 0.975), 2)
     tgt  = round(entry_price + tgt_mult * atr, 2) if atr > 0 else round(entry_price * (1.05 if regime == "SIDEWAYS" else 1.06), 2)
 
-    # ── Charge-Aware Floor Logic (Optimized for Viability) ──────────────────────
+    # ── Charge-Aware Floor Logic & Dynamic Slippage ──────────────────────────
     # User Requirement: Instead of blocking small trades, INCREASE quantity
     # to ensure charges don't flush away the profits.
-    min_qty = get_minimum_viable_quantity(entry_price, tgt, is_intraday)
+    
+    # 1. Dynamic Slippage Modeling
+    # Estimate slippage based on stock volatility (ATR / Price).
+    # Volatile stocks get 0.1% slippage penalty; standard get 0.05%.
+    volatility_pct = (atr / entry_price) if entry_price > 0 else 0
+    slippage_pct = 0.001 if volatility_pct > 0.02 else 0.0005
+    
+    # Adjust target price down to account for exit slippage
+    # and entry price up to account for entry slippage for viability checks
+    effective_entry = entry_price * (1 + slippage_pct)
+    effective_tgt = tgt * (1 - slippage_pct)
+
+    min_qty = get_minimum_viable_quantity(effective_entry, effective_tgt, is_intraday)
     
     if qty < min_qty:
         # Increase marginally to min_qty to ensure viability
