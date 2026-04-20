@@ -27,6 +27,7 @@ import sys
 import threading
 import time
 import webbrowser
+import yfinance as yf
 from datetime import datetime, timedelta
 from dataclasses import asdict
 from typing import Any, Dict, List, Optional
@@ -655,6 +656,12 @@ def _aggregate_signals(
             agg_conf = min(0.98, agg_conf + 0.15)
             agreement_count += 1 # Virtual agreement boost
             logger.info("🔥 MOMENTUM BOOST: %s (Priority Entry)", sym)
+
+        # 🏛️ MONOPOLY PRIORITY BOOST (User Request)
+        # If symbol is in the dynamic monopoly watchlist, it gets a 10% fundamental boost
+        if sym in _monopoly_watchlist:
+            agg_conf = min(0.99, agg_conf + 0.10)
+            logger.info("🏛️ MONOPOLY BOOST: %s (+0.10 confidence)", sym)
 
         if agreement_count >= 3:
             agg_conf = min(0.99, agg_conf * 1.1)  # 10% boost for unanimous agreement
@@ -2136,10 +2143,81 @@ def _momentum_scanner_thread():
             
         time.sleep(300)  # Sleep for 5 minutes (300 seconds) to catch momentum faster
 
+_monopoly_watchlist = []
+
+def _monopoly_scanner_thread():
+    """Background thread to dynamically identify monopoly/high-moat stocks based on fundamentals."""
+    global _monopoly_watchlist
+    import os
+    import json
+    
+    # Load previous list if exists to be ready immediately
+    cache_path = os.path.join(ROOT, 'config', 'monopoly_stocks.json')
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, 'r') as f:
+                _monopoly_watchlist = json.load(f).get("MONOPOLY", [])
+                logger.info("🏛️ Loaded %d monopoly stocks from cache", len(_monopoly_watchlist))
+        except Exception: pass
+
+    while _state.get("running", True):
+        try:
+            from src.data.universe import get_nifty500_symbols
+            symbols = get_nifty500_symbols()
+            
+            logger.info("🏛️ Starting Dynamic Monopoly Scan for %d symbols...", len(symbols))
+            monopolies = []
+            
+            # Scan in chunks to avoid overwhelming or rate limits
+            chunk_size = 20
+            for i in range(0, len(symbols), chunk_size):
+                if not _state.get("running", True): break
+                chunk = symbols[i : i + chunk_size]
+                
+                for sym in chunk:
+                    try:
+                        ticker = yf.Ticker(sym if sym.endswith(".NS") else f"{sym}.NS")
+                        info = ticker.info
+                        
+                        # MONOPOLY CRITERIA:
+                        # 1. Operating Margins > 25% (High pricing power)
+                        # 2. Return on Equity > 15% (Efficient capital use)
+                        # 3. Debt to Equity < 0.5 (Financial stability)
+                        
+                        margin = info.get("operatingMargins", 0) or 0
+                        roe = info.get("returnOnEquity", 0) or 0
+                        debt_equity = info.get("debtToEquity", 100) or 100
+                        
+                        if margin > 0.25 and roe > 0.15 and debt_equity < 50:
+                            monopolies.append(sym)
+                            logger.debug("🏛️ Found Monopoly: %s (Margin: %.1f%%, ROE: %.1f%%)", sym, margin*100, roe*100)
+                    except Exception:
+                        continue
+                
+                time.sleep(2) # Breath between chunks
+            
+            if monopolies:
+                _monopoly_watchlist = monopolies
+                os.makedirs(os.path.join(ROOT, 'config'), exist_ok=True)
+                with open(cache_path, 'w') as f:
+                    json.dump({"MONOPOLY": monopolies, "updated_at": datetime.now().isoformat()}, f, indent=2)
+                logger.info("🏛️ Dynamic Monopoly Watchlist updated: %d stocks identified", len(monopolies))
+                
+        except Exception as e:
+            logger.error("Monopoly scanner failed: %s", e)
+            
+        # Monopolies don't change daily; scan once every 7 days
+        for _ in range(7 * 24 * 6): 
+            if not _state.get("running", True): break
+            time.sleep(600)
+
 def main():
     import threading
     t = threading.Thread(target=_momentum_scanner_thread, daemon=True)
     t.start()
+    
+    t_mono = threading.Thread(target=_monopoly_scanner_thread, daemon=True)
+    t_mono.start()
     
     _pre_flight_check()
     logger.info("=" * 70)

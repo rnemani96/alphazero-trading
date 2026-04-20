@@ -302,74 +302,51 @@ class ActivePortfolio:
                 if price > highest: pos["highest_price"] = round(price, 2)
                 if price < lowest:  pos["lowest_price"]  = round(price, 2)
 
-                # ── Requirement #6: 0.5R Move -> Breakeven ───────────────────────
+                # ── 🚀 AGGRESSIVE PROFIT PRESERVATION (User Request) ──────────────────
+                # Rule 1: Instant Breakeven at +1.0% profit (Protects Capital)
+                if not pos.get("breakeven_done") and pnl_pct >= 1.0:
+                    new_sl = round(ep * 1.002 if is_long else ep * 0.998, 2) # Entry + 0.2%
+                    pos["stop_loss"] = new_sl
+                    pos["breakeven_done"] = True
+                    updated_stops.append({"symbol": sym, "new_sl": new_sl, "broker_id": pos.get("broker_id")})
+                    logger.info("🛡️ BREAKEVEN LOCKED: %s %s moved to entry+ after 1%% gain.", side, sym)
+
+                # Rule 2: 0.5R Move -> Scale Out (Requirement #6 legacy)
                 initial_risk_dist = pos.get("sl_dist", abs(ep - sl))
                 profit_dist = abs(price - ep) if pnl > 0 else 0
                 
-                if not pos.get("breakeven_done") and profit_dist >= (0.5 * initial_risk_dist):
-                    new_sl = round(ep * 1.005 if is_long else ep * 0.995, 2)
-                    pos["stop_loss"] = new_sl
-                    pos["breakeven_done"] = True
-                    updated_stops.append({
-                        "symbol": sym, "new_sl": new_sl, "broker_id": pos.get("broker_id")
-                    })
-                    logger.info("🛡️ BREAKEVEN: %s %s moved to entry + 0.5%% after 0.5R move.", side, sym)
-
-                # ── Requirement #6: 1.0R Move -> Partial Profit (50%) ───────────
-                if not pos.get("scale_out_done") and profit_dist >= initial_risk_dist:
-                    pos["scale_out_done"] = True
-                    reduced_qty = max(1, pos["quantity"] // 2)
-                    pos["quantity"] = pos["quantity"] - reduced_qty
-                    pos["realised_pnl"] = pos.get("realised_pnl", 0) + (profit_dist * reduced_qty)
-                    
-                    partial_exits.append({
-                        "symbol": sym,
-                        "quantity": reduced_qty,
-                        "action": "SELL" if is_long else "BUY",
-                        "price": price,
-                        "reason": "1R_SCALE_OUT"
-                    })
-                    logger.info("🚀 SCALE-OUT: %s %s 1R reached! Selling 50%% (%d shares).", side, sym, reduced_qty)
-
-                # ── Dynamic Adaptive Trailing & Profit Preservation ──────────────
+                # ── Dynamic Adaptive Trailing (Ultra-Tight) ──────────────────────
                 atr = pos.get("atr", ep * 0.02)
                 
                 # ADAPTIVE TIGHTENING: The more we gain, the tighter we lock.
-                trail_mult = 2.5
-                if pnl_pct >= 3.0:    trail_mult = 1.0
+                trail_mult = 2.0 # Default
+                if pnl_pct >= 5.0:    trail_mult = 0.5 # Extremely tight lock
+                elif pnl_pct >= 3.0:  trail_mult = 1.0 
                 elif pnl_pct >= 2.0:  trail_mult = 1.5
                 
-                trail_buffer = max(ep * 0.015, trail_mult * atr)
+                trail_buffer = max(ep * 0.01, trail_mult * atr)
                 
                 close_status = None
                 reason = None
                 
                 if is_long:
                     trail_sl = round(pos["highest_price"] - trail_buffer, 2)
-                    if trail_sl > pos.get("trailing_stop", 0):
-                        pos["trailing_stop"] = trail_sl
-                        # Visibility fix: update the main stop_loss field so it reflects in dashboard
-                        # Requirements: Never move stop-loss down for LONGs
-                        if trail_sl > pos.get("stop_loss", 0):
-                            pos["stop_loss"] = trail_sl
+                    if trail_sl > pos.get("stop_loss", 0):
+                        pos["stop_loss"] = trail_sl
                         updated_stops.append({"symbol": sym, "new_sl": trail_sl, "broker_id": pos.get("broker_id")})
-                    
-                    # ── Requirement #8: 'In-Hand' Protection ──────────────────
-                    if pnl_pct > 0.8 and price < (ep * 1.005):
-                        close_status = PositionStatus.STOPPED
-                        reason = f"Profit Preservation: Protecting {pnl_pct:.1f}% gain. Closing at break-even+."
                 else:
                     trail_sl = round(pos["lowest_price"] + trail_buffer, 2)
-                    if trail_sl < pos.get("trailing_stop", float('inf')):
-                        pos["trailing_stop"] = trail_sl
-                        # Visibility fix: update the main stop_loss field (never move UP for SHORTs)
-                        if trail_sl < pos.get("stop_loss", float('inf')):
-                            pos["stop_loss"] = trail_sl
+                    if trail_sl < pos.get("stop_loss", float('inf')):
+                        pos["stop_loss"] = trail_sl
                         updated_stops.append({"symbol": sym, "new_sl": trail_sl, "broker_id": pos.get("broker_id")})
-                    
-                    if pnl_pct > 0.8 and price > (ep * 0.995):
-                        close_status = PositionStatus.STOPPED
-                        reason = f"Profit Preservation (Short): Protecting {pnl_pct:.1f}% gain."
+
+                # Rule 3: 'In-Hand' Protection (If profit was > 2% and drops below 1%, CLOSE)
+                if pnl_pct > 2.0:
+                    pos["profit_peak_hit"] = True
+                
+                if pos.get("profit_peak_hit") and pnl_pct < 1.0:
+                    close_status = PositionStatus.STOPPED
+                    reason = f"Profit Preservation: Protecting gains after 2% spike. Closing at {pnl_pct:.1f}%."
 
                 # ── Check exit conditions ──────────────────────────────────────
                 if not close_status:

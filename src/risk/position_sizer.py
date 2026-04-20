@@ -121,7 +121,7 @@ def optimal_size(
         # We allow a slightly higher risk cap (3% vs 2%) for this 'viability boost'
         test_risk_pct = (abs(entry_price - sl) * min_qty / capital)
         if test_risk_pct <= 0.03: 
-            logger.info(f"⚡ VIABILITY BOOST: Increasing {sym if 'sym' in locals() else 'trade'} qty from {qty} to {min_qty} to cover charges (Risk: {test_risk_pct*100:.1f}%)")
+            logger.info(f"⚡ VIABILITY BOOST: Increasing qty from {qty} to {min_qty} to cover charges (Risk: {test_risk_pct*100:.1f}%)")
             qty = min_qty
         else:
             # Even if it exceeds 3% risk, we still try to take the trade with min_qty 

@@ -1,5 +1,18 @@
 # Changelog — AlphaZero Capital
 
+## [8.2.0] - 2026-04-20 (Monopoly Intelligence & Institutional Risk Suite)
+### 🚀 Monopoly & Fundamental Intelligence
+- **Dynamic Monopoly Scanner**: Implemented `_monopoly_scanner_thread` which autonomously evaluates the NIFTY 500 for "Moat" characteristics (Margins >25%, ROE >15%, low debt).
+- **Fundamental Confidence Boost**: Integrated institutional-grade logic into the signal aggregator, applying a +10% confidence boost to stocks identified as monopolies to prioritize high-quality long-term holdings.
+- **Cache-Ready Intelligence**: Established `config/monopoly_stocks.json` for persistent storage of identified moats, ensuring the engine has fundamental context immediately upon startup.
+
+### 🛡️ Advanced Risk & Institutional Logic
+- **Dynamic Slippage Modeling**: Overhauled `PositionSizer` to penalize expected gross profit based on stock-specific volatility (ATR). High-volatility stocks now require a higher gross-profit buffer to account for market impact.
+- **Market Breadth Override (A/D Protection)**: Implemented a strict signal veto when the broader market Advance/Decline ratio falls below 50%. This prevents "catching a falling knife" during systemic sell-offs.
+- **Volume-Weighted Signal Priority**: Integrated exponential confidence scaling for high-relative-volume breakouts (>3.0x), ensuring the system captures institutional accumulation signatures with high precision.
+
+---
+
 ## [8.1.1] - 2026-04-20 (Dashboard UI Synchronization & Stability)
 ### 📊 UI Synchronization & Dynamic State
 - **Dynamic Variable Injection**: Overhauled `alphazero_v5.html` and `App.jsx` to completely replace hardcoded mock values (e.g., initial capital, slot counts, win rates) with dynamic backend-driven variables (`apData`).
