@@ -15720,5 +15720,7 @@
     "KAJARIACER": 0.4912,
     "SAREGAMA": 0.4897,
     "AFCONS": 0.4774
-  }
+  },
+  "nightly_training_done": true,
+  "weekly_tuning_done": true
 }

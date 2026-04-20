@@ -339,14 +339,17 @@ class TitanAgent(BaseAgent):
         # In non-trending markets, we require confirmation from other agents 
         # to ensure we are picking the 'Best of the Best' stocks.
         if regime in ('SIDEWAYS', 'VOLATILE', 'NEUTRAL'):
+            # In PAPER_MODE, we bypass these restrictive filters to maximize learning/data collection
+            is_paper = os.getenv('MODE', 'PAPER').upper() == 'PAPER'
+            
             # Filter 1: Sentiment (HERMES) - Must be at least slightly negative or better
-            if sentiment < -0.1: # Relaxed from 0.0
+            if not is_paper and sentiment < -0.1: # Relaxed from 0.0
                 return None
             # Filter 2: Momentum (SIGMA) - Relaxed threshold to capture emerging leaders
-            if momentum < 0.35: # Relaxed from 0.45
+            if not is_paper and momentum < 0.25: # Relaxed from 0.35
                 return None
             # Filter 3: Sector (ATLAS) - Relaxed threshold
-            if sector_strength < 0.35: # Relaxed from 0.45
+            if not is_paper and sector_strength < 0.25: # Relaxed from 0.35
                 return None
 
         # ── Signal Boosting Logic (Reward High-Quality Agreement) ─────────────

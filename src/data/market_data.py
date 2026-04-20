@@ -175,7 +175,9 @@ def _yf_download(symbol: str, start: str, end: str,
             df = yf.download(ticker, start=start, end=end,
                              interval=interval, progress=False, auto_adjust=True,
                              timeout=20)
-            if df is None or df.empty:
+            if df is None or not hasattr(df, 'empty'):
+                return None
+            if df.empty:
                 return None
             # Ensure single-level columns and NO DUPLICATES
             df = _yf_fix_columns(df)
