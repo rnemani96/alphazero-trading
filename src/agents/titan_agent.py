@@ -253,7 +253,7 @@ class TitanAgent(BaseAgent):
             return 0.50, 2
         elif r == "SIDEWAYS" or r == "NEUTRAL":
             # Bar relaxed: allow more trades in choppy markets if they show momentum
-            return 0.15, 1     # Hyper-relaxed from 0.28
+            return 0.10, 1     # Relaxed from 0.15 to allow main.py to handle final aggregate
         elif r == "VOLATILE":
             return 0.45, 2
         return max(0.28, (getattr(self, '_min_confidence', 0.52) - 0.15)), 1

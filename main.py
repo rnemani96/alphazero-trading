@@ -441,7 +441,8 @@ def _is_market_hours() -> bool:
     if now.weekday() >= 5:
         return False
     total = now.hour * 60 + now.minute
-    return 9 * 60 + 15 <= total <= 15 * 60 + 30
+    # NSE Pre-market starts at 09:00; Live trading at 09:15
+    return 9 * 60 <= total <= 15 * 60 + 30
 
 
 def _is_post_market() -> bool:
@@ -569,7 +570,7 @@ def _aggregate_signals(
         MIN_AGG_CONF = 0.15   # Extremely loose
         MIN_AGREEMENT = 1
     elif regime == "SIDEWAYS" or regime == "NEUTRAL":
-        MIN_AGG_CONF = 0.15   
+        MIN_AGG_CONF = 0.12   # Relaxed from 0.15
         MIN_AGREEMENT = 1     
     elif regime == "VOLATILE":
         MIN_AGG_CONF = 0.25   # Was 0.35
@@ -638,6 +639,9 @@ def _aggregate_signals(
 
         # Weighted aggregate
         agg_conf = TITAN_W * tc + NEXUS_W * nexus_conf + HERMES_W * hermes_conf
+        
+        if len(approved) < 5:
+            logger.debug(f"CONF_BREAKDOWN: {sym} | Agg: {agg_conf:.3f} (Titan:{tc:.2f}*0.45 + Nexus:{nexus_conf:.2f}*0.30 + Hermes:{hermes_conf:.2f}*0.25)")
 
         # Strategy gating by regime: Penalize trend followers in sideways
         strat_name = str(sig.get('top_strategy', '')).upper()
@@ -898,26 +902,36 @@ def _send_telegram(text: str):
 # ── Universe builder ──────────────────────────────────────────────────────────
 
 def _build_universe() -> List[str]:
-    """Return list of NSE symbols to scan this iteration."""
+    """Return list of NSE symbols to scan this iteration. Tightened for Speed during Market Hours."""
+    market_hours = _is_market_hours()
+    
+    # ── High Velocity Target Universe ──
+    # During market hours, we prioritize speed (<1 min iterations).
+    # We limit the universe to the most liquid and high-performing stocks.
+    limit = 60 if market_hours else 100
+    
     try:
         from src.data.discovery import get_best_performing_stocks
-        stocks = get_best_performing_stocks(limit=100)
+        # discovery.py has a 1-hour cache
+        stocks = get_best_performing_stocks(limit=limit)
         syms = list({s.get('symbol') for s in stocks if s.get('symbol')})
     except Exception:
         syms = []
 
-    # Supplement with Top 60 NIFTY 500 stocks for liquid momentum
+    # Supplement with liquid NIFTY stocks
     try:
         from src.data.universe import get_nifty500_symbols
-        syms += get_nifty500_symbols()[:100]
+        # Only take Top 40 from Nifty 500 list during hours to keep total universe < 100
+        n_limit = 40 if market_hours else 100
+        syms += get_nifty500_symbols()[:n_limit]
     except Exception:
         pass
 
-    # Always include open positions
+    # Always include open positions (Critical for monitoring)
     if AP:
         syms += [str(k).split(':')[0] for k in AP.open_positions.keys()]
         
-    # Robust symbol filtering (Requirements #11, #12)
+    # Robust symbol filtering
     invalid = {"UNDEFINED", "NONE", "NULL", "NAN", "N/A", "UNDEFINED.NS"}
     cleaned_syms = []
     for s in syms:
@@ -926,7 +940,13 @@ def _build_universe() -> List[str]:
         if sym_str in invalid or not sym_str:
             continue
         cleaned_syms.append(sym_str)
-    return list(dict.fromkeys(cleaned_syms))  # deduplicate, preserve order
+    
+    final_list = list(dict.fromkeys(cleaned_syms))
+    if market_hours:
+        # Final hard cap during market hours to ensure 1-min iteration SLA
+        final_list = final_list[:120] 
+        
+    return final_list
 
 
 
@@ -1077,8 +1097,14 @@ def _run_iteration():
     from concurrent.futures import ThreadPoolExecutor
     
     # Batch fetch all candles at once
-    all_c15 = MSD.get_bulk_candles(universe, interval="15m", period="58d")
-    all_c5  = MSD.get_bulk_candles(universe, interval="5m", period="58d")
+    # REDUCED PERIODS FOR MARKET HOURS (SPEED OPTIMIZATION)
+    # 22d of 15m is ~450 bars (Plenty for EMA 200 / RSI 14)
+    # 10d of 5m  is ~750 bars (Plenty for intraday scalping)
+    c15_period = "22d" if market_hours else "58d"
+    c5_period  = "10d" if market_hours else "30d"
+    
+    all_c15 = MSD.get_bulk_candles(universe, interval="15m", period=c15_period)
+    all_c5  = MSD.get_bulk_candles(universe, interval="5m",  period=c5_period)
 
     mdata_15m: Dict[str, Any] = {}
     mdata_5m:  Dict[str, Any] = {}
@@ -1137,36 +1163,33 @@ def _run_iteration():
     _state['market_data'] = {s: {'ltp': prices.get(s, 0)} for s in universe}
 
     # ── CRITICAL FALLBACK: load cached parquet when live candles fail ──────────
-    # If yfinance 401s / rate limits mean we have no enriched data, load from
-    # the nightly data_daemon's parquet cache so TITAN always has signal data.
     if len(mdata_15m_history) < 5:
+        logger.info("CRITICAL FALLBACK: Loading universe from parquet cache...")
+        t_fallback_start = time.time()
         try:
-            import glob as _glob
             parquet_dir = Path(ROOT) / "data" / "training_ready" / "15m"
-            parquet_files = list(parquet_dir.glob("*.parquet"))
             _loaded = 0
-            for pf in parquet_files:
-                sym = pf.stem
-                if sym in mdata_15m_history:
-                    continue
-                try:
-                    df_p = pd.read_parquet(pf)
-                    df_p.columns = [c.lower() for c in df_p.columns]
-                    if 'close' in df_p.columns and len(df_p) >= 20:
-                        # Update last price if we have it
-                        if prices.get(sym, 0) > 0:
-                            df_p.iloc[-1, df_p.columns.get_loc('close')] = prices[sym]
-                        mdata_15m_history[sym] = df_p
-                        if sym not in mdata_15m:
-                            last = df_p.iloc[-1].to_dict()
-                            last['price'] = last.get('close', 0)
-                            mdata_15m[sym] = last
-                        _loaded += 1
-                except Exception:
-                    continue
-            if _loaded > 0:
-                logger.info("FALLBACK: Loaded %d symbols from parquet cache (live candles unavailable)", _loaded)
-                mdata = mdata_15m
+            for sym in universe:
+                if sym in mdata_15m_history: continue
+                pf = parquet_dir / f"{sym}.parquet"
+                if pf.exists():
+                    try:
+                        df_p = pd.read_parquet(pf)
+                        df_p.columns = [c.lower() for c in df_p.columns]
+                        if 'close' in df_p.columns and len(df_p) >= 20:
+                            if prices.get(sym, 0) > 0:
+                                df_p.iloc[-1, df_p.columns.get_loc('close')] = prices[sym]
+                            mdata_15m_history[sym] = df_p
+                            if sym not in mdata_15m:
+                                last = df_p.iloc[-1].to_dict()
+                                last['price'] = last.get('close', 0)
+                                mdata_15m[sym] = last
+                            _loaded += 1
+                    except Exception: continue
+            logger.info(f"FALLBACK: Loaded {_loaded} symbols from universe in {time.time()-t_fallback_start:.1f}s")
+            if _loaded > 0: mdata = mdata_15m
+        except Exception as e:
+            logger.warning(f"Fallback loading failed: {e}")
         except Exception as _fb_exc:
             logger.debug("Parquet fallback failed: %s", _fb_exc)
 
@@ -1882,6 +1905,13 @@ def _run_nightly_tasks():
     """Requirement 2.1: Dynamic Universe Training & 2.2: Parallel Stress Test."""
     logger.info("🌙 STARTING NIGHTLY STRATEGY TRAINING & STRESS TEST...")
     
+    def check_abort():
+        now = datetime.now(IST)
+        if now.hour == 9:
+            logger.warning("🕒 HARD STOP REACHED (09:00 IST). Aborting nightly tasks for market open!")
+            return True
+        return False
+    
     try:
         # 0. Download new data (after market hours are done, followed by trainings)
         try:
@@ -1892,12 +1922,15 @@ def _run_nightly_tasks():
             logger.error(f"Data Harvester failed: {e}")
 
         # ── Requirement #10: Automated Nightly Backtest ──
+        if check_abort(): return
         try:
             from scripts.nightly_backtest import run_nightly_backtest
             logger.info("📉 Starting Automated Nightly Backtest on recorded data...")
             run_nightly_backtest()
         except Exception as e:
             logger.error(f"Nightly Backtest failed: {e}")
+
+        if check_abort(): return
 
         # 1. Update KARMA Universe
         from src.data.universe import get_karma_universe
@@ -1938,6 +1971,7 @@ def _run_nightly_tasks():
         engine.run_stress_test(training_syms, hist_data)
 
         # ── Requirement #9: Automated Model Showdown ────────────────
+        if check_abort(): return
         try:
             from scripts.ai_model_showdown import run_showdown
             logger.info("🏆 Starting Nightly AI Model Showdown...")
@@ -1946,6 +1980,7 @@ def _run_nightly_tasks():
             logger.error(f"Nightly Model Showdown failed: {e}")
 
         # ── Automated Model Forge (Retraining) ──────────────────
+        if check_abort(): return
         try:
             from scripts.train_committee import main as train_models
             logger.info("⚒️ Starting Nightly AI Model Retraining...")
@@ -2228,12 +2263,22 @@ def _market_recorder_thread():
     recorder_path = os.path.join(ROOT, 'scripts', 'market_recorder.py')
     while _state.get("running", True):
         try:
+            if _is_market_hours():
+                # TRADING PRIORITY: Disable harvester/recorder during live hours to free up yfinance quota
+                logger.debug("Market Recorder idle during trading hours (Priority: Trading)")
+                time.sleep(300)
+                continue
+
             logger.info("📡 Starting Market Recorder process...")
             # Run the recorder script as a subprocess so it can manage its own lifecycle
             process = subprocess.Popen([sys.executable, recorder_path])
             
             # Monitor the process while the main system is running
             while _state.get("running", True) and process.poll() is None:
+                if _is_market_hours():
+                    logger.info("Market Hours reached. Terminating Recorder for Trading Priority.")
+                    process.terminate()
+                    break
                 time.sleep(10)
                 
             if process.poll() is not None:

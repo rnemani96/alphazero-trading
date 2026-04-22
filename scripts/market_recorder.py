@@ -29,6 +29,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger("Recorder")
 
+_YF_SESSION = None
+
+def _get_yf_session():
+    global _YF_SESSION
+    if _YF_SESSION is None:
+        import requests
+        _YF_SESSION = requests.Session()
+        _YF_SESSION.headers.update({
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        })
+    return _YF_SESSION
+
+def _refresh_yf_session():
+    global _YF_SESSION
+    logger.info("Refreshing yfinance session cookies...")
+    _YF_SESSION = None
+    return _get_yf_session()
+
 def record_minute_data():
     fetcher = DataFetcher()
     symbols = get_nifty500_symbols()
@@ -60,8 +78,25 @@ def record_minute_data():
                     prepost=False,
                     threads=False, # Sequential is safer for rate limits
                     progress=False,
-                    timeout=15
+                    timeout=15,
+                    session=_get_yf_session()
                 )
+                
+                if (data is None or data.empty) and len(formatted_symbols) > 0:
+                    logger.warning("Empty data. Potential rate limit or crumb error. Refreshing...")
+                    _refresh_yf_session()
+                    data = yf.download(
+                        tickers=formatted_symbols,
+                        period="1d",
+                        interval="1m",
+                        group_by='ticker',
+                        auto_adjust=True,
+                        prepost=False,
+                        threads=False,
+                        progress=False,
+                        timeout=15,
+                        session=_get_yf_session()
+                    )
                 
                 if data is None or data.empty:
                     continue

@@ -285,9 +285,7 @@ class MultiSourceData:
         
         # Initialize yfinance session to stabilize 'Invalid Crumb' issues
         self._yf_session = None
-        if REQUESTS_OK:
-            self._yf_session = _req.Session()
-            self._yf_session.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
+        self._refresh_yf_session()
         
         # Initialize tokens from env/globals
         self._upstox_token = _UPSTOX_TOKEN
@@ -561,8 +559,19 @@ class MultiSourceData:
             yfi = {"1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m", "1h": "1h", "1d": "1d"}.get(interval, "1d")
             
             # yfinance.download handles bulk fetching in one request
-            data = yf.download(yf_syms, period=period, interval=yfi, group_by='ticker', threads=True, progress=False, session=self._yf_session)
+            # We pass the session. If it 401s, yfinance might not raise, but return empty.
+            data = yf.download(yf_syms, period=period, interval=yfi, group_by='ticker', 
+                               threads=True, progress=False, session=self._yf_session,
+                               timeout=15) # Timeout for the whole batch
             
+            if data.empty and len(symbols) > 0:
+                logger.warning("[yfinance] Bulk download returned empty. Possible 'Invalid Crumb'. Refreshing session...")
+                self._refresh_yf_session()
+                # Retry once
+                data = yf.download(yf_syms, period=period, interval=yfi, group_by='ticker', 
+                                   threads=True, progress=False, session=self._yf_session,
+                                   timeout=15)
+
             result = {}
             for sym, yfsym in zip(symbols, yf_syms):
                 try:
@@ -571,8 +580,12 @@ class MultiSourceData:
                     bars = []
                     for ts, row in df.iterrows():
                         if pd.isna(row['Close']): continue
-                        tz_ts = ts.to_pydatetime().replace(tzinfo=IST)
-                        bars.append(CandleBar(tz_ts, float(row["Open"]), float(row["High"]), float(row["Low"]), float(row["Close"]), int(row["Volume"])))
+                        # Ensure we don't crash on NaTs or invalid times
+                        try:
+                            tz_ts = ts.to_pydatetime().replace(tzinfo=IST)
+                            bars.append(CandleBar(tz_ts, float(row["Open"]), float(row["High"]), float(row["Low"]), float(row["Close"]), int(row["Volume"])))
+                        except Exception:
+                            continue
                     if bars:
                         result[sym] = bars
                 except Exception:
@@ -580,6 +593,9 @@ class MultiSourceData:
             return result
         except Exception as e:
             logger.debug("[yfinance] bulk candles error: %s", e)
+            # If we hit a serious error, clear session for next time
+            if "401" in str(e) or "Unauthorized" in str(e):
+                self._refresh_yf_session()
             return {}
 
     # ── Public: News ──────────────────────────────────────────────────────────
@@ -1422,6 +1438,26 @@ class MultiSourceData:
         except Exception as e:
             logger.debug("[AlphaVantage] candles error for %s: %s", symbol, e)
         return None
+
+    def _refresh_yf_session(self):
+        """Creates a fresh requests session for yfinance with modern headers and timeouts."""
+        if not REQUESTS_OK: return
+        try:
+            self._yf_session = _req.Session()
+            # Rotate user agents or use a very standard one
+            self._yf_session.headers.update({
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "*/*",
+                "Connection": "keep-alive"
+            })
+            # Force a short timeout at the adapter level if possible, 
+            # but yfinance doesn't always respect it. We set it on the session.
+            adapter = _req.adapters.HTTPAdapter(max_retries=2)
+            self._yf_session.mount("https://", adapter)
+            self._yf_session.mount("http://", adapter)
+            logger.info("yfinance session refreshed.")
+        except Exception as e:
+            logger.warning("Failed to refresh yf session: %s", e)
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
