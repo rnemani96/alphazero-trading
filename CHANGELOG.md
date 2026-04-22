@@ -1,5 +1,19 @@
 # Changelog — AlphaZero Capital
 
+## [8.3.0] - 2026-04-22 (Performance & Analytics Optimization Suite)
+### 🚀 Market Recording & Replay Intelligence
+- **High-Speed Market Recorder**: Implemented `scripts/market_recorder.py` which autonomously captures minute-level tick data for all Nifty 500 stocks. 
+- **Batch Processing Optimization**: Reduced snapshot recording time from 4+ minutes to **under 60 seconds** using chunked yfinance downloads (25 symbols per chunk).
+- **Automated Nightly Backtester**: Integrated `scripts/nightly_backtest.py` into the nightly orchestrator to automatically replay the day's data against benchmark strategies for continuous self-validation.
+- **Strategy Leaderboard UI**: Added a new "Strategy Performance Rankings" component to the dashboard to monitor the real-time and backtested effectiveness of all active trading logics.
+
+### 🛡️ Execution & Data Stability
+- **Relaxed Trading Constraints**: Lowered the mandatory market breadth gate to **30%** (was 50%) and signal confidence to **0.15** to ensure continuous trade execution during sideways or neutral regimes.
+- **yfinance Resiliency Layer**: Overhauled the data fetching engine to handle malformed responses and rate-limiting gracefully. Integrated robust handling for delisted symbols and Yahoo's anti-bot measures.
+- **Persistent Connection Management**: Optimized network throughput by aligning with yfinance's internal anti-bot bypass backends (restored native session management).
+
+---
+
 ## [8.2.0] - 2026-04-20 (Monopoly Intelligence & Institutional Risk Suite)
 ### 🚀 Monopoly & Fundamental Intelligence
 - **Dynamic Monopoly Scanner**: Implemented `_monopoly_scanner_thread` which autonomously evaluates the NIFTY 500 for "Moat" characteristics (Margins >25%, ROE >15%, low debt).

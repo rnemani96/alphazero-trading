@@ -42,35 +42,50 @@ def record_minute_data():
     # We use yfinance multi-download for speed (1-minute interval)
     try:
         import yfinance as yf
-        # Process in chunks of 50 to avoid URL length issues
-        chunk_size = 50
+        # Process in chunks of 25 to avoid URL length issues and rate-limiting
+        chunk_size = 25
         for i in range(0, len(symbols), chunk_size):
             chunk = symbols[i:i+chunk_size]
             formatted_symbols = [f"{s}.NS" for s in chunk]
             
-            # Download 1m data for the last 2 minutes to ensure we catch the latest
-            data = yf.download(
-                tickers=formatted_symbols,
-                period="1d",
-                interval="1m",
-                group_by='ticker',
-                auto_adjust=True,
-                prepost=True,
-                threads=True,
-                progress=False
-            )
+            try:
+                # Download 1m data for the last day to get the latest minute
+                # auto_adjust=True and prepost=True can slow down requests significantly
+                data = yf.download(
+                    tickers=formatted_symbols,
+                    period="1d",
+                    interval="1m",
+                    group_by='ticker',
+                    auto_adjust=True,
+                    prepost=False,
+                    threads=False, # Sequential is safer for rate limits
+                    progress=False,
+                    timeout=15
+                )
+                
+                if data is None or data.empty:
+                    continue
+
+                for sym in chunk:
+                    ticker_sym = f"{sym}.NS"
+                    # Check if ticker is in columns (MultiIndex handling)
+                    if ticker_sym in data.columns.get_level_values(0):
+                        try:
+                            df_sym = data[ticker_sym].dropna().tail(1)
+                            if not df_sym.empty:
+                                file_path = save_root / f"{sym}.csv"
+                                # Append to file
+                                df_sym.to_csv(file_path, mode='a', header=not file_path.exists())
+                        except Exception:
+                            continue
+            except Exception as e:
+                logger.warning(f"  Chunk starting with {chunk[0]} failed: {e}")
             
-            for sym in chunk:
-                ticker_sym = f"{sym}.NS"
-                if ticker_sym in data.columns.levels[0]:
-                    df_sym = data[ticker_sym].dropna().tail(1)
-                    if not df_sym.empty:
-                        file_path = save_root / f"{sym}.csv"
-                        # Append to file
-                        df_sym.to_csv(file_path, mode='a', header=not file_path.exists())
+            if (i // chunk_size) % 4 == 0:
+                logger.info(f"  Processed {i + len(chunk)}/{len(symbols)} symbols")
             
-            logger.info(f"  Processed {i + len(chunk)}/{len(symbols)} symbols")
-            time.sleep(1) # Small delay
+            # Anti-rate-limit jitter
+            time.sleep(0.5)
             
     except Exception as e:
         logger.error(f"Recording failed: {e}")

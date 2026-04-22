@@ -11,6 +11,8 @@ __pycache__/
 data/raw/*
 data/clean/*
 data/features/*
+data/raw_recording/*
+data/backtests/*
 !.gitkeep
 
 # Logs
