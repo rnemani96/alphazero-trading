@@ -513,7 +513,6 @@ class DataFetcher:
                 auto_adjust=True,
                 progress=False,
                 threads=True,
-                session=self._session
             )
 
             for sym, yticker in zip(symbols, yahoo_tickers):
@@ -716,7 +715,6 @@ class DataFetcher:
                 interval=yf_interval,
                 auto_adjust=True,
                 progress=False,
-                session=self._session
             )
 
             if df.empty:

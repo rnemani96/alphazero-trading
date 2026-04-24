@@ -55,30 +55,35 @@ def get_best_performing_stocks(limit: int = 40) -> List[Dict]:
     perf_data = []
     # Remove any unwanted symbols or handle formatting
     symbols = [_clean_symbol(s) for s in symbols if s and _clean_symbol(s).upper() not in ["UNDEFINED", "NONE", "NULL", "NAN", "N/A"]]
-    yf_symbols = [f"{s}.NS" for s in symbols]
     
     # Chunk the download to avoid yfinance timeouts/limitations
-    CHUNK_SIZE = 100
+    CHUNK_SIZE = 50 # Smaller chunks are more reliable for bulk data
     from src.data.multi_source_data import get_msd
     msd = get_msd()
     
-    logger.info(f"Downloading data for {len(yf_symbols)} stocks via MultiSourceData (chunks of {CHUNK_SIZE})...")
+    logger.info(f"Downloading data for {len(symbols)} stocks via MultiSourceData (chunks of {CHUNK_SIZE})...")
     
     try:
-        # Use MSD for unified session/crumb handling
-        batch_results = msd.get_bulk_candles(symbols, period="5d", interval="1d")
+        all_results = {}
+        for i in range(0, len(symbols), CHUNK_SIZE):
+            chunk = symbols[i : i + CHUNK_SIZE]
+            logger.debug(f"Processing chunk {i//CHUNK_SIZE + 1} ({len(chunk)} symbols)...")
+            batch_results = msd.get_bulk_candles(chunk, period="5d", interval="1d")
+            if batch_results:
+                all_results.update(batch_results)
+            # Small delay to avoid aggressive rate limiting
+            time.sleep(0.5)
         
-        if not batch_results:
+        if not all_results:
             logger.warning("No data returned from MSD bulk candles. Falling back to default list.")
             return [{"symbol": s, "sector": "AUTO"} for s in symbols[:limit]]
             
         for sym in symbols:
             try:
-                series = [b.close for b in batch_results.get(sym, [])]
+                series = [b.close for b in all_results.get(sym, [])]
                 if len(series) < 2:
                     continue
                 
-                # Performance = (Today / Yesterday - 1)
                 # Performance = (Today / Yesterday - 1)
                 pct = (series[-1] / series[-2] - 1) * 100
                 

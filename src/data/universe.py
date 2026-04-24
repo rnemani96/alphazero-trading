@@ -134,15 +134,19 @@ def get_karma_universe(msd) -> List[str]:
 
     logger.info(f"Generating KARMA universe from {len(all_syms)} NIFTY 500 stocks...")
     
-    # 1. Fetch performance data for all (batched 100 at a time for safety)
+    # 1. Fetch performance data for all (batched 50 at a time for safety)
     performance = []
-    batch_size = 100
+    batch_size = 50
     for i in range(0, len(all_syms), batch_size):
         batch = all_syms[i : i + batch_size]
         quotes = msd.get_bulk_quotes(batch)
         for sym, q in quotes.items():
             chg = q.get("change_pct", 0)
             performance.append((sym, chg))
+        # Small jitter to avoid rate limits
+        if i + batch_size < len(all_syms):
+            import time
+            time.sleep(0.3)
 
     if not performance:
         logger.warning("No performance data found for training universe. Using random sample.")

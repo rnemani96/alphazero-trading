@@ -84,7 +84,6 @@ def record_minute_data():
                     threads=False, # Sequential is safer for rate limits
                     progress=False,
                     timeout=15,
-                    session=_get_yf_session()
                 )
                 
                 if (data is None or data.empty) and len(formatted_symbols) > 0:
@@ -99,7 +98,6 @@ def record_minute_data():
                         threads=False,
                         progress=False,
                         timeout=15,
-                        session=_get_yf_session()
                     )
                 
                 if data is None or data.empty:

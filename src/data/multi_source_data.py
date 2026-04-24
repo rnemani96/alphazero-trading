@@ -339,7 +339,7 @@ class MultiSourceData:
         try:
             s = symbol
             if not s.endswith(".NS") and not s.startswith("^"): s = f"{s}.NS"
-            t = yf.Ticker(s, session=self._yf_session)
+            t = yf.Ticker(s)
             info = getattr(t, "info", {})
             if not info: return {}
             
@@ -605,10 +605,10 @@ class MultiSourceData:
             yfi = {"1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m", "1h": "1h", "1d": "1d"}.get(interval, "1d")
             
             # yfinance.download handles bulk fetching in one request
-            # We pass the session. If it 401s, yfinance might not raise, but return empty.
+            # We let yfinance handle its own session (internal curl_cffi bypass)
             data = yf.download(yf_syms, period=period, interval=yfi, group_by='ticker', 
                                threads=True, progress=False,
-                               timeout=15, session=self._yf_session)
+                               timeout=15)
             
             # Check for Crumb failure (often returns empty or raises 401 in session)
             if data.empty and len(symbols) > 0:
@@ -617,7 +617,7 @@ class MultiSourceData:
                 # Retry once
                 data = yf.download(yf_syms, period=period, interval=yfi, group_by='ticker', 
                                    threads=True, progress=False,
-                                   timeout=20, session=self._yf_session)
+                                   timeout=20)
             
             if data.empty and len(symbols) > 0:
                 # Ultimate fallback: attempt single downloads or use cached data
@@ -895,7 +895,7 @@ class MultiSourceData:
             return None
         try:
             yf_sym = _to_yf(symbol)
-            tk = yf.Ticker(yf_sym, session=self._yf_session)
+            tk = yf.Ticker(yf_sym)
             fi = tk.fast_info
             
             # Fallback chain for price
@@ -970,14 +970,14 @@ class MultiSourceData:
         try:
             yf_syms = [_to_yf(s) for s in symbols]
             # Use yf.download for more reliable bulk OHLCV snapshots
-            data = yf.download(yf_syms, period="1d", interval="1m", progress=False, group_by='ticker', timeout=10, session=self._yf_session)
+            data = yf.download(yf_syms, period="1d", interval="1m", progress=False, group_by='ticker', timeout=10)
             
             if data.empty:
                 logger.warning("[yfinance] Bulk quote download failed. Retrying...")
-                data = yf.download(yf_syms, period="1d", interval="1m", progress=False, group_by='ticker', timeout=10, session=self._yf_session)
+                data = yf.download(yf_syms, period="1d", interval="1m", progress=False, group_by='ticker', timeout=10)
 
             if data.empty:
-                data = yf.download(yf_syms, period="5d", interval="1d", progress=False, group_by='ticker', timeout=10, session=self._yf_session)
+                data = yf.download(yf_syms, period="5d", interval="1d", progress=False, group_by='ticker', timeout=10)
                 
             result = {}
             for sym, yfsym in zip(symbols, yf_syms):
@@ -1031,7 +1031,7 @@ class MultiSourceData:
         if not _RL["yfinance"].acquire(timeout=3):
             return None
         try:
-            tk  = yf.Ticker(_to_yf(symbol), session=self._yf_session)
+            tk  = yf.Ticker(_to_yf(symbol))
             yfi = {"1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m", "1h": "1h", "1d": "1d", "1wk": "1wk"}.get(interval, "1d")
             df  = tk.history(period=period, interval=yfi, auto_adjust=True)
             if df.empty:

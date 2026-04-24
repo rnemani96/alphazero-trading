@@ -1,249 +1,819 @@
 {
-  "timestamp": 1777017724.002756,
+  "timestamp": 1777044689.464022,
   "stocks": [
     {
+      "symbol": "HSCL",
+      "change": 5.58560453658985,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SCHNEIDER",
+      "change": 4.711621613659056,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "COCHINSHIP",
+      "change": 4.514057015295125,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ADANIENSOL",
+      "change": 3.7245143193296526,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "VTL",
+      "change": 3.6266179300143087,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "VIJAYA",
+      "change": 3.501704597195232,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HUDCO",
+      "change": 3.379628375436061,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IDBI",
+      "change": 3.3093648459494585,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ONESOURCE",
+      "change": 3.149387878043708,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RBLBANK",
+      "change": 2.8644523411069045,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NAVINFLUOR",
+      "change": 2.7306743093702623,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PNBHOUSING",
+      "change": 2.5700842881729136,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ASTERDM",
+      "change": 2.5669030018539596,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HFCL",
+      "change": 2.52685546875,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NMDC",
+      "change": 2.267785376588538,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GVT&D",
+      "change": 2.2662553277486452,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "EMCURE",
+      "change": 2.261083770885386,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TEJASNET",
+      "change": 2.200672942393145,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "FLUOROCHEM",
+      "change": 2.112697279703313,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NATCOPHARM",
+      "change": 2.0299594933212983,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CLEAN",
+      "change": 2.004494510837951,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TITAGARH",
+      "change": 2.0018922708904485,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IPCALAB",
+      "change": 1.9526930938245757,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ABSLAMC",
+      "change": 1.928500089153462,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "OFSS",
+      "change": 1.791503156457952,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ADANIGREEN",
+      "change": 1.783142443579866,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JSWINFRA",
+      "change": 1.7169697176011578,
+      "sector": "AUTO"
+    },
+    {
       "symbol": "FIVESTAR",
-      "change": 2.134235555296571,
+      "change": 1.711514090946209,
       "sector": "AUTO"
     },
     {
-      "symbol": "VBL",
-      "change": 0.6917926904523641,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NESTLEIND",
-      "change": 0.5246383845489255,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "COLPAL",
-      "change": 0.3209072012402503,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "OIL",
-      "change": 0.2954196907607898,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MARICO",
-      "change": 0.22467581783893742,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "LINDEINDIA",
-      "change": 0.1520912547528619,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SBIN",
-      "change": 0.08681299263193498,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "DIVISLAB",
-      "change": 0.054871835070935404,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CESC",
-      "change": 0.027751722605406925,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SAMMAANCAP",
-      "change": 0.020796380795062852,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HDFCBANK",
-      "change": -0.04461982492904859,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HDFCAMC",
-      "change": -0.05907442376744676,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "M&M",
-      "change": -0.06562325793361135,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TATATECH",
-      "change": -0.08873114463177068,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GAIL",
-      "change": -0.10912216733995894,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "KSB",
-      "change": -0.16877454844348438,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CANFINHOME",
-      "change": -0.17781458186745258,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HONASA",
-      "change": -0.18783237087505178,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "FINCABLES",
-      "change": -0.1962024335152357,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "VOLTAS",
-      "change": -0.20754064337599187,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "DRREDDY",
-      "change": -0.24793755282682683,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "JBCHEPHARM",
-      "change": -0.2684575895631425,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ZFCVINDIA",
-      "change": -0.28289473684210975,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NYKAA",
-      "change": -0.30170270250425846,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GICRE",
-      "change": -0.3385094351202267,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GODIGIT",
-      "change": -0.34380561386065933,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TATAPOWER",
-      "change": -0.34859401407226764,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CIPLA",
-      "change": -0.3522456160456433,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "INDGN",
-      "change": -0.35500556986800547,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SHYAMMETL",
-      "change": -0.3688237194444999,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "JYOTHYLAB",
-      "change": -0.3907043160691237,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CASTROLIND",
-      "change": -0.39706878547346447,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TATASTEEL",
-      "change": -0.4172418887357865,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "POWERINDIA",
-      "change": -0.4255989911727598,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "JSWSTEEL",
-      "change": -0.4295962143247789,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "PNB",
-      "change": -0.4347421415577313,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ENGINERSIN",
-      "change": -0.45140794393822015,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NTPC",
-      "change": -0.4599145067782806,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "JSWCEMENT",
-      "change": -0.46289051630358236,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "PFC",
-      "change": -0.46828049097834556,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MAXHEALTH",
-      "change": -0.4718152470821968,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SARDAEN",
-      "change": -0.4943681383569043,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TRENT",
-      "change": -0.4963094072758856,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MANKIND",
-      "change": -0.5015482790262649,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "RHIM",
-      "change": -0.5036206496611961,
+      "symbol": "KAJARIACER",
+      "change": 1.6150683451376935,
       "sector": "AUTO"
     },
     {
       "symbol": "CHOLAFIN",
-      "change": -0.524813752611708,
+      "change": 1.6068372661343977,
       "sector": "AUTO"
     },
     {
-      "symbol": "JIOFIN",
-      "change": -0.5429124441540978,
+      "symbol": "SCHAEFFLER",
+      "change": 1.5757920063775854,
       "sector": "AUTO"
     },
     {
-      "symbol": "GESHIP",
-      "change": -0.5514740309309762,
+      "symbol": "POLICYBZR",
+      "change": 1.5501497238952,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "POWERINDIA",
+      "change": 1.5132408575031508,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AARTIIND",
+      "change": 1.4702739199944137,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AEGISLOG",
+      "change": 1.3762787138243526,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "VBL",
+      "change": 1.2803329286590115,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "VOLTAS",
+      "change": 1.2798339674852999,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "COALINDIA",
+      "change": 1.1871754523410827,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CHALET",
+      "change": 1.1605001252132263,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SAIL",
+      "change": 1.1391384530398119,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "USHAMART",
+      "change": 1.1389521640091216,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TARIL",
+      "change": 1.1097275330663514,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TATAPOWER",
+      "change": 1.0922640809584605,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CANFINHOME",
+      "change": 1.0891295761190412,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TRENT",
+      "change": 1.0796420802109408,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CUMMINSIND",
+      "change": 1.0643454325107715,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BRITANNIA",
+      "change": 1.0402891651238644,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TATATECH",
+      "change": 1.002666266914365,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HDFCAMC",
+      "change": 0.9895890004919305,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "COLPAL",
+      "change": 0.981308628751032,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PPLPHARMA",
+      "change": 0.9763874725030819,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AUBANK",
+      "change": 0.8899431397928925,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "POLYCAB",
+      "change": 0.8727318390155059,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ATGL",
+      "change": 0.8283679069948757,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HONASA",
+      "change": 0.8091369482209121,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PTCIL",
+      "change": 0.7875492218263558,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RAMCOCEM",
+      "change": 0.772042192390443,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NESTLEIND",
+      "change": 0.7656893887362681,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MAHABANK",
+      "change": 0.7631664544265337,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NLCINDIA",
+      "change": 0.7409943591303314,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RRKABEL",
+      "change": 0.7262586881328525,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "UNITDSPR",
+      "change": 0.6944928920516347,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PREMIERENE",
+      "change": 0.6845183873666505,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HINDALCO",
+      "change": 0.6722043658820231,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CCL",
+      "change": 0.6688088711062745,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SBIN",
+      "change": 0.625997311943105,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "WHIRLPOOL",
+      "change": 0.5701275658253735,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MARICO",
+      "change": 0.564894497495505,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LTFOODS",
+      "change": 0.5144756946363849,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ASTRAZEN",
+      "change": 0.5143972092473303,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "FINCABLES",
+      "change": 0.4440301202564001,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BANDHANBNK",
+      "change": 0.4427856811307862,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GAIL",
+      "change": 0.39403120152137205,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "KPRMILL",
+      "change": 0.38834688089941505,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JUBLINGREA",
+      "change": 0.38056239116122104,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PIIND",
+      "change": 0.37789461645123534,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GRANULES",
+      "change": 0.36392749917393274,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NYKAA",
+      "change": 0.3589850752321988,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BAJFINANCE",
+      "change": 0.3484523647958371,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PNB",
+      "change": 0.3371459999153892,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SUZLON",
+      "change": 0.33500894604379106,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "WELCORP",
+      "change": 0.27821407307206947,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "FORTIS",
+      "change": 0.27515379476328317,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "EICHERMOT",
+      "change": 0.2678886147338799,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BAJAJ-AUTO",
+      "change": 0.2670017276582337,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "APTUS",
+      "change": 0.23748699126628914,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AWL",
+      "change": 0.23317453199187543,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CESC",
+      "change": 0.22200531220646358,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SHRIRAMFIN",
+      "change": 0.1981571410075489,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JYOTHYLAB",
+      "change": 0.18954400830328844,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DALBHARAT",
+      "change": 0.18888866038615504,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IKS",
+      "change": 0.18811057479439786,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GILLETTE",
+      "change": 0.17943323846059123,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AMBUJACEM",
+      "change": 0.1776239612318431,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GRASIM",
+      "change": 0.15722299188756228,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "KOTAKBANK",
+      "change": 0.12149357841431119,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JINDALSTEL",
+      "change": 0.11956954962135669,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DELHIVERY",
+      "change": 0.0667597495820127,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HDFCBANK",
+      "change": 0.06374705368308309,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GODIGIT",
+      "change": 0.04688041592801895,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JUBLPHARMA",
+      "change": 0.005294211606021726,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AAVAS",
+      "change": 0.0,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ELECON",
+      "change": 0.0,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RELINFRA",
+      "change": 0.0,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CANBK",
+      "change": -0.014189688624077768,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GRSE",
+      "change": -0.03125942679012006,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TBOTEK",
+      "change": -0.04019615645843855,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "OIL",
+      "change": -0.042199133156517465,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BLUEDART",
+      "change": -0.04485044361788315,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BHEL",
+      "change": -0.062201259265892705,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LICI",
+      "change": -0.07392799889668344,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AKZOINDIA",
+      "change": -0.07460565052533896,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PVRINOX",
+      "change": -0.08457468516791522,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AADHARHFC",
+      "change": -0.09210555740384319,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PFC",
+      "change": -0.09578154558220753,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NTPC",
+      "change": -0.09943912902035112,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JSWSTEEL",
+      "change": -0.10342472777445932,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NBCC",
+      "change": -0.11788727170686242,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NIACL",
+      "change": -0.12183792609112842,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LLOYDSME",
+      "change": -0.12958376598622978,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IIFL",
+      "change": -0.16664247346630523,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JUBLFOOD",
+      "change": -0.18261010151947588,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LINDEINDIA",
+      "change": -0.22122364327687993,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GICRE",
+      "change": -0.22567550753075372,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "INDGN",
+      "change": -0.24343486708896522,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DIVISLAB",
+      "change": -0.26652034177314654,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AXISBANK",
+      "change": -0.27014830883682617,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JMFINANCIL",
+      "change": -0.2803733806871378,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CGCL",
+      "change": -0.28275640616093334,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JBCHEPHARM",
+      "change": -0.28336819149267223,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "M&M",
+      "change": -0.30514975152160506,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ENGINERSIN",
+      "change": -0.32419292099368224,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MRPL",
+      "change": -0.33687484226967435,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CHOLAHLDNG",
+      "change": -0.35562175395826845,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CENTRALBK",
+      "change": -0.3597151917840713,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SUPREMEIND",
+      "change": -0.36167972837471973,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IOB",
+      "change": -0.3699518223484355,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RADICO",
+      "change": -0.37509377916826736,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SOBHA",
+      "change": -0.3936437285281813,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TATASTEEL",
+      "change": -0.3982724021172279,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "UBL",
+      "change": -0.4112712909084104,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TMPV",
+      "change": -0.41199379364654787,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ASHOKLEY",
+      "change": -0.4278327172465901,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CREDITACC",
+      "change": -0.4348195754815487,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CONCOR",
+      "change": -0.44550045626816637,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DIXON",
+      "change": -0.469332351723184,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SAREGAMA",
+      "change": -0.4735918270350581,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "KEI",
+      "change": -0.48351900699968864,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BSE",
+      "change": -0.49090384060063164,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MAZDOCK",
+      "change": -0.4974439914426587,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SAMMAANCAP",
+      "change": -0.49913429511482255,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NATIONALUM",
+      "change": -0.5008565070076854,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ONGC",
+      "change": -0.5065544828056767,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MFSL",
+      "change": -0.507708127239892,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ENRIN",
+      "change": -0.5121678513731132,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MEDANTA",
+      "change": -0.5218812152089747,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "KARURVYSYA",
+      "change": -0.5218814117739945,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PHOENIXLTD",
+      "change": -0.5265235062438256,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AMBER",
+      "change": -0.532392559332906,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ADANIENT",
+      "change": -0.5391261888586962,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GODREJIND",
+      "change": -0.5471899806256286,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BPCL",
+      "change": -0.5487352344859309,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "INDIANB",
+      "change": -0.5519413875723411,
       "sector": "AUTO"
     },
     {
@@ -252,1328 +822,1683 @@
       "sector": "AUTO"
     },
     {
-      "symbol": "NSLNISP",
-      "change": -0.5581158634943684,
+      "symbol": "GUJGASLTD",
+      "change": -0.5569932374311803,
       "sector": "AUTO"
     },
     {
-      "symbol": "CONCOR",
-      "change": -0.5642957439503493,
+      "symbol": "AJANTPHARM",
+      "change": -0.5573935460239876,
       "sector": "AUTO"
     },
     {
       "symbol": "TRIVENI",
-      "change": -0.571563212995907,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NATIONALUM",
-      "change": -0.5919194316484022,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GUJGASLTD",
-      "change": -0.6088098713771029,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "LICI",
-      "change": -0.6468305109446626,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "INDHOTEL",
-      "change": -0.6489990358650388,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SUZLON",
-      "change": -0.6886263447553498,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "JUBLFOOD",
-      "change": -0.7000126132303719,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ULTRACEMCO",
-      "change": -0.7068299498643849,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "DIXON",
-      "change": -0.7132011227166113,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "RRKABEL",
-      "change": -0.7192771528020225,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "INDIGO",
-      "change": -0.7287136811347628,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "PAYTM",
-      "change": -0.7502973460248641,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CUMMINSIND",
-      "change": -0.7533466115955512,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GPIL",
-      "change": -0.7641364940470741,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SHRIRAMFIN",
-      "change": -0.7777643595441863,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "YESBANK",
-      "change": -0.7988010081237062,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "RELIANCE",
-      "change": -0.8039339460958805,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "PAGEIND",
-      "change": -0.8165415514289509,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "KARURVYSYA",
-      "change": -0.8249199350273573,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "JMFINANCIL",
-      "change": -0.8267498956237462,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "PGEL",
-      "change": -0.8355995614782064,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MEDANTA",
-      "change": -0.8458203644721829,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "RADICO",
-      "change": -0.8470822058401883,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CANBK",
-      "change": -0.8518470858495664,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GLENMARK",
-      "change": -0.865094268602784,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "DCMSHRIRAM",
-      "change": -0.8733988043972962,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ECLERX",
-      "change": -0.8824503594434208,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "IIFL",
-      "change": -0.8927508889366442,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "KEC",
-      "change": -0.8962447600183387,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "THELEELA",
-      "change": -0.896660375814895,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SUPREMEIND",
-      "change": -0.9001195773186477,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "STARHEALTH",
-      "change": -0.9004694411737679,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MANYAVAR",
-      "change": -0.9084970366328493,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ELECON",
-      "change": -0.9361263370002426,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TMPV",
-      "change": -0.9376383566100488,
+      "change": -0.5596585229041384,
       "sector": "AUTO"
     },
     {
       "symbol": "UCOBANK",
-      "change": -0.9391434715191327,
+      "change": -0.5634918149883372,
       "sector": "AUTO"
     },
     {
-      "symbol": "CENTRALBK",
-      "change": -0.94078627097397,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SAREGAMA",
-      "change": -0.9615402302535547,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HOMEFIRST",
-      "change": -0.96571910128469,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "INDIANB",
-      "change": -0.967269960437056,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MOTHERSON",
-      "change": -0.9746878257125391,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "DALBHARAT",
-      "change": -0.9801956689593827,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NIACL",
-      "change": -0.9929879284987009,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "FEDERALBNK",
-      "change": -0.9986397259327151,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "METROPOLIS",
-      "change": -1.016522275827969,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "DLF",
-      "change": -1.020578258696192,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "IOB",
-      "change": -1.0244752891419018,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TATAELXSI",
-      "change": -1.0251541831522326,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GODREJPROP",
-      "change": -1.0385245999965154,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "IDEA",
-      "change": -1.0438453263686531,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CDSL",
-      "change": -1.0501680772477484,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "LTF",
-      "change": -1.0714791644292787,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "OBEROIRLTY",
-      "change": -1.0774669362216382,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "RECLTD",
-      "change": -1.0891236473810517,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "UBL",
-      "change": -1.0922297535861825,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "IDFCFIRSTB",
-      "change": -1.12045129841426,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GRSE",
-      "change": -1.1321050337088079,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MFSL",
-      "change": -1.1407843151357455,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SCI",
-      "change": -1.15858324597512,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HEROMOTOCO",
-      "change": -1.1625596184419718,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "BLUESTARCO",
-      "change": -1.1640642835137327,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "LALPATHLAB",
-      "change": -1.195050338540582,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MAZDOCK",
-      "change": -1.2176126005489452,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NHPC",
-      "change": -1.227596380111684,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "PRESTIGE",
-      "change": -1.2498141430482113,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NBCC",
-      "change": -1.2646022248953614,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GLAXO",
-      "change": -1.2667400152008068,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TVSMOTOR",
-      "change": -1.27241534790421,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SYRMA",
-      "change": -1.2862251564883076,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CHAMBLFERT",
-      "change": -1.286497335933967,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "JSL",
-      "change": -1.301878801863654,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "PGHH",
-      "change": -1.3043061283207091,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "POWERGRID",
-      "change": -1.3159899012297638,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HINDZINC",
-      "change": -1.317343035734797,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ENRIN",
-      "change": -1.325434380994861,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NIVABUPA",
-      "change": -1.3452953372231402,
+      "symbol": "IGL",
+      "change": -0.5678057529919678,
       "sector": "AUTO"
     },
     {
       "symbol": "KIMS",
-      "change": -1.358886059727138,
+      "change": -0.5725627803812583,
       "sector": "AUTO"
     },
     {
-      "symbol": "ICICIBANK",
-      "change": -1.3649869743369791,
+      "symbol": "CASTROLIND",
+      "change": -0.5765639283068502,
       "sector": "AUTO"
     },
     {
-      "symbol": "NUVAMA",
-      "change": -1.36557909672399,
+      "symbol": "ADANIPOWER",
+      "change": -0.5976276137213743,
       "sector": "AUTO"
     },
     {
-      "symbol": "PETRONET",
-      "change": -1.366879027969592,
+      "symbol": "NSLNISP",
+      "change": -0.6066488851104945,
       "sector": "AUTO"
     },
     {
-      "symbol": "RKFORGE",
-      "change": -1.3778056421892337,
+      "symbol": "HINDZINC",
+      "change": -0.6080013062616629,
       "sector": "AUTO"
     },
     {
-      "symbol": "HINDPETRO",
-      "change": -1.3796714708574132,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HINDCOPPER",
-      "change": -1.383208017516624,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HAVELLS",
-      "change": -1.3885582259773877,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "VGUARD",
-      "change": -1.4082433579119868,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "THERMAX",
-      "change": -1.4237517433139502,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "COROMANDEL",
-      "change": -1.441318938635816,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CHOLAHLDNG",
-      "change": -1.460595714306312,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "LT",
-      "change": -1.4627179250558564,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "IOC",
-      "change": -1.4641116899759665,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CARBORUNIV",
-      "change": -1.4646186773818792,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SUNDARMFIN",
-      "change": -1.465747186063926,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "PFIZER",
-      "change": -1.4676407519236934,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HDFCLIFE",
-      "change": -1.4699822048346523,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TATACONSUM",
-      "change": -1.4775413407018045,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MOTILALOFS",
-      "change": -1.4857432335752985,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TITAN",
-      "change": -1.537080668686186,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CREDITACC",
-      "change": -1.5540742772133243,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "POONAWALLA",
-      "change": -1.5589641528312215,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "BRIGADE",
-      "change": -1.5606089317148797,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NH",
-      "change": -1.5739737946676824,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CAMS",
-      "change": -1.5771059227708828,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SBFC",
-      "change": -1.582835220647849,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "INDUSINDBK",
-      "change": -1.5923695659484038,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GRAVITA",
-      "change": -1.5949094149505516,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "IRFC",
-      "change": -1.6276405141918637,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TITAGARH",
-      "change": -1.6581272573978012,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SOBHA",
-      "change": -1.6659603246593324,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "KPIL",
-      "change": -1.6693018659760694,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "UPL",
-      "change": -1.674324461394805,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GODREJAGRO",
-      "change": -1.6831703311932733,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ITCHOTELS",
-      "change": -1.694273125492285,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CENTURYPLY",
-      "change": -1.7022388473411643,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "RVNL",
-      "change": -1.715435422106859,
+      "symbol": "PGEL",
+      "change": -0.6085332581176162,
       "sector": "AUTO"
     },
     {
       "symbol": "INDUSTOWER",
-      "change": -1.7173244372119867,
+      "change": -0.6177415183079016,
       "sector": "AUTO"
     },
     {
-      "symbol": "MAHSEAMLES",
-      "change": -1.7288843658291975,
+      "symbol": "BLUESTARCO",
+      "change": -0.6230202267927365,
       "sector": "AUTO"
     },
     {
-      "symbol": "SAGILITY",
-      "change": -1.7310874411512578,
+      "symbol": "APOLLOHOSP",
+      "change": -0.6233131988176321,
       "sector": "AUTO"
     },
     {
-      "symbol": "PATANJALI",
-      "change": -1.7433142024565473,
+      "symbol": "IDEA",
+      "change": -0.6262992319437499,
       "sector": "AUTO"
     },
     {
-      "symbol": "FIRSTCRY",
-      "change": -1.7885926293731536,
+      "symbol": "KSB",
+      "change": -0.6290619608738224,
       "sector": "AUTO"
     },
     {
-      "symbol": "CUB",
-      "change": -1.788942526566395,
+      "symbol": "MGL",
+      "change": -0.637418660487099,
       "sector": "AUTO"
     },
     {
-      "symbol": "CRISIL",
-      "change": -1.814465232824336,
+      "symbol": "INDHOTEL",
+      "change": -0.6411817253615615,
       "sector": "AUTO"
     },
     {
-      "symbol": "PTCIL",
-      "change": -1.8188636789799317,
+      "symbol": "RECLTD",
+      "change": -0.6508200631120897,
       "sector": "AUTO"
     },
     {
-      "symbol": "PHOENIXLTD",
-      "change": -1.8204222881936905,
+      "symbol": "CENTURYPLY",
+      "change": -0.6669207213654493,
       "sector": "AUTO"
     },
     {
-      "symbol": "EIHOTEL",
-      "change": -1.8247588646411184,
+      "symbol": "ABREL",
+      "change": -0.6814720441065347,
       "sector": "AUTO"
     },
     {
-      "symbol": "SYNGENE",
-      "change": -1.8326149157608662,
+      "symbol": "ATUL",
+      "change": -0.691244239631339,
       "sector": "AUTO"
     },
     {
-      "symbol": "SIEMENS",
-      "change": -1.8346937205114155,
+      "symbol": "TVSMOTOR",
+      "change": -0.7059507209827731,
       "sector": "AUTO"
     },
     {
-      "symbol": "SBICARD",
-      "change": -1.8367497206983496,
+      "symbol": "GESHIP",
+      "change": -0.7070135624568152,
       "sector": "AUTO"
     },
     {
-      "symbol": "CROMPTON",
-      "change": -1.8390637646845343,
+      "symbol": "LTF",
+      "change": -0.7086154179169912,
       "sector": "AUTO"
     },
     {
-      "symbol": "KEI",
-      "change": -1.841101305016013,
+      "symbol": "INDIGO",
+      "change": -0.7221225272991627,
       "sector": "AUTO"
     },
     {
-      "symbol": "COHANCE",
-      "change": -1.8411601543909417,
+      "symbol": "TORNTPHARM",
+      "change": -0.7233795955620459,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "STARHEALTH",
+      "change": -0.7261812205092255,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MAXHEALTH",
+      "change": -0.7300695888688868,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ACC",
+      "change": -0.7308006881091011,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ASTRAL",
+      "change": -0.7429089504611852,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SHYAMMETL",
+      "change": -0.7557893352367784,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PAGEIND",
+      "change": -0.7902015013828478,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PRESTIGE",
+      "change": -0.7946828773319425,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BANKBARODA",
+      "change": -0.7997363698217241,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "FEDERALBNK",
+      "change": -0.8124556350957102,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CDSL",
+      "change": -0.8159509638122731,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BAJAJHFL",
+      "change": -0.8210339357815344,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CIPLA",
+      "change": -0.8346752592299889,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MARUTI",
+      "change": -0.8510638297872353,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PETRONET",
+      "change": -0.8556562026222903,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "POONAWALLA",
+      "change": -0.8568383091307585,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RHIM",
+      "change": -0.8598452536449086,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "POWERGRID",
+      "change": -0.8616638109327224,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "KEC",
+      "change": -0.8703873986074306,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ANANDRATHI",
+      "change": -0.8774897429988493,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TATACONSUM",
+      "change": -0.8780837723477375,
       "sector": "AUTO"
     },
     {
       "symbol": "LICHSGFIN",
-      "change": -1.8513382479939389,
+      "change": -0.8798438090682037,
       "sector": "AUTO"
     },
     {
-      "symbol": "KALYANKJIL",
-      "change": -1.8650871002047653,
+      "symbol": "IDFCFIRSTB",
+      "change": -0.8845620786145925,
       "sector": "AUTO"
     },
     {
-      "symbol": "GRAPHITE",
-      "change": -1.8807762305703246,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MINDACORP",
-      "change": -1.8841700731504152,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SUMICHEM",
-      "change": -1.9101917323409379,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MRF",
-      "change": -1.9351483861382412,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ICICIGI",
-      "change": -1.9393322897656051,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CAMPUS",
-      "change": -1.9477936158697307,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ETERNAL",
-      "change": -1.9659955390704753,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "OLECTRA",
-      "change": -1.969113089729313,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "IRCTC",
-      "change": -1.9769590752810817,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "LODHA",
-      "change": -1.9848219497956787,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TATACHEM",
-      "change": -1.9923747884532883,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "LTTS",
-      "change": -2.017628005737193,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GMRAIRPORT",
-      "change": -2.032350720504683,
+      "symbol": "SARDAEN",
+      "change": -0.8864560839234481,
       "sector": "AUTO"
     },
     {
       "symbol": "M&MFIN",
-      "change": -2.0366901335088894,
+      "change": -0.8921036880605082,
       "sector": "AUTO"
     },
     {
-      "symbol": "TIMKEN",
-      "change": -2.0527247709719476,
+      "symbol": "HINDPETRO",
+      "change": -0.9020944419060317,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ABBOTINDIA",
+      "change": -0.9051554506099957,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GLAXO",
+      "change": -0.9059607460724206,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "APLAPOLLO",
+      "change": -0.9095864448067426,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ABLBL",
+      "change": -0.9139674139371112,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RKFORGE",
+      "change": -0.9245786460595928,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "YESBANK",
+      "change": -0.94857976806908,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TATAELXSI",
+      "change": -0.9566552497933145,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BHARATFORG",
+      "change": -0.9657956257258071,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DLF",
+      "change": -0.9699730294205344,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PATANJALI",
+      "change": -0.9732594209558854,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LT",
+      "change": -0.9817233879137355,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NHPC",
+      "change": -0.9820714845990897,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ACE",
+      "change": -1.0146732766166844,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TITAN",
+      "change": -1.043419723998651,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "COHANCE",
+      "change": -1.0442395868931253,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DRREDDY",
+      "change": -1.044329407517841,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PFIZER",
+      "change": -1.0453252625512,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PAYTM",
+      "change": -1.052138564826699,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "METROPOLIS",
+      "change": -1.0800520905703825,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IRFC",
+      "change": -1.0850936761279129,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MCX",
+      "change": -1.0926417234016217,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ADANIPORTS",
+      "change": -1.1104902711965292,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ECLERX",
+      "change": -1.1114853486022258,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MANKIND",
+      "change": -1.1121287926234569,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BAJAJHLDNG",
+      "change": -1.1275478244109238,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CUB",
+      "change": -1.1336168170343996,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SBFC",
+      "change": -1.135058160727187,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GRAVITA",
+      "change": -1.153630981833742,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RELIANCE",
+      "change": -1.1612308547293337,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HOMEFIRST",
+      "change": -1.1658277474714263,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MANAPPURAM",
+      "change": -1.17808165788863,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JIOFIN",
+      "change": -1.1783189461187948,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IREDA",
+      "change": -1.1852856545750634,
       "sector": "AUTO"
     },
     {
       "symbol": "KIRLOSENG",
-      "change": -2.0803576342420915,
+      "change": -1.1923289238027435,
       "sector": "AUTO"
     },
     {
-      "symbol": "RCF",
-      "change": -2.0930735880091644,
+      "symbol": "MOTHERSON",
+      "change": -1.1947840417199873,
       "sector": "AUTO"
     },
     {
-      "symbol": "CONCORDBIO",
-      "change": -2.094839175668506,
+      "symbol": "360ONE",
+      "change": -1.2021881125267253,
       "sector": "AUTO"
     },
     {
-      "symbol": "GODREJIND",
-      "change": -2.0983960255082867,
+      "symbol": "BRIGADE",
+      "change": -1.2038998738863382,
       "sector": "AUTO"
     },
     {
-      "symbol": "WIPRO",
-      "change": -2.110869449225883,
+      "symbol": "ETERNAL",
+      "change": -1.2042184984276894,
       "sector": "AUTO"
     },
     {
-      "symbol": "SONACOMS",
-      "change": -2.1321034305572195,
+      "symbol": "GODREJPROP",
+      "change": -1.2060287876011988,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ITC",
+      "change": -1.211916749882802,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "OBEROIRLTY",
+      "change": -1.2121538773641194,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PGHH",
+      "change": -1.217991752181835,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BAJAJFINSV",
+      "change": -1.221690545148213,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BEL",
+      "change": -1.222358006619928,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JSL",
+      "change": -1.2245424271049576,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RVNL",
+      "change": -1.2271700525805174,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MOTILALOFS",
+      "change": -1.2391715363850087,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CAMS",
+      "change": -1.2461106330305727,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CROMPTON",
+      "change": -1.247090915079918,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NIVABUPA",
+      "change": -1.255609633075505,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DCMSHRIRAM",
+      "change": -1.2560286307796265,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ACMESOLAR",
+      "change": -1.2613273803660618,
       "sector": "AUTO"
     },
     {
       "symbol": "EXIDEIND",
-      "change": -2.1742225465712695,
+      "change": -1.2815009955453593,
       "sector": "AUTO"
     },
     {
-      "symbol": "TORNTPOWER",
-      "change": -2.1876799078871634,
+      "symbol": "ZFCVINDIA",
+      "change": -1.3026315789473664,
       "sector": "AUTO"
     },
     {
-      "symbol": "CHOICEIN",
-      "change": -2.1887651574256983,
+      "symbol": "THERMAX",
+      "change": -1.3104404712599105,
       "sector": "AUTO"
     },
     {
-      "symbol": "FINPIPE",
-      "change": -2.1911534025053525,
+      "symbol": "THELEELA",
+      "change": -1.3564833310670599,
       "sector": "AUTO"
     },
     {
-      "symbol": "HBLENGINE",
-      "change": -2.196580283734584,
+      "symbol": "CHAMBLFERT",
+      "change": -1.3759982651513458,
       "sector": "AUTO"
     },
     {
-      "symbol": "UNIONBANK",
-      "change": -2.203553817775028,
+      "symbol": "ITCHOTELS",
+      "change": -1.3765986965872279,
       "sector": "AUTO"
     },
     {
-      "symbol": "MAHSCOOTER",
-      "change": -2.2199318163799275,
+      "symbol": "LAURUSLABS",
+      "change": -1.3773293913308282,
       "sector": "AUTO"
     },
     {
-      "symbol": "ERIS",
-      "change": -2.2282708801289908,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GODFRYPHLP",
-      "change": -2.2384224250636353,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "DABUR",
-      "change": -2.2391277810801635,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SWIGGY",
-      "change": -2.2521671594813997,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NUVOCO",
-      "change": -2.2530039594417683,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TECHNOE",
-      "change": -2.2653631241244754,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CGPOWER",
-      "change": -2.279777496327362,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GSPL",
-      "change": -2.282348303216053,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MMTC",
-      "change": -2.2869936388641543,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "JBMA",
-      "change": -2.2882376555600215,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "DBREALTY",
-      "change": -2.2975392830875463,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "UNOMINDA",
-      "change": -2.318374633915976,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "J&KBANK",
-      "change": -2.3223091992160216,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CRAFTSMAN",
-      "change": -2.348235597703374,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HAL",
-      "change": -2.377943710511199,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "REDINGTON",
-      "change": -2.3880683290643523,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TATAINVEST",
-      "change": -2.406361245377764,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "WOCKPHARMA",
-      "change": -2.4356377892287617,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "KFINTECH",
-      "change": -2.4442406969407804,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "FACT",
-      "change": -2.4469630613282334,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NEWGEN",
-      "change": -2.446963609983943,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ELGIEQUIP",
-      "change": -2.4490546315905526,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "LUPIN",
-      "change": -2.4557957802271324,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ESCORTS",
-      "change": -2.456937105715473,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "FORCEMOT",
-      "change": -2.481927710843379,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "INDIAMART",
-      "change": -2.514578454345795,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NCC",
-      "change": -2.519076951365262,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MUTHOOTFIN",
-      "change": -2.527096155103814,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "IEX",
-      "change": -2.53703219914716,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CERA",
-      "change": -2.5540186482059246,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SRF",
-      "change": -2.584170614202297,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "IGIL",
-      "change": -2.6027012264649096,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "JWL",
-      "change": -2.6047301229732645,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HINDUNILVR",
-      "change": -2.607334082069801,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "KAYNES",
-      "change": -2.618692834750902,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "BOSCHLTD",
-      "change": -2.6350989834135863,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ENDURANCE",
-      "change": -2.6583112917972884,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CAPLIPOINT",
-      "change": -2.680996855999007,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ITI",
-      "change": -2.715155449820661,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "EMAMILTD",
-      "change": -2.770642246161681,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "DEVYANI",
-      "change": -2.777782394937234,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HEXT",
-      "change": -2.8056544359029822,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "DEEPAKNTR",
-      "change": -2.811944832592961,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "BBTC",
-      "change": -2.830248334043328,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "INOXWIND",
-      "change": -2.8391780760929186,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SBILIFE",
-      "change": -2.871834183093447,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "INDIACEM",
-      "change": -2.88846965897237,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SUNDRMFAST",
-      "change": -2.919049413213548,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "DOMS",
-      "change": -2.9573577964188247,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "EIDPARRY",
-      "change": -2.9944901694600956,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "WELSPUNLIV",
-      "change": -3.048694624882964,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HONAUT",
-      "change": -3.078101071975503,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "DEEPAKFERT",
-      "change": -3.087607506652068,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HAPPSTMNDS",
-      "change": -3.087819320919616,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "HEG",
-      "change": -3.0969496485547587,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NEULANDLAB",
-      "change": -3.098083728383516,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "MAPMYINDIA",
-      "change": -3.1249961804780235,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "SONATSOFTW",
-      "change": -3.1465119513325313,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "RAILTEL",
-      "change": -3.1540363506126323,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "VMM",
-      "change": -3.18643322429476,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "RAINBOW",
-      "change": -3.2413229957363954,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "JYOTICNC",
-      "change": -3.266418023798734,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NAUKRI",
-      "change": -3.310251226473615,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ICICIPRULI",
-      "change": -3.3906153171678888,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "PCBL",
-      "change": -3.399045111775467,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "TTML",
-      "change": -3.4680796972578087,
+      "symbol": "IOC",
+      "change": -1.381629478873736,
       "sector": "AUTO"
     },
     {
       "symbol": "DATAPATTNS",
-      "change": -3.496894736313838,
+      "change": -1.38811987929649,
       "sector": "AUTO"
     },
     {
-      "symbol": "HYUNDAI",
-      "change": -3.5191358888449265,
+      "symbol": "ULTRACEMCO",
+      "change": -1.3890030410125709,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HEROMOTOCO",
+      "change": -1.4010333863274993,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GODREJAGRO",
+      "change": -1.4026402640264002,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JSWCEMENT",
+      "change": -1.404630561344411,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SYRMA",
+      "change": -1.4133222586743766,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TTML",
+      "change": -1.413738420978261,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SJVN",
+      "change": -1.4182635548553146,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SIEMENS",
+      "change": -1.4361867664456573,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "J&KBANK",
+      "change": -1.4387335574884363,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ASIANPAINT",
+      "change": -1.4396686798376468,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "INDUSINDBK",
+      "change": -1.4412696845212736,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HINDCOPPER",
+      "change": -1.4469036364377574,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BAYERCROP",
+      "change": -1.4496158102890622,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BHARTIARTL",
+      "change": -1.4501385987372606,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "VGUARD",
+      "change": -1.4681629652387618,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SCI",
+      "change": -1.4729998184172866,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "FIRSTCRY",
+      "change": -1.4743810752172126,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HBLENGINE",
+      "change": -1.4808416562637872,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AUROPHARMA",
+      "change": -1.5048052959839353,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SBICARD",
+      "change": -1.5061347709726447,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "UNIONBANK",
+      "change": -1.5079887666923475,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "3MINDIA",
+      "change": -1.5089784216085755,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GLENMARK",
+      "change": -1.5203426124197006,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GPIL",
+      "change": -1.5282729880941592,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DBREALTY",
+      "change": -1.5285299367353455,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LALPATHLAB",
+      "change": -1.5374938587347287,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "EMAMILTD",
+      "change": -1.5511339526473433,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "EIHOTEL",
+      "change": -1.5533084259077734,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TRITURBINE",
+      "change": -1.5803150974201263,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JBMA",
+      "change": -1.589726923173429,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ERIS",
+      "change": -1.590596256253729,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SAILIFE",
+      "change": -1.5985046855148233,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AIAENG",
+      "change": -1.6006482808361588,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BDL",
+      "change": -1.6089386375639614,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ICICIBANK",
+      "change": -1.617214304757042,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "INOXWIND",
+      "change": -1.6308121104026352,
       "sector": "AUTO"
     },
     {
       "symbol": "MSUMI",
-      "change": -3.5247727777484195,
+      "change": -1.6514621000374041,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NH",
+      "change": -1.651832656945218,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HINDUNILVR",
+      "change": -1.6522927285831712,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "UPL",
+      "change": -1.658743646349914,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SYNGENE",
+      "change": -1.669194302464072,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BHARTIHEXA",
+      "change": -1.6738342101550785,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "WIPRO",
+      "change": -1.6768563763054134,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SONACOMS",
+      "change": -1.6882799431067963,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DMART",
+      "change": -1.718574536758144,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ATHERENERG",
+      "change": -1.7196295839630005,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MAHSEAMLES",
+      "change": -1.7212362944038717,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HAVELLS",
+      "change": -1.7218180117000714,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "OLECTRA",
+      "change": -1.7239950294174577,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "FINPIPE",
+      "change": -1.734660933599319,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HDFCLIFE",
+      "change": -1.7455962216420762,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CGPOWER",
+      "change": -1.7486230117404133,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BERGEPAINT",
+      "change": -1.76037556970976,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GRAPHITE",
+      "change": -1.7653448627115154,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BALKRISIND",
+      "change": -1.7656926690345798,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TATAINVEST",
+      "change": -1.7716330619240606,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "INTELLECT",
+      "change": -1.7756559614235834,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RCF",
+      "change": -1.7863886399636875,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AFFLE",
+      "change": -1.8216147938853733,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "KALYANKJIL",
+      "change": -1.8287557706015423,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MRF",
+      "change": -1.834862385321101,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "KPIL",
+      "change": -1.8354391749901056,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IRCTC",
+      "change": -1.8409293240866709,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LODHA",
+      "change": -1.8447154457640114,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BOSCHLTD",
+      "change": -1.8459069020866803,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ITI",
+      "change": -1.8627623986886221,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SAGILITY",
+      "change": -1.897081507700138,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "REDINGTON",
+      "change": -1.9032069456394907,
       "sector": "AUTO"
     },
     {
       "symbol": "GMDCLTD",
-      "change": -3.5586129694326396,
+      "change": -1.9037856725183322,
       "sector": "AUTO"
     },
     {
-      "symbol": "JKCEMENT",
-      "change": -3.6902914295568245,
+      "symbol": "MUTHOOTFIN",
+      "change": -1.906550912720173,
       "sector": "AUTO"
     },
     {
-      "symbol": "LATENTVIEW",
-      "change": -3.7514594364076226,
+      "symbol": "NCC",
+      "change": -1.9074687587057326,
       "sector": "AUTO"
     },
     {
-      "symbol": "KIRLOSBROS",
-      "change": -3.7532255355752775,
+      "symbol": "SRF",
+      "change": -1.9194385840918704,
       "sector": "AUTO"
     },
     {
-      "symbol": "SUNTV",
-      "change": -3.7708678607588975,
+      "symbol": "LUPIN",
+      "change": -1.9347316382030577,
       "sector": "AUTO"
     },
     {
-      "symbol": "SAPPHIRE",
-      "change": -3.7772861898969223,
+      "symbol": "DABUR",
+      "change": -1.9347812818444332,
       "sector": "AUTO"
     },
     {
-      "symbol": "JSWENERGY",
-      "change": -3.794094745606047,
+      "symbol": "CRISIL",
+      "change": -1.9407887616918473,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "FORCEMOT",
+      "change": -1.9421686746987965,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MAHSCOOTER",
+      "change": -1.9424403393324297,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "UNOMINDA",
+      "change": -1.9467304198987678,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "APOLLOTYRE",
+      "change": -1.988670565558559,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "VEDL",
+      "change": -1.991566593954397,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HAL",
+      "change": -1.9919631318207953,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ZYDUSLIFE",
+      "change": -2.0024252824798805,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NETWEB",
+      "change": -2.0136254414627297,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GMRAIRPORT",
+      "change": -2.021987275271464,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LTTS",
+      "change": -2.0234243637559324,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RAINBOW",
+      "change": -2.026810029327686,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SWIGGY",
+      "change": -2.0303640802935674,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SHREECEM",
+      "change": -2.0416175893207655,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TATACHEM",
+      "change": -2.0418273219986904,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MINDACORP",
+      "change": -2.0605228085325944,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TECHNOE",
+      "change": -2.061236742045225,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TRIDENT",
+      "change": -2.0777184029789564,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CAMPUS",
+      "change": -2.0803183436872486,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ANGELONE",
+      "change": -2.0827504185348067,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ICICIGI",
+      "change": -2.088515847186778,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BEML",
+      "change": -2.1134810599017895,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GODFRYPHLP",
+      "change": -2.140904500575236,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JWL",
+      "change": -2.1489938239482864,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NUVOCO",
+      "change": -2.152874524576176,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TORNTPOWER",
+      "change": -2.1588946459412783,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ELGIEQUIP",
+      "change": -2.163038271899931,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "COROMANDEL",
+      "change": -2.1815863778199995,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IGIL",
+      "change": -2.1947067886671445,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RITES",
+      "change": -2.210490340127058,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NUVAMA",
+      "change": -2.2299667509788623,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ABFRL",
+      "change": -2.231012389858922,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "VMM",
+      "change": -2.235262557356521,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HEG",
+      "change": -2.2366863645968293,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MMTC",
+      "change": -2.242152415227905,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SUNDARMFIN",
+      "change": -2.2510484787083618,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CHOICEIN",
+      "change": -2.2584709999614594,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JINDALSAW",
+      "change": -2.2627214120103267,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BANKINDIA",
+      "change": -2.2670012959755015,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BIOCON",
+      "change": -2.2765346079565263,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TIMKEN",
+      "change": -2.29160294886549,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "APLLTD",
+      "change": -2.3024406122967522,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IRCON",
+      "change": -2.327699453848464,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CRAFTSMAN",
+      "change": -2.3288820076124095,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BASF",
+      "change": -2.3331715484123383,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ASAHIINDIA",
+      "change": -2.3417833014299227,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BATAINDIA",
+      "change": -2.3440539986960385,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IRB",
+      "change": -2.3476319039240523,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ESCORTS",
+      "change": -2.3481399568411887,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GSPL",
+      "change": -2.3599556166691738,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DEEPAKNTR",
+      "change": -2.401984814337743,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CARBORUNIV",
+      "change": -2.4129354273699,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "INDIAMART",
+      "change": -2.4219601302535643,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SIGNATURE",
+      "change": -2.4240654205607504,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BLUEJET",
+      "change": -2.454653904832982,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JYOTICNC",
+      "change": -2.458099546545156,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "WOCKPHARMA",
+      "change": -2.4911543281003756,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "WELSPUNLIV",
+      "change": -2.5018699160229363,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DEEPAKFERT",
+      "change": -2.5131641444418817,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "IFCI",
+      "change": -2.5708198831991824,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AEGISVOPAK",
+      "change": -2.5787053922185277,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "APARINDS",
+      "change": -2.584896097313738,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CERA",
+      "change": -2.586931972880202,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ABCAPITAL",
+      "change": -2.6161526508890254,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "KFINTECH",
+      "change": -2.632654646945287,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "MANYAVAR",
+      "change": -2.6497945757000374,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ALOKINDS",
+      "change": -2.6637860072980413,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BLS",
+      "change": -2.7014598821757163,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SUNDRMFAST",
+      "change": -2.712712217357749,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "DOMS",
+      "change": -2.717914352945805,
       "sector": "AUTO"
     },
     {
       "symbol": "ZENTEC",
-      "change": -3.857768082002433,
+      "change": -2.7190290544656825,
       "sector": "AUTO"
     },
     {
-      "symbol": "HCLTECH",
-      "change": -3.9406529495960463,
+      "symbol": "CAPLIPOINT",
+      "change": -2.7432126696832593,
       "sector": "AUTO"
     },
     {
-      "symbol": "SOLARINDS",
-      "change": -4.007112465866514,
+      "symbol": "KAYNES",
+      "change": -2.755438731984494,
       "sector": "AUTO"
     },
     {
-      "symbol": "JKTYRE",
-      "change": -4.077000911732687,
+      "symbol": "NEWGEN",
+      "change": -2.804034012260237,
       "sector": "AUTO"
     },
     {
-      "symbol": "ZENSARTECH",
-      "change": -4.080197054658996,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "LEMONTREE",
-      "change": -4.137532937339494,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NAVA",
-      "change": -4.271446500700038,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CEATLTD",
-      "change": -4.365187626537703,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "NAM-INDIA",
-      "change": -4.389740675540532,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GODREJCP",
-      "change": -4.435885501363557,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "ZEEL",
-      "change": -4.518042149663637,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "CHENNPETRO",
-      "change": -4.549707490182886,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "GLAND",
-      "change": -4.572795726274492,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "INOXINDIA",
-      "change": -4.757655711955422,
+      "symbol": "SONATSOFTW",
+      "change": -2.8137062489937414,
       "sector": "AUTO"
     },
     {
       "symbol": "PRAJIND",
-      "change": -4.901835430875767,
+      "change": -2.8289174323288258,
       "sector": "AUTO"
     },
     {
-      "symbol": "CYIENT",
-      "change": -4.920402567245952,
+      "symbol": "MAPMYINDIA",
+      "change": -2.840431339983518,
       "sector": "AUTO"
     },
     {
-      "symbol": "TCS",
-      "change": -5.012298518398117,
+      "symbol": "SUMICHEM",
+      "change": -2.8820361306029607,
       "sector": "AUTO"
     },
     {
-      "symbol": "TECHM",
-      "change": -5.051005897159689,
+      "symbol": "DEVYANI",
+      "change": -2.8867104207164873,
       "sector": "AUTO"
     },
     {
-      "symbol": "FSL",
-      "change": -5.084212906938069,
+      "symbol": "IEX",
+      "change": -2.9073391626589062,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JSWENERGY",
+      "change": -2.9301766105550575,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AIIL",
+      "change": -2.9496737006415086,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PCBL",
+      "change": -2.9552504416161196,
       "sector": "AUTO"
     },
     {
       "symbol": "JPPOWER",
-      "change": -5.281686526087648,
+      "change": -2.967798139567457,
       "sector": "AUTO"
     },
     {
-      "symbol": "AGARWALEYE",
-      "change": -5.287151499585652,
+      "symbol": "EIDPARRY",
+      "change": -3.0403855830979376,
       "sector": "AUTO"
     },
     {
-      "symbol": "TIINDIA",
-      "change": -5.312945361079057,
+      "symbol": "NTPCGREEN",
+      "change": -3.05826815092215,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ENDURANCE",
+      "change": -3.088815144984325,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BBTC",
+      "change": -3.1028918421372897,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "WAAREEENER",
+      "change": -3.1438631358958413,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LATENTVIEW",
+      "change": -3.148549415785895,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AFCONS",
+      "change": -3.185597506293958,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CHENNPETRO",
+      "change": -3.207710395759855,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CONCORDBIO",
+      "change": -3.237472914267858,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SBILIFE",
+      "change": -3.238332255482934,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ALKYLAMINE",
+      "change": -3.2393458632172134,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NAUKRI",
+      "change": -3.2513114270248167,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ABB",
+      "change": -3.2605108573691477,
       "sector": "AUTO"
     },
     {
       "symbol": "KPITTECH",
-      "change": -5.493089005253027,
+      "change": -3.27813644487136,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HYUNDAI",
+      "change": -3.285976422861847,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SAPPHIRE",
+      "change": -3.3614370370487867,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ZEEL",
+      "change": -3.3885337038680574,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HAPPSTMNDS",
+      "change": -3.4487352807037963,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "RAILTEL",
+      "change": -3.4535506995632237,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "FACT",
+      "change": -3.46698634151672,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LEMONTREE",
+      "change": -3.4794796146681906,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "KIRLOSBROS",
+      "change": -3.5303749059166556,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SUNPHARMA",
+      "change": -3.5533570644243673,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SWANCORP",
+      "change": -3.592902056434466,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ARE&M",
+      "change": -3.624217237309413,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JKCEMENT",
+      "change": -3.6989136057941074,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "VENTIVE",
+      "change": -3.726362078722334,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TATACOMM",
+      "change": -3.802111560855148,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NEULANDLAB",
+      "change": -3.8191894237831314,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TIINDIA",
+      "change": -3.8259717438155927,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "INDIACEM",
+      "change": -3.86701100223078,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "INOXINDIA",
+      "change": -3.9169480260038303,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HONAUT",
+      "change": -3.9356814701378307,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ICICIPRULI",
+      "change": -3.9417104552780358,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "OLAELEC",
+      "change": -3.945242813272809,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HEXT",
+      "change": -4.014245356319313,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "HCLTECH",
+      "change": -4.020423212796043,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SUNTV",
+      "change": -4.106407633524956,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BSOFT",
+      "change": -4.246754832081978,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NAVA",
+      "change": -4.315188584348329,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "SOLARINDS",
+      "change": -4.388137423001204,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TECHM",
+      "change": -4.4319380935631365,
       "sector": "AUTO"
     },
     {
       "symbol": "MPHASIS",
-      "change": -5.7312252964426875,
+      "change": -4.444442300038432,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BIKAJI",
+      "change": -4.470047892454321,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "BALRAMCHIN",
+      "change": -4.47899551245301,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GLAND",
+      "change": -4.561658867125784,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "GODREJCP",
+      "change": -4.641491668416453,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AKUMS",
+      "change": -4.670993921599864,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "AGARWALEYE",
+      "change": -4.874602602214173,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "TCS",
+      "change": -4.952817196685199,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "POLYMED",
+      "change": -4.95968070081485,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "JKTYRE",
+      "change": -4.9976144916313086,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "NAM-INDIA",
+      "change": -5.097144054922953,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ALKEM",
+      "change": -5.17163300425686,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ZENSARTECH",
+      "change": -5.3254478696289524,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "LTM",
+      "change": -5.499287108297468,
       "sector": "AUTO"
     },
     {
       "symbol": "RPOWER",
-      "change": -6.114988844324221,
+      "change": -5.6164856280742415,
       "sector": "AUTO"
     },
     {
       "symbol": "COFORGE",
-      "change": -6.1445192118734,
+      "change": -5.710302520562982,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CEATLTD",
+      "change": -6.215942923814765,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "PERSISTENT",
+      "change": -6.276166358028556,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "CYIENT",
+      "change": -6.715464791278558,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "INFY",
+      "change": -6.932129751121597,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "FSL",
+      "change": -6.995240486482834,
+      "sector": "AUTO"
+    },
+    {
+      "symbol": "ANANTRAJ",
+      "change": -9.377757198141234,
       "sector": "AUTO"
     },
     {
       "symbol": "UTIAMC",
-      "change": -10.297882672710957,
+      "change": -10.659974104333491,
       "sector": "AUTO"
     }
   ]
