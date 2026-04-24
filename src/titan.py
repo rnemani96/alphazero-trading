@@ -347,8 +347,8 @@ class TitanStrategyEngine:
         x = np.arange(14); y = c[-14:]
         slope = np.polyfit(x, y, 1)[0]
         norm_slope = slope / c[-1] * 100
-        if norm_slope > 0.05:  return Signal("T10","LinReg Slope","Trend",1, min(0.85, 0.5+abs(norm_slope)*3), f"Positive slope={norm_slope:.3f}%/bar","15m",{"slope":slope})
-        if norm_slope < -0.05: return Signal("T10","LinReg Slope","Trend",-1, min(0.85, 0.5+abs(norm_slope)*3), f"Negative slope={norm_slope:.3f}%/bar","15m",{"slope":slope})
+        if norm_slope > 0.08:  return Signal("T10","LinReg Slope","Trend",1, min(0.85, 0.5+abs(norm_slope)*3), f"Positive slope={norm_slope:.3f}%/bar","15m",{"slope":slope})
+        if norm_slope < -0.08: return Signal("T10","LinReg Slope","Trend",-1, min(0.85, 0.5+abs(norm_slope)*3), f"Negative slope={norm_slope:.3f}%/bar","15m",{"slope":slope})
         return Signal("T10","LinReg Slope","Trend",0,0.28,"Flat trend","15m",{})
 
     def t11_elder(self, df, ind):

@@ -59,49 +59,31 @@ def get_best_performing_stocks(limit: int = 40) -> List[Dict]:
     
     # Chunk the download to avoid yfinance timeouts/limitations
     CHUNK_SIZE = 100
-    all_data = []
+    from src.data.multi_source_data import get_msd
+    msd = get_msd()
     
-    logger.info(f"Downloading data for {len(yf_symbols)} stocks via yfinance (chunks of {CHUNK_SIZE})...")
+    logger.info(f"Downloading data for {len(yf_symbols)} stocks via MultiSourceData (chunks of {CHUNK_SIZE})...")
     
     try:
-        for i in range(0, len(yf_symbols), CHUNK_SIZE):
-            chunk = yf_symbols[i:i + CHUNK_SIZE]
-            try:
-                chunk_data = yf.download(chunk, period="5d", interval="1d", progress=False, group_by='ticker')
-                if not chunk_data.empty:
-                    all_data.append(chunk_data)
-                # Small throttle between chunks
-                time.sleep(1)
-            except Exception as chunk_err:
-                logger.warning(f"Chunk download failed for {len(chunk)} symbols: {chunk_err}")
-                continue
-
-        if not all_data:
-            logger.warning("No data returned from any yfinance chunks. Falling back to default list.")
+        # Use MSD for unified session/crumb handling
+        batch_results = msd.get_bulk_candles(symbols, period="5d", interval="1d")
+        
+        if not batch_results:
+            logger.warning("No data returned from MSD bulk candles. Falling back to default list.")
             return [{"symbol": s, "sector": "AUTO"} for s in symbols[:limit]]
             
-        # Merge all dataframes
-        data = pd.concat(all_data, axis=1)
-            
-        for sym_ns in yf_symbols:
+        for sym in symbols:
             try:
-                # Handle multi-index if necessary (group_by='ticker' helps)
-                if sym_ns not in data.columns.get_level_values(0):
-                    continue
-                
-                ticker_data = data[sym_ns]
-                if 'Close' not in ticker_data.columns:
-                    continue
-                    
-                series = ticker_data['Close'].dropna()
+                series = [b.close for b in batch_results.get(sym, [])]
                 if len(series) < 2:
                     continue
                 
                 # Performance = (Today / Yesterday - 1)
-                pct = (series.iloc[-1] / series.iloc[-2] - 1) * 100
+                # Performance = (Today / Yesterday - 1)
+                pct = (series[-1] / series[-2] - 1) * 100
                 
                 perf_data.append({
-                    "symbol": sym_ns.replace(".NS", ""),
+                    "symbol": sym,
                     "change": pct,
                     "sector": "AUTO"
                 })
@@ -125,6 +107,7 @@ def get_best_performing_stocks(limit: int = 40) -> List[Dict]:
     except Exception as e:
         logger.error(f"Discovery momentum scan failed: {e}")
         return [{"symbol": s, "sector": "AUTO"} for s in symbols[:limit]]
+
 def get_market_movers(limit: int = 10, index: str = "NIFTY 100") -> Dict[str, List[Dict]]:
     """
     Discovers both top gainers and top losers from the specified index.
@@ -137,44 +120,27 @@ def get_market_movers(limit: int = 10, index: str = "NIFTY 100") -> Dict[str, Li
         return {"gainers": [], "losers": []}
         
     symbols = [_clean_symbol(s) for s in symbols if s]
-    yf_symbols = [f"{s}.NS" for s in symbols]
+    from src.data.multi_source_data import get_msd
+    msd = get_msd()
+    
     movers = []
-    CHUNK_SIZE = 100
-    all_chunks = []
-    
-    logger.info(f"Downloading data for {len(yf_symbols)} stocks via yfinance (chunks of {CHUNK_SIZE})...")
-    
     try:
-        for i in range(0, len(yf_symbols), CHUNK_SIZE):
-            chunk = yf_symbols[i:i + CHUNK_SIZE]
-            try:
-                chunk_data = yf.download(chunk, period="2d", interval="1d", progress=False, group_by='ticker')
-                if not chunk_data.empty:
-                    all_chunks.append(chunk_data)
-                time.sleep(1)
-            except Exception as e:
-                logger.warning(f"Movers chunk failed: {e}")
-                continue
-
-        if not all_chunks:
+        batch_results = msd.get_bulk_candles(symbols, period="2d", interval="1d")
+        
+        if not batch_results:
             return {"gainers": [], "losers": []}
             
-        data = pd.concat(all_chunks, axis=1)
-            
-        for sym_ns in yf_symbols:
+        for sym in symbols:
             try:
-                if sym_ns not in data.columns.get_level_values(0):
-                    continue
-                ticker_data = data[sym_ns]
-                series = ticker_data['Close'].dropna()
+                series = [b.close for b in batch_results.get(sym, [])]
                 if len(series) < 2:
                     continue
                 
-                pct = (series.iloc[-1] / series.iloc[-2] - 1) * 100
+                pct = (series[-1] / series[-2] - 1) * 100
                 movers.append({
-                    "symbol": sym_ns.replace(".NS", ""),
+                    "symbol": sym,
                     "change": pct,
-                    "price": series.iloc[-1]
+                    "price": series[-1]
                 })
             except Exception:
                 continue

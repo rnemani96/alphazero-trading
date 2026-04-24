@@ -60,10 +60,15 @@ def record_minute_data():
     # We use yfinance multi-download for speed (1-minute interval)
     try:
         import yfinance as yf
-        # Process in chunks of 25 to avoid URL length issues and rate-limiting
         chunk_size = 25
+        from src.data.multi_source_data import get_msd
+        msd = get_msd()
         for i in range(0, len(symbols), chunk_size):
             chunk = symbols[i:i+chunk_size]
+            # Filter blacklisted symbols
+            chunk = [s for s in chunk if not msd._is_dead(s)]
+            if not chunk: continue
+            
             formatted_symbols = [f"{s}.NS" for s in chunk]
             
             try:
@@ -83,8 +88,7 @@ def record_minute_data():
                 )
                 
                 if (data is None or data.empty) and len(formatted_symbols) > 0:
-                    logger.warning("Empty data. Potential rate limit or crumb error. Refreshing...")
-                    _refresh_yf_session()
+                    logger.warning("Empty data. Potential rate limit or crumb error. Retrying...")
                     data = yf.download(
                         tickers=formatted_symbols,
                         period="1d",

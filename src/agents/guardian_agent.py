@@ -97,7 +97,7 @@ class GuardianAgent(BaseAgent):
         self.consec_losses      = 0
         self.kill_switch_active = False
         self.cooldown_until: Optional[datetime] = None
-        self.max_strategy_positions = 3
+        self.max_strategy_positions = 4
         self.last_trade_time: Optional[datetime] = None
         self.trade_decisions    = 0
         self.last_reset_date    = date.today()
@@ -456,6 +456,10 @@ class GuardianAgent(BaseAgent):
         
         if is_paper or now.weekday() >= 5:
             return True
+            
+        total_mins = hour * 60 + minute
+        open_mins  = 9 * 60 + 15
+        close_mins = 15 * 60 + 25
         return open_mins <= total_mins <= close_mins
 
     def get_stats(self) -> Dict[str, Any]:

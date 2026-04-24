@@ -284,6 +284,8 @@ _state: Dict[str, Any] = {
 }
 _state_lock = threading.Lock()
 STATE_FILE  = "data/alphazero_state.json"
+OVERRIDES_FILE = "config/daily_overrides.json"
+_daily_overrides = {}
 
 
 def _write_state():
@@ -409,14 +411,24 @@ def _write_state():
                 # Force UTF-8 encoding to prevent crashes on Windows with non-latin1 characters (e.g. emojis)
                 with open(tmp_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2, default=_safe_serialize)
-                os.replace(tmp_path, path)  # Atomic on Windows, overwrites if exists safely
+                
+                # Atomic on POSIX, nearly atomic on Windows
+                # On Windows, os.replace can fail if another process has the file open (e.g. Dashboard).
+                # We retry up to 5 times with small delay.
+                for attempt in range(5):
+                    try:
+                        os.replace(tmp_path, path)
+                        break
+                    except PermissionError:
+                        if attempt == 4: raise
+                        time.sleep(0.2)
             except Exception as e:
                 if os.path.exists(tmp_path): 
                     try:
                         os.remove(tmp_path)
                     except Exception:
                         pass
-                raise e
+                logger.warning(f"State write failure for {path}: {e}")
 
         # Write files robustly under lock to prevent sharing violations
         with _state_lock:
@@ -579,6 +591,21 @@ def _aggregate_signals(
         MIN_AGG_CONF = 0.15
         MIN_AGREEMENT = 1
 
+    # 🕒 Apply Chronos Daily Overrides (Daily Pulse Analysis)
+    conf_boost = _daily_overrides.get("min_confidence_boost", 0.0)
+    if conf_boost != 0:
+        MIN_AGG_CONF = max(0.1, MIN_AGG_CONF + conf_boost)
+        logger.info("🕒 CHRONOS: Adjusted MIN_AGG_CONF by %.2f -> %.2f", conf_boost, MIN_AGG_CONF)
+
+    # 🚫 Restricted Strategies
+    restricted = _daily_overrides.get("restricted_strategies", [])
+    priority = _daily_overrides.get("priority_strategies", [])
+
+    # 🚨 Apply Volatility Throttle (Morning VIX > 18)
+    if _state.get('volatility_throttle'):
+        MIN_AGG_CONF += 0.10
+        logger.info("🛡️ VOLATILITY GATE: Increased MIN_AGG_CONF to %.2f", MIN_AGG_CONF)
+
     TITAN_W  = 0.45
     NEXUS_W  = 0.30
     HERMES_W = 0.25
@@ -640,6 +667,18 @@ def _aggregate_signals(
         # Weighted aggregate
         agg_conf = TITAN_W * tc + NEXUS_W * nexus_conf + HERMES_W * hermes_conf
         
+        # ── Lunch Zone Dynamic Gate (12:00 - 13:30 IST) ──
+        # Relaxed from hard block: Apply penalty unless volume is high
+        now_ist = datetime.now(IST)
+        total_mins = now_ist.hour * 60 + now_ist.minute
+        if 12 * 60 <= total_mins <= 13 * 60 + 30:
+            rel_vol = float(sig.get('rel_vol', 1.0))
+            if rel_vol < 1.5:
+                agg_conf *= 0.85  # 15% penalty for low-volume lunch trades
+                logger.debug(f"🍱 LUNCH ZONE: {sym} penalized (Vol {rel_vol:.1f}x < 1.5x)")
+            else:
+                logger.info(f"🍱 LUNCH ZONE: {sym} exempt from penalty (Strong Vol {rel_vol:.1f}x)")
+
         if len(approved) < 5:
             logger.debug(f"CONF_BREAKDOWN: {sym} | Agg: {agg_conf:.3f} (Titan:{tc:.2f}*0.45 + Nexus:{nexus_conf:.2f}*0.30 + Hermes:{hermes_conf:.2f}*0.25)")
 
@@ -648,6 +687,14 @@ def _aggregate_signals(
         if regime == "SIDEWAYS" and any(m in strat_name for m in ["T1", "T2", "T10"]):
             agg_conf *= 0.9   # Reduced penalty from 0.7 to 0.9 to allow strong signals through
             logger.debug("AGGREGATE: %s penalized (Trend strat in Side market)", sym)
+            
+        # 🕒 CHRONOS Strategy Overrides
+        if any(r in strat_name for r in restricted):
+            agg_conf *= 0.8 # 20% penalty for restricted strategies
+            logger.debug("🕒 CHRONOS: %s restricted strategy penalty applied to %s", strat_name, sym)
+        if any(p in strat_name for p in priority):
+            agg_conf = min(0.99, agg_conf * 1.15) # 15% boost for priority strategies
+            logger.info("🕒 CHRONOS: %s priority strategy boost applied to %s", strat_name, sym)
 
         # Logic for 'agreement' (AlphaZero v5.0 Aggression Scaling)
         agreement_count = sum([1 for c in [tc, nexus_conf, hermes_conf] if c >= 0.5])
@@ -1046,6 +1093,23 @@ def _post_market_tasks():
         except Exception as exc:
             logger.warning("Walk-forward backtest failed: %s", exc)
 
+def _run_chronos_analysis():
+    """Run the Daily Pulse Analyzer and load overrides."""
+    global _daily_overrides
+    try:
+        from scripts.daily_pulse_analyzer import analyze_pulse
+        logger.info("🕒 Chronos: Analyzing market pulse...")
+        _daily_overrides = analyze_pulse()
+        _state['chronos_last_run'] = datetime.now(IST).isoformat()
+    except Exception as e:
+        logger.warning(f"Chronos analysis failed: {e}")
+        # Fallback to loading existing file
+        if os.path.exists(OVERRIDES_FILE):
+            try:
+                with open(OVERRIDES_FILE, "r") as f:
+                    _daily_overrides = json.load(f)
+            except: pass
+
 
 # ── Main iteration ────────────────────────────────────────────────────────────
 
@@ -1380,6 +1444,18 @@ def _run_iteration():
 
     # ── Step 7: TITAN signals ─────────────────────────────────────────────────
     signals: List[Dict] = []
+    
+    # 🚨 Volatility Gating: Prevent aggressive morning batch entries if VIX > 18
+    _now = datetime.now(IST)
+    is_market_open_period = (9 * 60 + 15 <= _now.hour * 60 + _now.minute <= 9 * 60 + 45)
+    if is_market_open_period and vix > 18.0:
+        logger.warning("🛡️ VOLATILITY GATE: Morning volatility high (VIX=%.1f > 18). Throttling batch entries.", vix)
+        # We don't block entirely, but we'll be more selective in Step 9 or TITAN can use this info.
+        # For now, we just log it, but we can also set a flag for _aggregate_signals.
+        _state['volatility_throttle'] = True
+    else:
+        _state['volatility_throttle'] = False
+
     if (market_hours or settings.MODE == "PAPER") and agents.get('TITAN'):
         try:
             # Pass multi-agent scores to TITAN for internal boosting
@@ -2219,17 +2295,14 @@ def _monopoly_scanner_thread():
                 
                 for sym in chunk:
                     try:
-                        ticker = yf.Ticker(sym if sym.endswith(".NS") else f"{sym}.NS")
-                        info = ticker.info
+                        # Use MSD instead of direct yf.Ticker to benefit from session/cache
+                        info = MSD.get_stock_fundamentals(sym)
+                        if not info: continue
                         
-                        # MONOPOLY CRITERIA:
-                        # 1. Operating Margins > 25% (High pricing power)
-                        # 2. Return on Equity > 15% (Efficient capital use)
-                        # 3. Debt to Equity < 0.5 (Financial stability)
-                        
-                        margin = info.get("operatingMargins", 0) or 0
-                        roe = info.get("returnOnEquity", 0) or 0
-                        debt_equity = info.get("debtToEquity", 100) or 100
+                        # MONOPOLY CRITERIA (from centralized MSD fundamentals)
+                        margin = info.get("operating_margin", 0) or 0
+                        roe = info.get("roe", 0) or 0
+                        debt_equity = info.get("debt_equity", 100) or 100
                         
                         if margin > 0.25 and roe > 0.15 and debt_equity < 50:
                             monopolies.append(sym)
@@ -2344,6 +2417,14 @@ def main():
             
             # 🌙 Nightly Intelligence Refresh (Requirement #2.1, #2.2)
             now_ist = datetime.now(IST)
+            
+            # 🕒 Chronos Morning Analysis (09:00 - 09:10 IST)
+            if now_ist.hour == 9 and 0 <= now_ist.minute <= 10 and not _state.get('chronos_done_today'):
+                _run_chronos_analysis()
+                _state['chronos_done_today'] = True
+            elif now_ist.hour != 9:
+                _state['chronos_done_today'] = False
+
             if (now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 35)) and not _state.get('nightly_training_done'):
                 _run_nightly_tasks()
                 _state['nightly_training_done'] = True

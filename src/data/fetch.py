@@ -151,6 +151,10 @@ class DataFetcher:
         self._ohlcv_cache:    Dict[tuple, List[Dict]] = {}
         self.ohlcv_cache_ttl  = 300   # 5-minute TTL for candles
         
+        # yfinance session stabilization
+        self._session = None
+        self._refresh_session()
+        
     def get_stock_fundamentals(self, symbol: str) -> Dict[str, Any]:
         """Fetch company fundamentals (PE, Market Cap, etc) via yfinance. Requirement #2."""
         s = _to_yahoo(symbol)
@@ -315,6 +319,20 @@ class DataFetcher:
             self._macro_history.to_csv(self._macro_path)
         except Exception as e:
             logger.debug(f"Failed to save macro history: {e}")
+
+    def _refresh_session(self):
+        """Initialize or refresh the requests session for yfinance stability."""
+        try:
+            self._session = _requests.Session() if REQUESTS_OK else None
+            if self._session:
+                self._session.headers.update({
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+                })
+                # Prime the session
+                try: self._session.get("https://finance.yahoo.com", timeout=5)
+                except: pass
+        except Exception as e:
+            logger.warning(f"DataFetcher session refresh failed: {e}")
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -495,6 +513,7 @@ class DataFetcher:
                 auto_adjust=True,
                 progress=False,
                 threads=True,
+                session=self._session
             )
 
             for sym, yticker in zip(symbols, yahoo_tickers):
@@ -697,6 +716,7 @@ class DataFetcher:
                 interval=yf_interval,
                 auto_adjust=True,
                 progress=False,
+                session=self._session
             )
 
             if df.empty:

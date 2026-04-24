@@ -280,8 +280,12 @@ class MultiSourceData:
         self._qcache: Dict[str, Tuple[float, Dict]]       = {}
         self._ccache: Dict[str, Tuple[float, List[CandleBar]]] = {}
         self._ncache: Dict[str, Tuple[float, List[NewsItem]]] = {}
-
         self._funder_cache: Dict[str, Tuple[float, Dict]] = {}
+
+        # ── P1 #11: Dead Ticker Management ──
+        self._dead_tickers: Dict[str, float] = {}   # symbol -> expiry_ts
+        self._ticker_failures: Dict[str, int] = {}  # symbol -> count
+        self._max_fail = 3                          # blacklist after 3 failures
         
         # Initialize yfinance session to stabilize 'Invalid Crumb' issues
         self._yf_session = None
@@ -301,6 +305,27 @@ class MultiSourceData:
             f"NSEDirect={'✓' if NSE_PY_OK or REQUESTS_OK else '✗'}"
         )
 
+    def _is_dead(self, symbol: str) -> bool:
+        """Check if symbol is blacklisted due to repeated failures."""
+        if symbol in self._dead_tickers:
+            if time.time() < self._dead_tickers[symbol]:
+                logger.debug(f"⏭️ SKIPPING BLACKLISTED: {symbol}")
+                return True
+            else:
+                # Blacklist expired
+                del self._dead_tickers[symbol]
+                self._ticker_failures[symbol] = 0
+        return False
+
+    def _record_failure(self, symbol: str):
+        """Record a data fetch failure for a symbol."""
+        with self._lock:
+            self._ticker_failures[symbol] = self._ticker_failures.get(symbol, 0) + 1
+            if self._ticker_failures[symbol] >= self._max_fail:
+                logger.warning(f"🚫 BLACKLISTING: {symbol} due to {self._max_fail} consecutive failures.")
+                # Blacklist for 24 hours
+                self._dead_tickers[symbol] = time.time() + 86400
+
     # ── Public: Fundamentals ──────────────────────────────────────────────────
 
     def get_stock_fundamentals(self, symbol: str) -> Dict[str, Any]:
@@ -314,7 +339,7 @@ class MultiSourceData:
         try:
             s = symbol
             if not s.endswith(".NS") and not s.startswith("^"): s = f"{s}.NS"
-            t = yf.Ticker(s)
+            t = yf.Ticker(s, session=self._yf_session)
             info = getattr(t, "info", {})
             if not info: return {}
             
@@ -329,6 +354,8 @@ class MultiSourceData:
                 "beta":           info.get("beta", 1.0),
                 "rev_growth":     info.get("revenueGrowth", 0),
                 "profit_margin":  info.get("profitMargins", 0),
+                "operating_margin": info.get("operatingMargins", 0),
+                "roe":            info.get("returnOnEquity", 0),
                 "description":    info.get("longBusinessSummary", "No description available."),
                 "website":        info.get("website", ""),
                 "employees":      info.get("fullTimeEmployees", 0),
@@ -461,6 +488,9 @@ class MultiSourceData:
           ltp, open, high, low, close, volume, change, change_pct,
           bid, ask, source (which data source answered)
         """
+        if self._is_dead(symbol):
+            return {}
+
         with self._lock:
             cached = self._qcache.get(symbol)
             if cached and time.time() - cached[0] < self.CACHE_TTL_QUOTE:
@@ -479,6 +509,9 @@ class MultiSourceData:
         if q:
             with self._lock:
                 self._qcache[symbol] = (time.time(), q)
+                self._ticker_failures[symbol] = 0 # Reset failures on success
+        else:
+            self._record_failure(symbol)
         return q or {}
 
     # ── Public: Candles ───────────────────────────────────────────────────────
@@ -497,6 +530,9 @@ class MultiSourceData:
 
         Returns list of CandleBar sorted oldest-first.
         """
+        if self._is_dead(symbol):
+            return []
+
         key = f"{symbol}_{period}_{interval}"
         with self._lock:
             cached = self._ccache.get(key)
@@ -516,6 +552,9 @@ class MultiSourceData:
         if candles:
             with self._lock:
                 self._ccache[key] = (time.time(), candles)
+                self._ticker_failures[symbol] = 0 # Reset failures on success
+        else:
+            self._record_failure(symbol)
         return candles or []
 
     def get_bulk_candles(
@@ -525,6 +564,13 @@ class MultiSourceData:
         interval: str = "1d"
     ) -> Dict[str, List[CandleBar]]:
         """Fetch candles for multiple symbols efficiently."""
+        # Filter dead tickers early
+        active_symbols = [s for s in symbols if not self._is_dead(s)]
+        if len(active_symbols) < len(symbols):
+            skipped = len(symbols) - len(active_symbols)
+            logger.debug(f"Skipping {skipped} blacklisted tickers in bulk request.")
+            
+        symbols = active_symbols
         result: Dict[str, List[CandleBar]] = {}
         
         # 1. Try yfinance multi-download (Most efficient for free tier)
@@ -561,22 +607,37 @@ class MultiSourceData:
             # yfinance.download handles bulk fetching in one request
             # We pass the session. If it 401s, yfinance might not raise, but return empty.
             data = yf.download(yf_syms, period=period, interval=yfi, group_by='ticker', 
-                               threads=True, progress=False, session=self._yf_session,
-                               timeout=15) # Timeout for the whole batch
+                               threads=True, progress=False,
+                               timeout=15, session=self._yf_session)
             
+            # Check for Crumb failure (often returns empty or raises 401 in session)
             if data.empty and len(symbols) > 0:
-                logger.warning("[yfinance] Bulk download returned empty. Possible 'Invalid Crumb'. Refreshing session...")
+                logger.warning("[yfinance] Bulk download returned empty. Possible 'Invalid Crumb' or 401. Refreshing session and retrying...")
                 self._refresh_yf_session()
                 # Retry once
                 data = yf.download(yf_syms, period=period, interval=yfi, group_by='ticker', 
-                                   threads=True, progress=False, session=self._yf_session,
-                                   timeout=15)
+                                   threads=True, progress=False,
+                                   timeout=20, session=self._yf_session)
+            
+            if data.empty and len(symbols) > 0:
+                # Ultimate fallback: attempt single downloads or use cached data
+                logger.error("[yfinance] Bulk download failed twice. Falling back to individual fetching.")
+                return {}
 
             result = {}
             for sym, yfsym in zip(symbols, yf_syms):
                 try:
-                    df = data[yfsym] if len(symbols) > 1 else data
-                    if df.empty: continue
+                    if data is None or data.empty: continue
+                    
+                    # Handle MultiIndex (bulk) vs SingleIndex (one stock)
+                    if isinstance(data.columns, pd.MultiIndex):
+                        if yfsym not in data.columns.get_level_values(0):
+                            continue
+                        df = data[yfsym]
+                    else:
+                        df = data
+                        
+                    if df is None or df.empty: continue
                     bars = []
                     for ts, row in df.iterrows():
                         if pd.isna(row['Close']): continue
@@ -909,22 +970,32 @@ class MultiSourceData:
         try:
             yf_syms = [_to_yf(s) for s in symbols]
             # Use yf.download for more reliable bulk OHLCV snapshots
-            data = yf.download(yf_syms, period="1d", interval="1m", progress=False, group_by='ticker', session=self._yf_session)
+            data = yf.download(yf_syms, period="1d", interval="1m", progress=False, group_by='ticker', timeout=10, session=self._yf_session)
             
             if data.empty:
-                data = yf.download(yf_syms, period="5d", interval="1d", progress=False, group_by='ticker', session=self._yf_session)
+                logger.warning("[yfinance] Bulk quote download failed. Retrying...")
+                data = yf.download(yf_syms, period="1d", interval="1m", progress=False, group_by='ticker', timeout=10, session=self._yf_session)
+
+            if data.empty:
+                data = yf.download(yf_syms, period="5d", interval="1d", progress=False, group_by='ticker', timeout=10, session=self._yf_session)
                 
             result = {}
             for sym, yfsym in zip(symbols, yf_syms):
                 try:
-                    if yfsym not in data.columns.get_level_values(0):
-                        # Fallback to single quote if missing in bulk
-                        q = self._yf_quote(sym)
-                        if q: result[sym] = q
-                        continue
+                    if data is None or data.empty: continue
+
+                    # Handle MultiIndex (bulk) vs SingleIndex (one stock)
+                    if isinstance(data.columns, pd.MultiIndex):
+                        if yfsym not in data.columns.get_level_values(0):
+                            # Fallback to single quote if missing in bulk
+                            q = self._yf_quote(sym)
+                            if q: result[sym] = q
+                            continue
+                        df = data[yfsym].dropna()
+                    else:
+                        df = data.dropna()
                         
-                    df = data[yfsym].dropna()
-                    if df.empty:
+                    if df is None or df.empty:
                         q = self._yf_quote(sym)
                         if q: result[sym] = q
                         continue
@@ -1440,22 +1511,35 @@ class MultiSourceData:
         return None
 
     def _refresh_yf_session(self):
-        """Creates a fresh requests session for yfinance with modern headers and timeouts."""
+        """Creates a fresh requests session for yfinance with modern headers and cookie handling."""
         if not REQUESTS_OK: return
         try:
             self._yf_session = _req.Session()
-            # Rotate user agents or use a very standard one
+            # Modern Chrome User-Agent to bypass basic scraping blocks
+            ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
             self._yf_session.headers.update({
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept": "*/*",
-                "Connection": "keep-alive"
+                "User-Agent": ua,
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1"
             })
-            # Force a short timeout at the adapter level if possible, 
-            # but yfinance doesn't always respect it. We set it on the session.
-            adapter = _req.adapters.HTTPAdapter(max_retries=2)
+            # Attempt to prime the session by visiting the Yahoo home page
+            try:
+                self._yf_session.get("https://finance.yahoo.com", timeout=10)
+            except Exception:
+                pass
+                
+            # Setup retries with backoff
+            try:
+                from urllib3.util import Retry
+                retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
+                adapter = _req.adapters.HTTPAdapter(max_retries=retries)
+            except ImportError:
+                adapter = _req.adapters.HTTPAdapter(max_retries=3)
+                
             self._yf_session.mount("https://", adapter)
-            self._yf_session.mount("http://", adapter)
-            logger.info("yfinance session refreshed.")
+            logger.info("yfinance session refreshed with modern headers.")
         except Exception as e:
             logger.warning("Failed to refresh yf session: %s", e)
 

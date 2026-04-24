@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-04-24T09:00:57.312941+05:30",
+  "market_mood": "NEUTRAL",
+  "min_confidence_boost": 0.05,
+  "risk_multiplier": 1.0,
+  "priority_strategies": [
+    "MR",
+    "RSI_REVERSAL",
+    "BOLLINGER_REVERT"
+  ],
+  "restricted_strategies": [
+    "T1",
+    "T2",
+    "T10",
+    "BREAKOUT"
+  ]
+}
