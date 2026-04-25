@@ -1,5 +1,5 @@
 {
-  "timestamp": 1777044689.464022,
+  "timestamp": 1777083641.3874938,
   "stocks": [
     {
       "symbol": "HSCL",
@@ -502,6 +502,11 @@
       "sector": "AUTO"
     },
     {
+      "symbol": "AKZOINDIA",
+      "change": 0.030545539862392168,
+      "sector": "AUTO"
+    },
+    {
       "symbol": "JUBLPHARMA",
       "change": 0.005294211606021726,
       "sector": "AUTO"
@@ -554,11 +559,6 @@
     {
       "symbol": "LICI",
       "change": -0.07392799889668344,
-      "sector": "AUTO"
-    },
-    {
-      "symbol": "AKZOINDIA",
-      "change": -0.07460565052533896,
       "sector": "AUTO"
     },
     {

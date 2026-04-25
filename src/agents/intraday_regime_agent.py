@@ -307,6 +307,7 @@ class IntradayRegimeAgent(BaseAgent):
             'pc_ratio':       pc_ratio,
             'max_pain_diff':  max_pain_diff,
             'uoa_flag':       uoa_flag,
+            'sgx_bias':       float(market_data.get('sgx_bias', 0.0)),
         }
 
     # ── Rule-based detection (always available) ───────────────────────────────
@@ -406,7 +407,8 @@ class IntradayRegimeAgent(BaseAgent):
                 f.get('rolling_vol_5d', 0.0), f.get('rolling_vol_10d', 0.0),
                 f.get('sector_rot_strength', 0.0), f['spx_prev_ret'],
                 f['usdinr_change'], f['news_sentiment'], f['event_flag'],
-                f['pc_ratio'], f['max_pain_diff'], f['uoa_flag']
+                f['pc_ratio'], f['max_pain_diff'], f['uoa_flag'],
+                f.get('sgx_bias', 0.0)
             ]
             
             # Legacy v4.0 feature set (14 features)

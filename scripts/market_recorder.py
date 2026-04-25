@@ -29,23 +29,37 @@ logging.basicConfig(
 )
 logger = logging.getLogger("Recorder")
 
-_YF_SESSION = None
+import random
 
-def _get_yf_session():
-    global _YF_SESSION
-    if _YF_SESSION is None:
-        import requests
-        _YF_SESSION = requests.Session()
-        _YF_SESSION.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        })
-    return _YF_SESSION
+_USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0"
+]
+
+def _get_yf_headers():
+    return {"User-Agent": random.choice(_USER_AGENTS)}
 
 def _refresh_yf_session():
-    global _YF_SESSION
-    logger.info("Refreshing yfinance session cookies...")
-    _YF_SESSION = None
-    return _get_yf_session()
+    """Aggressive reset: Clear local Yahoo cache and wait."""
+    logger.info("🚨 401 Detected: Purging Yahoo Cache and cooling down for 60s...")
+    try:
+        import shutil
+        from pathlib import Path
+        # Common locations for yfinance cache
+        cache_dirs = [
+            Path.home() / ".cache" / "py-yfinance",
+            Path.home() / "AppData" / "Local" / "py-yfinance"
+        ]
+        for d in cache_dirs:
+            if d.exists():
+                shutil.rmtree(d, ignore_errors=True)
+                logger.info(f"Cleared cache: {d}")
+    except Exception as e:
+        logger.debug(f"Cache purge failed: {e}")
+    
+    time.sleep(60) # Mandatary cool-down
 
 def record_minute_data():
     fetcher = DataFetcher()
@@ -63,17 +77,21 @@ def record_minute_data():
         chunk_size = 25
         from src.data.multi_source_data import get_msd
         msd = get_msd()
+        # Hard Blacklist (P1 #11)
+        RECORD_BLACKLIST = {"RELINFRA", "ABGSHIP", "VIDEOIND", "SINTEX", "ADANITRANS", "AKZOINDIA"}
+
         for i in range(0, len(symbols), chunk_size):
             chunk = symbols[i:i+chunk_size]
-            # Filter blacklisted symbols
-            chunk = [s for s in chunk if not msd._is_dead(s)]
+            chunk = [s for s in chunk if s and s not in RECORD_BLACKLIST and s not in ("UNDEFINED", "None", "NONE") and not msd._is_dead(s)]
             if not chunk: continue
             
             formatted_symbols = [f"{s}.NS" for s in chunk]
             
+            if i > 0:
+                time.sleep(random.uniform(1.0, 3.0)) # Increased jitter
+
             try:
-                # Download 1m data for the last day to get the latest minute
-                # auto_adjust=True and prepost=True can slow down requests significantly
+                # Switching to Ticker.history for individual resilience if download fails
                 data = yf.download(
                     tickers=formatted_symbols,
                     period="1d",
@@ -81,24 +99,17 @@ def record_minute_data():
                     group_by='ticker',
                     auto_adjust=True,
                     prepost=False,
-                    threads=False, # Sequential is safer for rate limits
+                    threads=False,
                     progress=False,
-                    timeout=15,
+                    timeout=20,
                 )
                 
                 if (data is None or data.empty) and len(formatted_symbols) > 0:
-                    logger.warning("Empty data. Potential rate limit or crumb error. Retrying...")
-                    data = yf.download(
-                        tickers=formatted_symbols,
-                        period="1d",
-                        interval="1m",
-                        group_by='ticker',
-                        auto_adjust=True,
-                        prepost=False,
-                        threads=False,
-                        progress=False,
-                        timeout=15,
-                    )
+                    logger.warning("Yahoo Block Detected (Empty/401). Attempting Cache Purge...")
+                    _refresh_yf_session()
+                    # After purge, try smaller chunk (size 5)
+                    sub_chunk = formatted_symbols[:5]
+                    data = yf.download(tickers=sub_chunk, period="1d", interval="1m", group_by='ticker', threads=False, progress=False)
                 
                 if data is None or data.empty:
                     continue

@@ -1,6 +1,17 @@
 # Changelog — AlphaZero Capital
 
-## [8.3.0] - 2026-04-22 (Performance & Analytics Optimization Suite)
+## [8.3.1] - 2026-04-25 (GIFT Nifty Integration & Anti-Bot Resilience)
+### 🚀 Global Market Intelligence
+- **GIFT Nifty (SGX) Causal Integration**: Fully integrated `sgx_bias` as a feature in the **NEXUS** regime model. The AI now uses the GIFT Nifty futures premium (compared to the domestic NSE close) to predict market "mood" and volatility regimes before the Indian market opens.
+- **Historical Gap Proxy**: Updated `scripts/train_nexus.py` to train on the historical **Index Opening Gap**, allowing the model to learn the mathematical relationship between overnight global shocks and intraday price action.
+
+### 🛡️ Data Resilience & Anti-Bot Layer
+- **Aggressive Yahoo Bypass**: Implemented an automated **Crumb Recovery** system. If Yahoo returns a 401 Unauthorized error, the engine now autonomously purges the local `py-yfinance` cache and clears memory-resident cookies to force a fresh handshake.
+- **Network Signature Rotation**: Added a pool of modern browser User-Agents and **Rate-Limit Jitter (1–3s)** between chunk requests to humanize traffic and prevent IP-level rate-limiting.
+- **Permanent Blacklist**: Integrated a hard-coded suppression list for delisted symbols (e.g., `RELINFRA.NS`, `ABGSHIP.NS`) directly into the recorder and data engine to protect API quotas.
+- **Cool-Down Safeguard**: Implemented a mandatory 60-second "cool-down" period when 401 errors are detected, ensuring the system doesn't get permanently flagged as a bot.
+
+---
 ### 🚀 Market Recording & Replay Intelligence
 - **High-Speed Market Recorder**: Implemented `scripts/market_recorder.py` which autonomously captures minute-level tick data for all Nifty 500 stocks. 
 - **Batch Processing Optimization**: Reduced snapshot recording time from 4+ minutes to **under 60 seconds** using chunked yfinance downloads (25 symbols per chunk).

@@ -171,6 +171,7 @@ FEATURE_NAMES = [
     "sector_rot_strength", "spx_prev_ret",
     "usdinr_change", "news_sentiment", "event_flag",
     "pc_ratio", "max_pain_diff", "uoa_flag",
+    "sgx_bias",
 ]
 
 # ===========================================================================
@@ -323,6 +324,7 @@ def download_macro(years: int = 7, fresh: bool = False) -> Dict[str, "pd.Series"
 
     TICKERS = {
         "nifty":  "^NSEI",
+        "nifty_open": "^NSEI", # Will extract Open column
         "vix":    "^INDIAVIX",
         "spx":    "^GSPC",
         "usdinr": "USDINR=X",
@@ -377,7 +379,10 @@ def download_macro(years: int = 7, fresh: bool = False) -> Dict[str, "pd.Series"
                     df.columns = df.columns.get_level_values(0)
                 df.columns = [c.lower() for c in df.columns]
                 if "close" in df.columns:
-                    parts[name] = df["close"].dropna()
+                    if name == "nifty_open":
+                        parts[name] = df["open"].dropna()
+                    else:
+                        parts[name] = df["close"].dropna()
                     logger.info("  Macro %-10s %d rows", name, len(parts[name]))
         except Exception as exc:
             logger.warning("  Macro %s failed: %s", name, exc)
@@ -478,6 +483,7 @@ def build_causal_features(prices: "pd.DataFrame",
         n_close = prices[close_cols].mean(axis=1) if close_cols else pd.Series(0, index=prices.index)
         
     nifty_close = macro.get("nifty", n_close)
+    nifty_open  = macro.get("nifty_open", nifty_close.shift(1)) # proxy if not available
     ind         = _nifty_indicators(nifty_close)
     
     # VIX and VIX Delta
@@ -597,6 +603,7 @@ def build_causal_features(prices: "pd.DataFrame",
                 "pc_ratio":       1.0,  # Placeholder for history
                 "max_pain_diff":  0.0,
                 "uoa_flag":       0,
+                "sgx_bias":       float(((nifty_open.get(dt, nifty_close.get(dt, 1)) / nifty_close.shift(1).get(dt, 1)) - 1) * 100),
             }
             
             # Sector Rotation Strength for the day

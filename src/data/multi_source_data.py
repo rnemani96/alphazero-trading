@@ -44,6 +44,7 @@ import os
 import io
 import json
 import time
+import random
 import logging
 import threading
 from datetime import datetime, timedelta, date
@@ -1581,11 +1582,26 @@ class MultiSourceData:
         self._upstox_token = new_token
         logger.info("[Upstox] Access token refreshed.")
 
+    def _refresh_yf_session(self):
+        """Aggressive reset: Clear local Yahoo cache and wait."""
+        logger.warning("[MultiSourceData] 🚨 401/Invalid Crumb: Purging cache and cooling down...")
+        try:
+            import shutil
+            from pathlib import Path
+            cache_dirs = [
+                Path.home() / ".cache" / "py-yfinance",
+                Path.home() / "AppData" / "Local" / "py-yfinance"
+            ]
+            for d in cache_dirs:
+                if d.exists():
+                    shutil.rmtree(d, ignore_errors=True)
+            time.sleep(random.uniform(5.0, 10.0))
+        except Exception:
+            pass
 
 # ── Module-level singleton ────────────────────────────────────────────────────
 _MSD_INSTANCE: Optional[MultiSourceData] = None
 _MSD_LOCK = threading.Lock()
-
 def get_msd() -> MultiSourceData:
     global _MSD_INSTANCE
     with _MSD_LOCK:

@@ -41,7 +41,7 @@ def get_nifty500_symbols(use_cache: bool = True) -> List[str]:
         
         reader = csv.DictReader(io.StringIO(r.text))
         symbols = []
-        blacklist = {"ABGSHIP", "VIDEOIND", "SINTEX", "RELINFRA", "ADANITRANS"} # Delisted/Renamed/Problematic
+        blacklist = {"ABGSHIP", "VIDEOIND", "SINTEX", "RELINFRA", "ADANITRANS", "AKZOINDIA"} # Delisted/Renamed/Problematic
         for row in reader:
             s = (row.get('Symbol') or row.get('SYMBOL') or "").strip()
             if s and s not in blacklist:

@@ -1,15 +1,17 @@
 """
-main.py  —  AlphaZero Capital  v8.3.0
+main.py  —  AlphaZero Capital  v8.3.1
 ═══════════════════════════════════════════════════════════════════════════════
 Main orchestrator — 16 Agents + Multi-Source Data + Active Portfolio Guard
 + Multi-Agent Signal Aggregation + Confidence-Weighted Execution
 
-KEY CHANGES in v8.3.0:
-  ✅ MARKET RECORDER: Integrated minute-level tick data harvester for Nifty 500
+KEY CHANGES in v8.3.1:
+  ✅ GIFT NIFTY: Integrated sgx_bias as a causal feature for NEXUS regime detection
+  ✅ ANTI-BOT: Aggressive Yahoo cache purging & jitter to resolve 'Invalid Crumb'
+  ✅ MARKET RECORDER: Humanized burst pattern (1-3s jitter) for Nifty 500
   ✅ NIGHTLY BACKTEST: Automatic replay of daily data against benchmark strategies
   ✅ STRATEGY RANKINGS: Live leaderboard on dashboard via GuardianAgent stats
-  ✅ RELAXED TRADING: Lowered breadth (0.30) & confidence (0.15) for sideways markets
-  ✅ YFINANCE RESILIENCE: Optimized batch downloads and anti-bot bypass handling
+  ✅ RELAXED TRADING: Lowered breadth (0.30) & confidence (0.12) for sideways markets
+  ✅ YFINANCE RESILIENCE: Hard-coded blacklist for delisted symbols (RELINFRA, etc)
   ✅ KARMA feedback loop: every closed trade updates strategy weights
   ✅ Daily post-market PPO training at 15:35 IST
   ✅ Walk-forward backtest runs weekly (Sunday post-market)
@@ -1376,6 +1378,7 @@ def _run_iteration():
                 'pc_ratio':       pc_ratio,
                 'max_pain_diff':  max_pain_diff,
                 'uoa_flag':       uoa_flag,
+                'sgx_bias':       sgx_bias,
             }
             raw_regime = agents['NEXUS'].detect_regime(nexus_input)
             regime = raw_regime if isinstance(raw_regime, str) else regime
