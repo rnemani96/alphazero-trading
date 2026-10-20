@@ -11,7 +11,7 @@ const G = {
   cyan:"#00d4ff", amber:"#ffaa00",
 };
 
-const BACKEND = "http://localhost:8000";
+const BACKEND = "http://localhost:8001";
 const VERSION = "v5.0.0";
 const AUTHOR  = "Rajesh Nemani";
 
@@ -1782,8 +1782,8 @@ export default function App() {
   // ── Active Portfolio + Data Sources REST fetch ────────────────────────
   useEffect(()=>{
     const f=async()=>{
-      try{const r=await fetch(`${BACKEND}/portfolio`);if(r.ok)setApData(await r.json());}catch{}
-      try{const r=await fetch(`${BACKEND}/sources`);if(r.ok)setDataSources(await r.json());}catch{}
+      try{const r=await fetch(`${BACKEND}/api/portfolio`);if(r.ok)setApData(await r.json());}catch{}
+      try{const r=await fetch(`${BACKEND}/api/sources`);if(r.ok)setDataSources(await r.json());}catch{}
     };
     f();const t=setInterval(f,15000);return()=>clearInterval(t);
   },[]);

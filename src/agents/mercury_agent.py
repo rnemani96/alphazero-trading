@@ -71,8 +71,13 @@ class MercuryAgent(BaseAgent):
             0.0
         )
 
-        # Calculate realistic quantity from position_size and real price
-        qty = self._calculate_quantity_from_price(position_size, ltp)
+        # FIX: Honor explicit quantity from signal (e.g. partial exits) before
+        # falling back to calculating from position_size.
+        if signal.get('quantity') or signal.get('qty'):
+            qty = int(signal.get('quantity') or signal.get('qty') or 1)
+        else:
+            # Calculate realistic quantity from position_size and real price
+            qty = self._calculate_quantity_from_price(position_size, ltp)
 
         logger.info(f"MERCURY executing: {action} {symbol} ×{qty} ₹{position_size:,.0f} LTP=₹{ltp:.2f}")
 
@@ -156,6 +161,32 @@ class MercuryAgent(BaseAgent):
                 self.executor.update_prices(prices)
         except Exception as e:
             logger.warning(f"Price update error: {e}")
+
+    def modify_order(self, order_id: str, symbol: str, new_price: float,
+                     new_trigger: float = 0.0, order_type: str = "SL-M") -> Dict[str, Any]:
+        """
+        Modify an existing open order's stop-loss or limit price.
+        Called by main.py during trailing stop adjustments.
+        Delegates to the executor's modify_order if available.
+        """
+        try:
+            if hasattr(self.executor, 'modify_order'):
+                result = self.executor.modify_order(
+                    order_id=order_id,
+                    symbol=symbol,
+                    new_price=new_price,
+                    new_trigger=new_trigger,
+                    order_type=order_type,
+                )
+                logger.info(f"MERCURY modify_order: {symbol} {order_type} → ₹{new_price:.2f} (id={order_id})")
+                return result or {'success': True}
+            else:
+                # PaperExecutor: SL updates are handled via ActivePortfolio directly
+                logger.debug(f"MERCURY modify_order: executor has no modify_order; {symbol} SL update handled by ActivePortfolio")
+                return {'success': True, 'note': 'paper_mode_no_op'}
+        except Exception as e:
+            logger.error(f"MERCURY modify_order error: {symbol} — {e}")
+            return {'success': False, 'error': str(e)}
 
     # ── internals ─────────────────────────────────────────────────────────────
 

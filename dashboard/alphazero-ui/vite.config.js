@@ -5,8 +5,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Backend port must match DASHBOARD_PORT in config/settings.py (default: 8000)
-const BACKEND_PORT = parseInt(process.env.VITE_BACKEND_PORT || '8000')
+// Backend port must match BACKEND_PORT in config/settings.py (default: 8001)
+const BACKEND_PORT = parseInt(process.env.VITE_BACKEND_PORT || '8001')
 const BACKEND_URL  = `http://localhost:${BACKEND_PORT}`
 const WS_URL       = `ws://localhost:${BACKEND_PORT}`
 

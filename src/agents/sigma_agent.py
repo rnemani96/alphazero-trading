@@ -186,6 +186,12 @@ class SigmaAgent(BaseAgent):
 
         score += stock.get('delivery_pct', 0.0) * weights.get('delivery_pct', 0)
 
+        # FIX: historical_sharpe was in weights but never read — added here
+        # Normalise Sharpe: 0→0 pts, 1.0→0.5 pts, 2.0+→1.0 pts
+        raw_sharpe = stock.get('historical_sharpe', 0.0)
+        norm_sharpe = min(max(raw_sharpe / 2.0, 0.0), 1.0)
+        score += norm_sharpe * weights.get('historical_sharpe', 0)
+
         return round(score, 4)
 
     def get_stats(self) -> Dict[str, Any]:

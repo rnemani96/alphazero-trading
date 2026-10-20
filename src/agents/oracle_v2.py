@@ -42,8 +42,9 @@ class OracleV2Agent(OracleAgent):
             self._load_model()
             
         if self.model is None:
-            # Fallback to base Oracle if V2 model not trained
-            return super().predict(symbol, df)
+            # Model not trained yet — return neutral signal, do not crash
+            logger.debug("ORACLE_V2: model not loaded for %s — returning WAIT", symbol)
+            return {'symbol': symbol, 'confidence': 0.0, 'action': 'WAIT', 'model': 'LGBM_V2_UNTRAINED'}
 
         try:
             # Prepare features

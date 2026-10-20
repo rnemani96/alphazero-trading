@@ -56,3 +56,19 @@ pytz>=2024.1                 # Timezone handling
 tqdm>=4.66.0                 # Progress bars
 colorlog>=6.8.0              # Colored logging output
 
+
+# ── Web Scraping / HTML Parsing ───────────────────────────────────────────────
+beautifulsoup4>=4.12.0         # Used by market_data.py and transcript_scraper.py for NSE HTML
+lxml>=5.0.0                    # Parser backend for beautifulsoup4
+
+# ── System Monitoring ─────────────────────────────────────────────────────────
+psutil>=5.9.0                  # Used by tracker.py and infra/ops.py for CPU/RAM metrics
+
+# ── WebSocket Support ─────────────────────────────────────────────────────────
+websockets>=12.0               # Required by FastAPI uvicorn for /ws WebSocket endpoint
+
+# ── Serialization ─────────────────────────────────────────────────────────────
+joblib>=1.3.0                  # Used by oracle_v2.py for model persistence
+
+# ── Reporting ─────────────────────────────────────────────────────────────────
+reportlab>=4.0.0               # Used by reporting/pdf_generator.py for PDF reports

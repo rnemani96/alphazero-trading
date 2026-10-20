@@ -189,7 +189,7 @@ agents['EARNINGS_CALENDAR'] = _load_agent('EARNINGS_CALENDAR', 'src.agents.earni
 agents['STRATEGY'] = _load_agent('STRATEGY','src.agents.llm_strategy_generator','StrategyGenerator',      eb, _cfg)
 agents['SENTINEL'] = _load_agent('SENTINEL', 'src.agents.sentinel', 'SentinelAgent', eb, _cfg)
 agents['ORACLE_V2']= _load_agent('ORACLE_V2','src.agents.oracle_v2',           'OracleV2Agent',          eb, _cfg)
-agents['SHADOW']   = _load_agent('SHADOW',   'src.agents.lstm_agent',           'LSTMAgent',              eb, _cfg)
+agents['SHADOW_LSTM'] = _load_agent('SHADOW_LSTM', 'src.agents.lstm_agent', 'LSTMAgent', eb, _cfg)
 
 active_agents = {k: v for k, v in agents.items() if v is not None}
 logger.info("Agents online: %d / 18", len(active_agents))
@@ -234,6 +234,16 @@ try:
     logger.info("ShadowModelManager: A/B model testing active")
 except ImportError:
     logger.debug("ShadowModelManager not available")
+
+# ── Strategy Marketplace (Competition-Driven Weight Allocation) ────────────────
+_marketplace = None
+try:
+    from src.agents.strategy_marketplace import StrategyMarketplace
+    _marketplace = StrategyMarketplace(event_bus=eb, config=_cfg)
+    agents['MARKETPLACE'] = _marketplace
+    logger.info("StrategyMarketplace: strategy competition engine active")
+except Exception as _mp_exc:
+    logger.debug("StrategyMarketplace not available: %s", _mp_exc)
 
 # ── Monte Carlo stress engine (instantiated per-run with actual returns) ──────
 # MonteCarloEngine takes returns[] at construction, so we import the class here
@@ -929,9 +939,25 @@ def _update_positions(prices: Dict[str, float]):
         if pnl < 0:
             if 'symbol_cooldowns' not in _state: _state['symbol_cooldowns'] = {}
             _state['symbol_cooldowns'][sym] = time.time() + 3600 # 1 hour cooldown
-            logger.info("🛡️ Symbol Cooldown: %s blocked for 1 hour after SL hit.", sym)
+            logger.info("Symbol Cooldown: %s blocked for 1 hour after SL hit.", sym)
 
-        _send_telegram(f"🔔 *{sym}* {status}\nP&L: ₹{pnl:+,.0f}")
+        # ── Shadow Model A/B: record outcome + check for challenger promotion ──
+        if _shadow_mgr:
+            try:
+                _shadow_mgr.record_outcome(pnl)
+                _shadow_mgr.maybe_promote()
+            except Exception as _sm_exc:
+                logger.debug("ShadowModel record_outcome error: %s", _sm_exc)
+
+        # ── Strategy Marketplace: update competition weights ────────────────────
+        if _marketplace:
+            try:
+                strategy_id = pos.get('strategy', 'UNKNOWN')
+                _marketplace.on_signal_evaluated(strategy_id, won=(pnl > 0), pnl=pnl)
+            except Exception as _mp_exc:
+                logger.debug("Marketplace update error: %s", _mp_exc)
+
+        _send_telegram(f"*{sym}* {status}\nP&L: Rs{pnl:+,.0f}")
 
 
 def _send_telegram(text: str):

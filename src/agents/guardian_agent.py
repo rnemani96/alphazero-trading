@@ -468,6 +468,7 @@ class GuardianAgent(BaseAgent):
                 'name':              self.name,
                 'active':            self.is_active,
                 'kill_switch':       self.kill_switch_active,
+                'paused':            self.kill_switch_active,
                 'daily_pnl':         round(self.daily_pnl, 2),
                 'trades_today':      self.trades_today,
                 'consec_losses':     self.consec_losses,
@@ -476,3 +477,34 @@ class GuardianAgent(BaseAgent):
                 'kpi':               'Max drawdown < 8%',
                 'last_activity':     self.last_activity,
             }
+
+    # ── Dashboard Control ────────────────────────────────────────────────────
+
+    def pause(self):
+        """
+        Temporarily pause all new trade approvals.
+        Called by dashboard /api/command pause.
+        Sets kill_switch_active=True (guards all check_trade calls).
+        """
+        with self._lock:
+            self.kill_switch_active = True
+            self.last_activity = "PAUSED by dashboard"
+        logger.warning("GUARDIAN: Trading PAUSED by dashboard command")
+
+    def resume(self):
+        """
+        Resume trading after a dashboard pause.
+        Called by dashboard /api/command resume.
+        Only clears kill_switch if daily loss limit is NOT breached.
+        """
+        with self._lock:
+            loss_pct = abs(self.daily_pnl) / max(self.initial_capital, 1)
+            if self.daily_pnl < 0 and loss_pct >= self.max_daily_loss_pct:
+                logger.warning(
+                    "GUARDIAN: Cannot resume — daily loss limit %.1f%% breached", loss_pct * 100
+                )
+                return
+            self.kill_switch_active = False
+            self.last_activity = "RESUMED by dashboard"
+        logger.info("GUARDIAN: Trading RESUMED by dashboard command")
+

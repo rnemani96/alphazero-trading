@@ -83,7 +83,14 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
     app = FastAPI(title="AlphaZero Capital Dashboard", version="4.0")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:8001", "http://127.0.0.1:8001"],
+        allow_origins=[
+            "http://localhost:8001",
+            "http://127.0.0.1:8001",
+            "http://localhost:3000",   # Vite dev server
+            "http://127.0.0.1:3000",
+            "http://localhost:8000",   # legacy / alternate port
+            "http://127.0.0.1:8000",
+        ],
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
         allow_credentials=False,
@@ -277,7 +284,15 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
                 found = False
                 for k in list(ap.open_positions.keys()):
                     if k.startswith(symbol + ":") or k == symbol:
-                        ap.force_close(k, reason="Manual Force Close via Dashboard")
+                        pos = ap.open_positions[k]
+                        # Get current_price from position or fallback to entry_price
+                        current_price = float(
+                            pos.get("current_price") or
+                            pos.get("ltp") or
+                            pos.get("entry_price") or
+                            0.0
+                        )
+                        ap.force_close(symbol, current_price, reason="Manual Force Close via Dashboard")
                         found = True
                         break
                 if found: return {"result": f"{symbol} forcefully closed"}

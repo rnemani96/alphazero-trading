@@ -40,6 +40,8 @@ class EventType(Enum):
     # MARKET INTELLIGENCE
     REGIME_CHANGE       = "regime_change"
     NEWS_UPDATE         = "news_update"
+    MACRO_UPDATE        = "macro_update"      # FIX: was missing; used by oracle_agent.py & sector_agent.py
+    SECTOR_UPDATE       = "sector_update"     # FIX: added for sector rotation events
     OPTIONS_FLOW        = "options_flow"
     EARNINGS_ANALYZED   = "earnings_analyzed"
     STRATEGY_DISCOVERED = "strategy_discovered"
