@@ -7,9 +7,20 @@ echo          AlphaZero Capital - 24/7 Autonomous Trading Engine
 echo =======================================================================
 echo.
 echo [1/3] Checking environment...
-python --version >nul 2>&1
+set PYTHONUTF8=1
+set PYTHONIOENCODING=utf-8
+
+if exist "venv\Scripts\activate.bat" (
+    echo [INFO] Activating virtual environment (venv)...
+    call venv\Scripts\activate.bat
+    set PYTHON_EXE=venv\Scripts\python.exe
+) else (
+    set PYTHON_EXE=python
+)
+
+%PYTHON_EXE% --version >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Python not found in PATH. Please install Python 3.11+.
+    echo [ERROR] Python not found. Please install Python 3.11+.
     pause
     exit /b 1
 )
@@ -20,6 +31,6 @@ if not exist "data" mkdir data
 if not exist "models" mkdir models
 
 echo [3/3] Starting Autonomous Supervisor Watchdog...
-python scripts\watchdog.py
+%PYTHON_EXE% scripts\watchdog.py
 
 pause
