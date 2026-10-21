@@ -176,6 +176,30 @@ Default weights:
 
 ---
 
+### 2.6 Phase 6: Bayesian Thompson Sampling Capital Allocator
+File: `src/risk/thompson_sampling_allocator.py`
+
+Rather than relying on static strategy weights, AlphaZero models strategy returns as a continuous Bayesian multi-armed bandit.
+
+#### Beta-Binomial Posterior Formulation
+For each strategy $k$:
+$$\alpha_k[t] = \alpha_0 + \sum_{i=1}^{t} \mathbb{I}(\text{PnL}_i > 0)$$
+$$\beta_k[t] = \beta_0 + \sum_{i=1}^{t} \mathbb{I}(\text{PnL}_i \le 0)$$
+With uninformative prior $\alpha_0 = 2.0, \beta_0 = 2.0$.
+
+At each capital allocation cycle, the engine draws Monte Carlo samples from the conjugate Beta distribution:
+$$\theta_k \sim \text{Beta}(\alpha_k, \beta_k)$$
+
+#### Capital Allocation Weight Multiplier
+The dynamic capital multiplier $W_k \in [0.20, 2.50]$ scales effective trade risk:
+$$W_k = \text{clamp}\left(0.20, \; 2.50, \; \frac{\theta_k \cdot \text{Sharpe}_k}{\frac{1}{N} \sum_{j=1}^N \theta_j \cdot \text{Sharpe}_j}\right)$$
+
+#### Online Experience Replay Buffer
+To prevent catastrophic forgetting during market regime switches, every trade transition $(s_t, a_t, r_t, s_{t+1})$ is appended to a FIFO buffer of capacity $N=500$. Mini-batches are uniformly sampled for offline validation and posterior re-calibration:
+$$\mathcal{B}_{\text{sample}} = \{e_i \sim \mathcal{U}(1, |\mathcal{D}|)\}_{i=1}^{B}$$
+
+---
+
 ## 3. Universal LLM Gateway Architecture
 
 AlphaZero v5.1 introduces a unified LLM layer in `src/agents/llm_provider.py` that abstracts away vendor SDKs. It provides zero-dependency native HTTP fallback alongside OpenAI SDK compatibility.
