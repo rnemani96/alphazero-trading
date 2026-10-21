@@ -1,14 +1,38 @@
-import logging, torch, re, time
+import logging
+import re
+import time
+import threading
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    from datetime import timezone
+    ZoneInfo = lambda x: timezone.utc  # fallback
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
+try:
+    import torch
+    DEVICE = 0 if torch.cuda.is_available() else -1
+    _TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    DEVICE = -1
+    _TORCH_AVAILABLE = False
+
+try:
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
+    _TRANSFORMERS_AVAILABLE = True
+except Exception:
+    _TRANSFORMERS_AVAILABLE = False
+    pipeline = None
 
 logger = logging.getLogger("SentimentProcessor")
-
-# Set device (CUDA if available)
-DEVICE = 0 if torch.cuda.is_available() else -1
-
-import threading
 
 # ── LAYER 2: Keyword Engine ──────────────────────────────────────────────────
 _KW_POS = {"surge", "rally", "gain", "growth", "jump", "breakout", "bullish", "ath", "upside", "win", "deal", "record profit", "beats estimates"}
@@ -41,6 +65,10 @@ class SentimentProcessor:
         threading.Thread(target=self._load_model, daemon=True, name="FinBERTLoader").start()
 
     def _load_model(self):
+        if not _TRANSFORMERS_AVAILABLE or pipeline is None:
+            self.loaded = False
+            logger.info("FinBERT: PyTorch/Transformers not installed — operating in high-performance Keyword & Rules mode.")
+            return
         try:
             logger.info(f"Loading FinBERT on {'GPU' if DEVICE == 0 else 'CPU'}...")
             self.pipe = pipeline(

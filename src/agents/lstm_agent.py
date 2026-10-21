@@ -9,12 +9,19 @@ that tabular models like XGBoost/LGBM might miss.
 
 import logging
 import os
-import torch
-import torch.nn as nn
 import numpy as np
 import pandas as pd
 from typing import Dict, Optional
 from datetime import datetime
+
+try:
+    import torch
+    import torch.nn as nn
+    _TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    nn = None
+    _TORCH_AVAILABLE = False
 
 try:
     from src.event_bus.event_bus import BaseAgent
@@ -23,27 +30,37 @@ except ImportError:
 
 logger = logging.getLogger("LSTM_AGENT")
 
-class LSTMModel(nn.Module):
-    def __init__(self, input_size=5, hidden_size=64, num_layers=2):
-        super(LSTMModel, self).__init__()
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=0.2)
-        self.fc = nn.Linear(hidden_size, 1)
-        self.sigmoid = nn.Sigmoid()
+if _TORCH_AVAILABLE:
+    class LSTMModel(nn.Module):
+        def __init__(self, input_size=5, hidden_size=64, num_layers=2):
+            super(LSTMModel, self).__init__()
+            self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=0.2)
+            self.fc = nn.Linear(hidden_size, 1)
+            self.sigmoid = nn.Sigmoid()
 
-    def forward(self, x):
-        out, _ = self.lstm(x)
-        out = self.fc(out[:, -1, :])
-        return self.sigmoid(out)
+        def forward(self, x):
+            out, _ = self.lstm(x)
+            out = self.fc(out[:, -1, :])
+            return self.sigmoid(out)
+else:
+    LSTMModel = None
+
 
 class LSTMAgent(BaseAgent):
     def __init__(self, event_bus, config):
         super().__init__(event_bus, config, "SHADOW_LSTM")
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = LSTMModel().to(self.device).eval()
-        self.model_path = os.path.join("models", "shadow_lstm.pth")
-        
-        if os.path.exists(self.model_path):
-            self._load_model()
+        self.has_torch = _TORCH_AVAILABLE
+        self.device = None
+        self.model = None
+
+        if self.has_torch and LSTMModel is not None:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            self.model = LSTMModel().to(self.device).eval()
+            self.model_path = os.path.join("models", "shadow_lstm.pth")
+            if os.path.exists(self.model_path):
+                self._load_model()
+        else:
+            logger.info("SHADOW_LSTM: PyTorch not installed — using statistical sequence pattern engine.")
 
     def predict(self, symbol: str, df: pd.DataFrame) -> Dict:
         """
@@ -59,9 +76,16 @@ class LSTMAgent(BaseAgent):
                 return {'symbol': symbol, 'confidence': 0.0, 'action': 'WAIT'}
 
             # 2. Inference
-            with torch.no_grad():
-                input_tensor = torch.FloatTensor(seq).unsqueeze(0).to(self.device)
-                prob = self.model(input_tensor).item()
+            if self.has_torch and self.model is not None and torch is not None:
+                with torch.no_grad():
+                    input_tensor = torch.FloatTensor(seq).unsqueeze(0).to(self.device)
+                    prob = self.model(input_tensor).item()
+            else:
+                # Sequence momentum & slope heuristic
+                close_seq = seq[:, 0]  # normalized close
+                slope = float(close_seq[-1] - close_seq[0])
+                vol_accel = float(seq[-5:, 4].mean() - seq[:5, 4].mean())
+                prob = float(np.clip(0.50 + slope * 0.35 + vol_accel * 0.15, 0.05, 0.95))
 
             return {
                 'symbol': symbol,

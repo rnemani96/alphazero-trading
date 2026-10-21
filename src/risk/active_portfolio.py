@@ -173,7 +173,7 @@ class ActivePortfolio:
         with self._lock:
             key = f"{symbol}:{trade_type}"
             if key in self.open_positions:
-                pos    = self.open_positions[symbol]
+                pos    = self.open_positions[key]
                 target = pos.get("target", 0)
                 curr   = pos.get("current_price", pos.get("entry_price", 0))
                 pnl_pct = pos.get("pnl_pct", 0)
@@ -545,19 +545,28 @@ class ActivePortfolio:
         """
         pos = self.open_positions.get(symbol)
         if not pos:
+            pos = next((p for p in self.open_positions.values() if p.get("symbol") == symbol), None)
+        if not pos:
             return None
         ep    = pos["entry_price"]
         curr  = pos["current_price"]
         tgt   = pos["target"]
         sl    = pos["stop_loss"]
 
-        dist_total = tgt - ep
-        dist_done  = curr - ep
-        pct_to_tgt = round(dist_done / dist_total * 100, 1) if dist_total else 0
+        is_long = str(pos.get("direction", "BUY")).upper() != "SELL"
+        if is_long:
+            dist_total = tgt - ep
+            dist_done  = curr - ep
+            dist_sl    = curr - sl
+            dist_total_sl = ep - sl
+        else:
+            dist_total = ep - tgt
+            dist_done  = ep - curr
+            dist_sl    = sl - curr
+            dist_total_sl = sl - ep
 
-        dist_sl    = curr - sl
-        dist_total_sl = ep - sl
-        pct_from_sl = round(dist_sl / max(dist_total_sl, 0.01) * 100, 1)
+        pct_to_tgt = round(dist_done / max(dist_total, 1e-6) * 100, 1) if dist_total else 0
+        pct_from_sl = round(dist_sl / max(dist_total_sl, 1e-6) * 100, 1) if dist_total_sl else 0
 
         if pct_to_tgt >= 90:
             label = "🎯 Almost at Target"
@@ -568,7 +577,7 @@ class ActivePortfolio:
         elif pct_from_sl < 20:
             label = "⚠️ Near Stop Loss"
         else:
-            label = "📉 Below Entry"
+            label = "📉 Adverse to Entry"
 
         return {
             "symbol":        symbol,

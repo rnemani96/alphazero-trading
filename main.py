@@ -1824,11 +1824,12 @@ def _run_iteration():
 
             # Size position
             macro_status = _state.get('macro_status', 'LIVE')
-            is_intraday_sig = sig.get('tt') == 'INTRADAY' or sig.get('type') == 'SCALP'
+            action_dir = sig.get('action') or sig.get('signal', 'BUY')
             size_result = _sizer.size(
                 strat, price, atr, vix, macro_status, regime, 
                 confidence=sig.get('confidence', 0.5),
-                is_intraday=is_intraday_sig
+                is_intraday=is_intraday_sig,
+                action=action_dir,
             )
             qty         = size_result['qty']
             

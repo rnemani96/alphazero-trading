@@ -78,11 +78,13 @@ def optimal_size(
     confidence:   float = 0.5,
     is_intraday:  bool  = False,
     strategy_id:  str   = "default",
+    action:       str   = "BUY",
 ) -> Dict:
     """
     Combined: take the more conservative of Kelly and ATR sizing.
     Scales risk_pct based on confidence (0.5=norm, 0.9=2x).
     Integrates Charge-Aware sizing and Bayesian Thompson Sampling allocation.
+    Supports both BUY and SELL (short) directions with appropriate SL/Target orientation.
     """
     # Dynamic Risk Scaling from 0.5% (low conf) to 2.0% (max conf)
     effective_risk = risk_pct * (confidence * 2.0)
@@ -105,8 +107,13 @@ def optimal_size(
     sl_mult  = 2.0 if regime == "SIDEWAYS" else 1.5
     tgt_mult = 4.0 if regime == "SIDEWAYS" else 3.0
 
-    sl   = round(entry_price - sl_mult * atr, 2) if atr > 0 else round(entry_price * (0.97 if regime == "SIDEWAYS" else 0.975), 2)
-    tgt  = round(entry_price + tgt_mult * atr, 2) if atr > 0 else round(entry_price * (1.05 if regime == "SIDEWAYS" else 1.06), 2)
+    is_buy = str(action).upper() != "SELL"
+    if is_buy:
+        sl  = round(entry_price - sl_mult * atr, 2) if atr > 0 else round(entry_price * (0.97 if regime == "SIDEWAYS" else 0.975), 2)
+        tgt = round(entry_price + tgt_mult * atr, 2) if atr > 0 else round(entry_price * (1.05 if regime == "SIDEWAYS" else 1.06), 2)
+    else:
+        sl  = round(entry_price + sl_mult * atr, 2) if atr > 0 else round(entry_price * (1.03 if regime == "SIDEWAYS" else 1.025), 2)
+        tgt = round(entry_price - tgt_mult * atr, 2) if atr > 0 else round(entry_price * (0.95 if regime == "SIDEWAYS" else 0.94), 2)
 
     # ── Charge-Aware Floor Logic & Dynamic Slippage ──────────────────────────
     # User Requirement: Instead of blocking small trades, INCREASE quantity
@@ -206,6 +213,7 @@ class PositionSizer:
         regime:       str = "TRENDING",
         confidence:   float = 0.5,
         is_intraday:  bool  = False,
+        action:       str   = "BUY",
     ) -> Dict:
         """
         Compute position size for a strategy.
@@ -234,7 +242,8 @@ class PositionSizer:
 
         result       = optimal_size(
             self.capital, entry_price, atr, wp, aw, al,
-            self.risk_per_trade, regime, confidence, is_intraday, strategy_id=strategy
+            self.risk_per_trade, regime, confidence, is_intraday, strategy_id=strategy,
+            action=action
         )
         result['qty'] = scale_by_vix(result['qty'], vix)
         

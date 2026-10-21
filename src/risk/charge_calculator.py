@@ -95,12 +95,18 @@ def get_minimum_viable_quantity(
 ) -> int:
     """
     Search for a quantity that makes the trade mathematically 'worth it'.
+    Supports both LONG (target > entry) and SHORT (target < entry) trades.
     """
-    if target <= entry: return 0
+    if entry <= 0 or target <= 0 or entry == target:
+        return 0
     
+    is_long = target > entry
+    buy_p = entry if is_long else target
+    sell_p = target if is_long else entry
+
     # Start with a small size and scale up until viable
     for test_qty in [1, 5, 10, 25, 50, 100, 250, 500, 1000]:
-        res = calculate_charges(test_qty, entry, target, is_intraday)
+        res = calculate_charges(test_qty, buy_p, sell_p, is_intraday)
         gross = res["gross_pnl"]
         net = res["net_pnl"]
         

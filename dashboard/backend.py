@@ -416,7 +416,10 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
     return app
 
 def run_dashboard(port: int = 8000, agents: Dict = None, data_fetcher=None, event_bus=None):
-    app = create_app(agents, data_fetcher, event_bus)
-    if app:
+    app_instance = create_app(agents, data_fetcher, event_bus)
+    if app_instance:
         # Bind to 127.0.0.1 only — prevents LAN/network exposure
-        uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
+        uvicorn.run(app_instance, host="127.0.0.1", port=port, log_level="warning")
+
+# Default instance for direct `uvicorn dashboard.backend:app` execution
+app = create_app()
