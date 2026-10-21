@@ -113,8 +113,11 @@ class ProcessSupervisor:
             start_time = time.time()
 
             try:
-                # Launch main.py with inherited python environment
-                self.process = subprocess.Popen([sys.executable, main_script], cwd=str(ROOT))
+                # Launch main.py with inherited python environment and UTF-8 encoding
+                child_env = os.environ.copy()
+                child_env["PYTHONUTF8"] = "1"
+                child_env["PYTHONIOENCODING"] = "utf-8"
+                self.process = subprocess.Popen([sys.executable, main_script], cwd=str(ROOT), env=child_env)
                 exit_code = self.process.wait()
                 runtime = time.time() - start_time
 
