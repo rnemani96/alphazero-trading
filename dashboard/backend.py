@@ -217,7 +217,8 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
 
     @app.get("/candles/{symbol}")
     async def get_candles(symbol: str):
-        if _data_fetcher_ref:
+        symbol = re.sub(r'[^A-Za-z0-9_.-]', '', symbol).upper()
+        if _data_fetcher_ref and symbol:
             try:
                 candles = _data_fetcher_ref.get_candles(symbol, period="5d", interval="15m")
                 return JSONResponse({"symbol": symbol, "candles": [c.to_dict() for c in candles]})
@@ -227,7 +228,8 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
 
     @app.get("/fundamentals/{symbol}")
     async def get_fundamentals(symbol: str):
-        if _data_fetcher_ref:
+        symbol = re.sub(r'[^A-Za-z0-9_.-]', '', symbol).upper()
+        if _data_fetcher_ref and symbol:
             try:
                 data = _data_fetcher_ref.get_stock_fundamentals(symbol)
                 return JSONResponse(data)

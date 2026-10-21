@@ -56,17 +56,21 @@ def get_best_performing_stocks(limit: int = 40) -> List[Dict]:
     # Remove any unwanted symbols or handle formatting
     symbols = [_clean_symbol(s) for s in symbols if s and _clean_symbol(s).upper() not in ["UNDEFINED", "NONE", "NULL", "NAN", "N/A"]]
     
+    # Speed Optimization: For fast real-time scanning, prioritize top 150 liquid symbols
+    target_scan_size = min(len(symbols), max(limit * 3, 150))
+    symbols_to_scan = symbols[:target_scan_size]
+
     # Chunk the download to avoid yfinance timeouts/limitations
     CHUNK_SIZE = 50 # Smaller chunks are more reliable for bulk data
     from src.data.multi_source_data import get_msd
     msd = get_msd()
     
-    logger.info(f"Downloading data for {len(symbols)} stocks via MultiSourceData (chunks of {CHUNK_SIZE})...")
+    logger.info(f"Downloading data for {len(symbols_to_scan)} stocks via MultiSourceData (chunks of {CHUNK_SIZE})...")
     
     try:
         all_results = {}
-        for i in range(0, len(symbols), CHUNK_SIZE):
-            chunk = symbols[i : i + CHUNK_SIZE]
+        for i in range(0, len(symbols_to_scan), CHUNK_SIZE):
+            chunk = symbols_to_scan[i : i + CHUNK_SIZE]
             logger.debug(f"Processing chunk {i//CHUNK_SIZE + 1} ({len(chunk)} symbols)...")
             batch_results = msd.get_bulk_candles(chunk, period="5d", interval="1d")
             if batch_results:
