@@ -583,6 +583,7 @@ def _aggregate_signals(
     regime:        str,
     sentiment_scores: Dict[str, float],
     vix:           float,
+    mdata_history: Optional[Dict[str, Any]] = None,
 ) -> List[Dict]:
     """
     Multi-agent confidence aggregation:
@@ -738,6 +739,37 @@ def _aggregate_signals(
 
         if agreement_count >= 3:
             agg_conf = min(0.99, agg_conf * 1.1)  # 10% boost for unanimous agreement
+
+        # ── Predictive Trend Velocity & Rise/Fall Forecasting ────────────────
+        pred_meta = {}
+        if mdata_history and sym in mdata_history:
+            df_sym = mdata_history.get(sym)
+            if df_sym is not None and len(df_sym) >= 20:
+                try:
+                    from src.data.trend_velocity_predictor import TrendVelocityPredictor
+                    pred_res = TrendVelocityPredictor.predict_direction(df_sym, symbol=sym)
+                    pred_meta = pred_res
+                    rise_p = pred_res.get("rise_probability", 0.5)
+                    fall_p = pred_res.get("fall_probability", 0.5)
+
+                    # Directional Veto: Block BUY if price is strongly predicted to FALL
+                    if act == "BUY" and pred_res.get("predicted_direction") == "FALL" and fall_p >= 0.65:
+                        rejections["predictive_veto"] = rejections.get("predictive_veto", 0) + 1
+                        logger.info("🛡️ PREDICTIVE VETO: %s BUY rejected (Forecast: FALL with %.1f%% prob)", sym, fall_p * 100)
+                        continue
+                    # Block SELL/SHORT if price is strongly predicted to RISE
+                    elif act == "SELL" and pred_res.get("predicted_direction") == "RISE" and rise_p >= 0.65:
+                        rejections["predictive_veto"] = rejections.get("predictive_veto", 0) + 1
+                        logger.info("🛡️ PREDICTIVE VETO: %s SELL rejected (Forecast: RISE with %.1f%% prob)", sym, rise_p * 100)
+                        continue
+
+                    # Directional Convergence Boost
+                    if (act == "BUY" and pred_res.get("predicted_direction") == "RISE" and rise_p >= 0.60) or \
+                       (act == "SELL" and pred_res.get("predicted_direction") == "FALL" and fall_p >= 0.60):
+                        agg_conf = min(0.99, agg_conf * 1.12)
+                        agreement_count += 1
+                except Exception as _pv_exc:
+                    logger.debug("Predictor error for %s: %s", sym, _pv_exc)
 
         # Hard rejections
         if regime == 'RISK_OFF':
@@ -1586,8 +1618,8 @@ def _run_iteration():
                         post_sig.update({'symbol': sym, 'price': price, 'action': post_sig['signal'], 'source': 'EARNINGS_CALENDAR', 'atr': price * 0.02})
                         raw_signals.append(post_sig)
                         
-            # Multi-agent aggregation
-            signals = _aggregate_signals(raw_signals, regime, sentiment_scores, vix)
+            # Multi-agent aggregation with Trend Velocity Rise/Fall Prediction
+            signals = _aggregate_signals(raw_signals, regime, sentiment_scores, vix, mdata_history=mdata_15m_history)
             _state['latest_signals'] = signals
             logger.info("Signals: %d raw → %d aggregated", len(raw_signals), len(signals))
         except Exception as exc:
