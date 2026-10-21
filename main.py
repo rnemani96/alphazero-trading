@@ -934,6 +934,49 @@ def _update_positions(prices: Dict[str, float]):
             except Exception as pe:
                 logger.error("Partial execution failed: %s", pe)
 
+    # ── Position Threat Scan (TrendVelocityPredictor) ──────────────────────────
+    # For every open position, evaluate if a directional reversal is imminent.
+    # If a reversal threat is confirmed, ratchet the stop-loss to breakeven via Mercury.
+    if AP and AP.open_positions:
+        try:
+            from src.data.trend_velocity_predictor import TrendVelocityPredictor
+            _tvp_history = _state.get('mdata_15m_history', {})
+            for sym, pos in list(AP.open_positions.items()):
+                hist_df = _tvp_history.get(sym)
+                if hist_df is None or hist_df.empty:
+                    continue
+                threat_result = TrendVelocityPredictor.evaluate_position_threat(pos, hist_df)
+                if threat_result.get('reversal_threat') and threat_result.get('threat_severity') in ('HIGH', 'CRITICAL'):
+                    action_side = pos.get('action', 'BUY')
+                    current_price = prices.get(sym, pos.get('current_price', pos.get('entry_price', 0)))
+                    entry_price   = pos.get('entry_price', current_price)
+                    current_sl    = pos.get('stop_loss', 0)
+                    # Calculate breakeven price (entry + small buffer for charges)
+                    be_price = entry_price * 1.003 if action_side == 'BUY' else entry_price * 0.997
+                    # Only tighten; never widen the stop
+                    if action_side == 'BUY' and be_price > current_sl:
+                        logger.info(
+                            "⚠️ THREAT DETECTED %s | P(Fall)=%.0f%% | Moving SL → BE ₹%.2f",
+                            sym, threat_result.get('fall_probability', 0) * 100, be_price
+                        )
+                        AP.open_positions[sym]['stop_loss'] = be_price
+                        if agents.get('MERCURY') and pos.get('broker_id') not in (None, '', 'FAILED'):
+                            try:
+                                agents['MERCURY'].modify_order(
+                                    order_id=pos['broker_id'], symbol=sym,
+                                    new_price=be_price, new_trigger=be_price, order_type="SL-M"
+                                )
+                            except Exception:
+                                pass
+                    elif action_side == 'SELL' and be_price < current_sl:
+                        logger.info(
+                            "⚠️ THREAT DETECTED %s | P(Rise)=%.0f%% | Moving SL → BE ₹%.2f",
+                            sym, threat_result.get('rise_probability', 0) * 100, be_price
+                        )
+                        AP.open_positions[sym]['stop_loss'] = be_price
+        except Exception as tvp_err:
+            logger.debug("Position threat scan error: %s", tvp_err)
+
     for pos in closed:
         sym    = pos['symbol']
         pnl    = pos.get('realised_pnl', 0)
@@ -1306,6 +1349,7 @@ def _run_iteration():
 
     mdata = mdata_15m # fallback for legacy code
     _state['market_data'] = {s: {'ltp': prices.get(s, 0)} for s in universe}
+    _state['mdata_15m_history'] = mdata_15m_history  # Used by position threat scanner in _update_positions
 
     # ── CRITICAL FALLBACK: load cached parquet when live candles fail ──────────
     if len(mdata_15m_history) < 5:
@@ -1791,10 +1835,17 @@ def _run_iteration():
             sig['confidence'] *= 0.90
             if sig['confidence'] < MIN_ENTRY_CONF: continue
 
-        # Requirement #3.1: Multi-Timeframe Confirmation (RELAXED: only 15m + Daily)
-        # if not _check_mtf_confirmation(sym, action):
-        #     logger.info(f"SIGNAL REJECTED: {sym} - MTF Alignment Failed")
-        #     continue
+        # Requirement #3.1: Multi-Timeframe Alignment (15m, 1h, Daily)
+        mtf_aligned = _check_mtf_confirmation(sym, action)
+        if mtf_aligned:
+            sig['confidence'] = min(0.98, sig['confidence'] * 1.08)
+            sig['reason'] = sig.get('reason', '') + " | MTF-Aligned"
+        else:
+            sig['confidence'] *= 0.92
+            sig['reason'] = sig.get('reason', '') + " | MTF-Divergence"
+            if sig['confidence'] < MIN_ENTRY_CONF:
+                logger.info(f"SIGNAL FILTERED: {sym} - MTF Divergence dropped conf to {sig['confidence']:.2f} < {MIN_ENTRY_CONF}")
+                continue
 
         # Requirement #3.2: MANDATORY Volume Confirmation (Before Breakout / No Spikes)
         hist_df = mdata_5m_history.get(sym)
@@ -2171,6 +2222,28 @@ def _run_nightly_tasks():
             run_cleanup()
         except Exception as e:
             logger.error(f"Nightly Cleanup failed: {e}")
+
+        # ── LLM Autonomous Strategy Discovery ───────────────────────
+        if check_abort(): return
+        if agents.get('STRATEGY') and hasattr(agents['STRATEGY'], 'discover_strategy'):
+            try:
+                logger.info("🧠 Running LLM Autonomous Strategy Discovery...")
+                regime = _state.get('regime', 'TRENDING')
+                perf_summary = {
+                    'net_pnl': _state.get('net_pnl', 0),
+                    'win_rate': _state.get('win_rate', 0.65),
+                    'top_strategies': list(_state.get('intelligence', {}).keys())[:5],
+                }
+                market_ctx = {
+                    'vix': _state.get('macro', {}).get('vix', 15.0),
+                    'regime': regime,
+                    'symbols_count': len(training_syms),
+                }
+                discovered = agents['STRATEGY'].discover_strategy(market_ctx, perf_summary, regime)
+                if discovered and discovered.get('successful'):
+                    logger.info("🎉 Autonomous Strategy Generator discovered new profitable pattern: %s", discovered.get('name'))
+            except Exception as se:
+                logger.debug("Strategy discovery skipped or failed: %s", se)
 
         logger.info("🌙 Nightly tasks completed successfully.")
 

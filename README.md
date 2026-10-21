@@ -1,143 +1,93 @@
-# 🚀 AlphaZero Capital - Complete Trading System
+# 🚀 AlphaZero Capital - Complete Autonomous Trading System
 
 **Autonomous AI-Powered Trading System for NSE India**
 
-Version: 5.0.0 (March 2026)
+Version: 5.1.0 (October 2026)  
 Status: Production Ready ✅  
-Agents: 17 collaborating agents
-AI Support: Claude, GPT-4, Gemini (Multi-Provider)
+Agents: 18 collaborating agents  
+AI Support: Local LLMs (Ollama, LM Studio, vLLM) & Cloud APIs (OpenRouter, Groq, DeepSeek, OpenAI, Gemini, Claude, Mistral)
 
 ---
 
 ## 📦 What's Included
 
-### Core Trading Engine (v5.0)
-- ✅ **Strategy Correlation Guard** - Max 3 positions per strategy (Risk Mitigation)
-- ✅ **Candlestick Pattern Engine** - Hammer, Doji, Engulfing, Stars detection
-- ✅ **Regime-Adaptive Confidence** - Dynamic entry triggers based on market state
-- ✅ **Short Trade P&L Fix** - Direction-aware accounting for SELL signals
-- ✅ **Volatility Lock** - 9:15-9:45 AM IST morning filter
+### Core Trading & Zero-Loss Engine (v5.1)
+- ✅ **Adaptive Profit & Loss Recovery Engine** — Zero-loss breakeven ratchet (+0.3% charge coverage) and automated deficit recovery planning.
+- ✅ **Directional Trend Velocity Predictor** — $P(\text{Rise})$ vs $P(\text{Fall})$ probability forecasting with directional veto & preemptive position threat shield.
+- ✅ **Multi-Timeframe (MTF) Alignment** — Real-time alignment scoring across 15m, 1h, and Daily timeframes.
+- ✅ **Strategy Correlation Guard** — Max 3 positions per strategy (Risk Mitigation).
+- ✅ **Candlestick Pattern Engine** — Hammer, Doji, Engulfing, Marubozu, and Morning/Evening Stars detection.
+- ✅ **Regime-Adaptive Risk Engine** — Dynamic threshold scaling (confidence 0.50–0.88, R:R 1.4–4.5) based on India VIX and market regime.
+- ✅ **Direction-Aware Short P&L** — Fixed accounting for SHORT/SELL signals.
 
-### Intelligence Layer (v4.0)
-- ✅ **NEXUS Regime Classification** - XGBoost-powered market state detection
-- ✅ **TITAN 45-Strategy Suite** - Massive parallelized indicator voting
-- ✅ **HERMES News Sentiment** - FinBERT analysis of NSE/Moneycontrol
-- ✅ **ATLAS Sector Rotation** - Relative strength allocation
-
----
-
-## 🎯 Quick Start (5 Minutes)
-
-### Prerequisites
-```bash
-# Python 3.11+
-python --version
-
-# Redis (for Event Bus)
-# macOS: brew install redis
-# Ubuntu: sudo apt install redis-server
-```
-
-### Installation
-
-**Step 1: Extract Package**
-```bash
-tar -xzf alphazero_FINAL.tar.gz
-cd alphazero_FINAL
-```
-
-**Step 2: Run Installation Script**
-```bash
-chmod +x install.sh
-./install.sh
-```
-
-**Step 3: Configure Environment**
-```bash
-# Copy template
-cp .env.template .env
-
-# Edit with your API keys
-nano .env  # or vim, code, etc.
-
-# Minimum required:
-# - MODE=PAPER (start with paper trading)
-# - Choose ONE AI provider:
-#   ANTHROPIC_API_KEY=sk-ant-...  (Claude)
-#   OR OPENAI_API_KEY=sk-...      (GPT-4)
-#  OR GOOGLE_API_KEY=...         (Gemini)
-#   OR leave blank for local model
-```
-
-**Step 4: Start Trading!**
-```bash
-# Start the system
-python main.py
-
-# Or use the startup script
-./start.sh
-```
+### Intelligence & LLM Layer (v5.1)
+- ✅ **Universal LLM Gateway** — Use ANY local model (Ollama, LM Studio) or ANY cloud API with zero configuration and automated fallback.
+- ✅ **NEXUS Regime Classification** — XGBoost-powered market state detection (Trending, Sideways, Volatile, Risk-Off).
+- ✅ **TITAN 45-Strategy Suite** — Massive parallelized indicator voting across 5m and 15m timeframes.
+- ✅ **HERMES News Sentiment** — FinBERT and LLM sentiment analysis of NSE & financial feeds.
+- ✅ **ATLAS Sector Rotation** — Relative strength allocation across sectors.
+- ✅ **Autonomous Strategy Generator** — Nightly LLM pattern discovery and backtesting.
+- ✅ **Earnings Call Analyzer** — Management tone & guidance extraction from call transcripts.
 
 ---
 
-## 🤖 Multi-AI Provider Support
+## 🤖 Universal LLM Gateway (Local & Cloud APIs)
 
-### Supported Providers
+AlphaZero is provider-agnostic. You can use **ANY local LLM running on your computer** (100% private, zero API fees) or **ANY cloud AI API**:
 
-| Provider | Models | Cost | Speed | Quality |
-|----------|--------|------|-------|---------|
-| **Claude** | Sonnet 4, Opus 4 | $3-15/1M tokens | Fast | Excellent |
-| **OpenAI** | GPT-4 Turbo, GPT-3.5 | $10-30/1M tokens | Fast | Excellent |
-| **Gemini** | Gemini Pro | $0.5-1.5/1M tokens | Fast | Very Good |
-| **Local** | Llama 3, Mistral | FREE | Slower | Good |
+### 1. Local LLMs (Zero API Cost)
+- **Ollama** (`http://localhost:11434`): Auto-detected out-of-the-box! Supports `llama3.2:3b`, `qwen2.5:3b`, `gemma3:4b`, `deepseek-r1`, `mistral`, and any model in your local Ollama library.
+- **LM Studio** (`http://localhost:1234`): Run local models via LM Studio's local server.
+- **vLLM / LocalAI / llama.cpp** (`http://localhost:8000` or custom `LLM_BASE_URL`).
 
-### How to Choose
+### 2. Cloud AI APIs
+- **OpenRouter** (`OPENROUTER_API_KEY`): Access 100+ models (Claude, Llama-3, DeepSeek, Gemini).
+- **Groq** (`GROQ_API_KEY`): Ultra-fast inference with Llama 3.3 70B & DeepSeek-R1.
+- **DeepSeek** (`DEEPSEEK_API_KEY`): Official DeepSeek-V3 & DeepSeek-R1 reasoning models.
+- **OpenAI** (`OPENAI_API_KEY`): GPT-4o, GPT-4o-mini, o1, o3-mini.
+- **Google Gemini** (`GEMINI_API_KEY` / `GOOGLE_API_KEY`): Gemini 2.0 Flash, Gemini 1.5 Pro.
+- **Anthropic Claude** (`ANTHROPIC_API_KEY`): Claude 3.5 Sonnet, Claude 3 Opus.
+- **Mistral AI** (`MISTRAL_API_KEY`): Mistral Large, Codestral.
+- **Custom / Private API** (`LLM_BASE_URL` + `LLM_API_KEY`): Any OpenAI-compatible endpoint.
 
-**Auto-Detection (Recommended):**
+### Configuration (`.env`)
 ```bash
-# Leave LLM_PROVIDER blank in .env
-# System picks first available from: Claude → OpenAI → Gemini → Local
+# Auto-detect local Ollama or first available API key:
+LLM_PROVIDER=auto
+
+# Or manually choose your provider:
+# LLM_PROVIDER=ollama
+# OLLAMA_MODEL=llama3.2:3b
+#
+# LLM_PROVIDER=groq
+# GROQ_API_KEY=gsk_...
+#
+# LLM_PROVIDER=openrouter
+# OPENROUTER_API_KEY=sk-or-v1-...
+#
+# LLM_PROVIDER=custom
+# LLM_BASE_URL=http://localhost:8000/v1
+# LLM_MODEL=my-model
 ```
 
-**Manual Selection:**
-```bash
-# In .env file:
-LLM_PROVIDER=claude   # or openai, gemini, local
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-**Code Example:**
+### Python Usage:
 ```python
-from src.llm.llm_provider import LLMProvider
+from src.agents.llm_provider import LLMProvider
 
-# Auto-detect
-provider = LLMProvider.create()
+# Auto-detects local Ollama (e.g. gemma3:4b) or cloud API
+llm = LLMProvider.create()
+print(llm)  # <LLMProvider [OLLAMA] model='gemma3:4b' status=[READY]>
 
-# Or specify
-provider = LLMProvider.create('openai', api_key='sk-...')
-provider = LLMProvider.create('gemini', api_key='...')
-provider = LLMProvider.create('local')  # Free!
+# Text completion
+analysis = llm.complete("Analyze the market regime given VIX at 14.5 and bullish breadth.")
 
-# Use it
-response = provider.chat("Analyze this earnings call...")
+# OpenAI-standard chat completion interface
+response = llm.client.chat.completions.create(
+    model=llm.model,
+    messages=[{"role": "user", "content": "Analyze trading strategy..."}],
+)
+print(response.choices[0].message.content)
 ```
-
-### Cost Comparison
-
-**On ₹10L capital with expected usage:**
-
-| Provider | Monthly Cost | Annual Returns | ROI |
-|----------|--------------|----------------|-----|
-| **Gemini** | ₹800 (~$10) | +₹2,60,000 | 325x |
-| **Claude** | ₹5,200 (~$65) | +₹2,60,000 | 50x |
-| **GPT-4** | ₹9,600 (~$120) | +₹2,60,000 | 27x |
-| **Local** | FREE | +₹2,40,000* | ∞ |
-
-*Slightly lower returns due to lower quality
-
-**Recommendation:** Start with **Gemini** (cheapest) or **Claude** (best quality)
-
----
 
 ## 📊 Complete System Architecture
 

@@ -25,12 +25,23 @@ class Settings:
     # ── Trading Mode ───────────────────────────────────────────────────────
     MODE: str = os.getenv('MODE', 'PAPER')                  # PAPER | LIVE
 
-    # ── AI Providers ───────────────────────────────────────────────────────
-    LLM_PROVIDER: str        = os.getenv('LLM_PROVIDER', 'auto')
+    # ── AI Providers (Local & Cloud) ───────────────────────────────────────
+    LLM_PROVIDER: str        = os.getenv('LLM_PROVIDER', 'auto')    # auto | ollama | lmstudio | openrouter | groq | deepseek | openai | gemini | claude | mistral | custom
+    LLM_MODEL: str           = os.getenv('LLM_MODEL', '')           # override model name for any provider
+    LLM_BASE_URL: str        = os.getenv('LLM_BASE_URL', '')        # custom OpenAI-compatible endpoint URL
+    LLM_API_KEY: str         = os.getenv('LLM_API_KEY', '')         # generic API key for custom endpoint
     ANTHROPIC_API_KEY: str   = os.getenv('ANTHROPIC_API_KEY', '')
     OPENAI_API_KEY: str      = os.getenv('OPENAI_API_KEY', '')
     GOOGLE_API_KEY: str      = os.getenv('GOOGLE_API_KEY', '')
+    GEMINI_API_KEY: str      = os.getenv('GEMINI_API_KEY', '')
     OPENROUTER_API_KEY: str  = os.getenv('OPENROUTER_API_KEY', '')
+    GROQ_API_KEY: str        = os.getenv('GROQ_API_KEY', '')
+    DEEPSEEK_API_KEY: str    = os.getenv('DEEPSEEK_API_KEY', '')
+    MISTRAL_API_KEY: str     = os.getenv('MISTRAL_API_KEY', '')
+    TOGETHER_API_KEY: str    = os.getenv('TOGETHER_API_KEY', '')
+    OLLAMA_BASE_URL: str     = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+    OLLAMA_MODEL: str        = os.getenv('OLLAMA_MODEL', '')
+    LMSTUDIO_BASE_URL: str   = os.getenv('LMSTUDIO_BASE_URL', 'http://localhost:1234')
 
     # ── Broker / OpenAlgo ──────────────────────────────────────────────────
     OPENALGO_API_KEY: str    = os.getenv('OPENALGO_API_KEY', '')

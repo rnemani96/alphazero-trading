@@ -6,7 +6,7 @@ GAME-CHANGING: System evolves and learns new patterns autonomously!
 Expected Impact: +5-10% annual returns from discovered inefficiencies
 """
 
-import anthropic
+from openai import OpenAI
 import json
 import os
 from datetime import datetime
@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 class StrategyGenerator:
     """
-    LLM-Powered Strategy Discovery Engine
-    
+    LLM-Powered Strategy Discovery Engine (OpenRouter backend)
+
     HOW IT WORKS:
     1. Analyzes recent market data and performance
     2. LLM proposes NEW strategy based on patterns it sees
@@ -29,44 +29,40 @@ class StrategyGenerator:
     4. Backtests strategy on historical data
     5. If successful (Sharpe > 1.5), adds to TITAN
     6. System gets smarter over time!
-    
+
     Real Example:
     Input: "Bank stocks rallying after RBI rate decisions"
     LLM discovers: "Post-RBI Momentum" strategy
     Backtest: Sharpe 2.1, Win Rate 68%
     → Auto-added to trading system! 🎉
     """
-    
+
     def __init__(self, event_bus, config):
         """
-        Initialize the Strategy Generator
+        Initialize the Strategy Generator with Universal LLMProvider
         """
         self.event_bus = event_bus
         self.config = config
-        
-        # Get API key from config or environment
-        api_key = config.get("openrouter_api_key") or os.getenv("OPENROUTER_API_KEY")
-        if not api_key:
-            # Fallback to anthropic key for backwards compatibility
-            api_key = os.getenv('ANTHROPIC_API_KEY')
-            
-        if not api_key:
-             logger.warning("StrategyGenerator: No API key found. Discovery will fail.")
 
-        self.client = anthropic.Anthropic(api_key=api_key) if api_key else None
-        self.model = config.get("llm_model", "claude-3-5-sonnet-20240620")
-        
+        from .llm_provider import LLMProvider
+        self.llm = LLMProvider.create(config)
+        self.client = self.llm.client
+        self.model = self.llm.model
+
         # Backtester - if not provided in config, use a dummy or simulate
         self.backtester = config.get("backtester")
-        
+
         # State
         self.is_active = True
         self.last_activity = datetime.now().isoformat()
         self.discovered_strategies = []
         self.successful_strategies = []
-        
-        logger.info("Strategy Generator initialized - Ready to discover new patterns!")
-    
+
+        logger.info(
+            f"Strategy Generator initialized with LLM: [{self.llm.provider.upper()}] "
+            f"model='{self.model}' (available={self.llm.is_available()})"
+        )
+
     def discover_strategy(
         self,
         market_context: Dict,
@@ -75,25 +71,29 @@ class StrategyGenerator:
     ) -> Dict:
         """
         Discover a new trading strategy
-        
+
         Args:
             market_context: Recent market data and patterns
             recent_performance: What's working/not working
             regime: Current market regime
-        
+
         Returns:
             New strategy with code and backtest results
         """
-        
+
         logger.info(f"Discovering new strategy for {regime} regime...")
-        
+
+        if not self.client or not self.llm.is_available():
+            logger.warning("StrategyGenerator: LLM offline, skipping autonomous strategy discovery")
+            return {"error": "LLM offline", "successful": False}
+
         # Build discovery prompt
         prompt = self._build_discovery_prompt(
             market_context, recent_performance, regime
         )
-        
-        # Ask Claude to generate strategy
-        response = self.client.messages.create(
+
+        # Ask LLM (local or cloud API) to generate strategy
+        response = self.client.chat.completions.create(
             model=self.model,
             max_tokens=6000,
             temperature=0.7,  # Higher temperature for creativity
@@ -104,8 +104,8 @@ class StrategyGenerator:
                 }
             ]
         )
-        
-        strategy_text = response.content[0].text
+
+        strategy_text = response.choices[0].message.content
         
         try:
             # Parse strategy

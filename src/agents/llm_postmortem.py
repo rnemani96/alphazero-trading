@@ -17,7 +17,7 @@ def analyze_stopped_out_trade(trade: Dict[str, Any], market_context: Dict[str, A
     Analyzes a trade that hit its stop loss using an LLM to determine the likely root cause.
     Returns a dictionary with the analysis results and logs it to a JSONL file.
     """
-    llm = LLMProvider.create(provider='claude')
+    llm = LLMProvider.create()
     
     if not llm.is_available():
         logger.warning("LLMPostMortem: LLM not available. Skipping analysis.")

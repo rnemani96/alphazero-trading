@@ -37,25 +37,19 @@ class EarningsCallAnalyzer(BaseAgent):
     
     def __init__(self, event_bus, config):
         super().__init__(event_bus, config, "EarningsCallAnalyzer")
-        api_key = config.get("openrouter_api_key") or os.getenv("OPENROUTER_API_KEY")
+        from .llm_provider import LLMProvider
 
-        if not api_key:
-            raise ValueError("openrouter API key not found in config or environment")
-
-        self.client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=api_key,)
-    
-        self.model = config.get(
-        "llm_model",
-        "anthropic/claude-3.5-sonnet",)
-    
-
+        self.llm = LLMProvider.create(config)
+        self.client = self.llm.client
+        self.model = self.llm.model
 
         # Store historical analyses for trend detection
         self.historical_analyses = {}
 
-        logger.info("Earnings Call Analyzer initialized with openrouter API")
+        logger.info(
+            f"Earnings Call Analyzer initialized with LLM: [{self.llm.provider.upper()}] "
+            f"model='{self.model}' (available={self.llm.is_available()})"
+        )
     
     def analyze_earnings_call(
         self, 
@@ -76,15 +70,25 @@ class EarningsCallAnalyzer(BaseAgent):
         )
         
         logger.info(f"Analyzing {symbol} {quarter} earnings call...")
-        
-        # Call Claude API
+
+        if not self.client or not self.llm.is_available():
+            logger.warning("LLM client not available; returning neutral earnings assessment")
+            return {
+                "symbol": symbol,
+                "quarter": quarter,
+                "confidence_score": 5.0,
+                "trading_signal": {"action": "WAIT", "confidence": 0.5, "symbol": symbol, "reasons": ["LLM offline"]},
+            }
+
+        # Call LLM API (local or cloud)
         response = self.client.chat.completions.create(
-        model=self.model,
-        messages=[
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.3,
-        max_tokens=4000,)
+            model=self.model,
+            messages=[
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=4000,
+        )
 
         
         # Parse response
