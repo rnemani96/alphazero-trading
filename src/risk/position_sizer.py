@@ -77,15 +77,24 @@ def optimal_size(
     regime:       str   = "TRENDING",
     confidence:   float = 0.5,
     is_intraday:  bool  = False,
+    strategy_id:  str   = "default",
 ) -> Dict:
     """
     Combined: take the more conservative of Kelly and ATR sizing.
     Scales risk_pct based on confidence (0.5=norm, 0.9=2x).
-    Now integrates Charge-Aware sizing (User Requirement).
+    Integrates Charge-Aware sizing and Bayesian Thompson Sampling allocation.
     """
     # Dynamic Risk Scaling from 0.5% (low conf) to 2.0% (max conf)
     effective_risk = risk_pct * (confidence * 2.0)
     effective_risk = max(0.005, min(0.02, effective_risk))
+
+    # Phase 6: Bayesian Thompson Sampling capital allocation
+    try:
+        from .thompson_sampling_allocator import get_thompson_allocator
+        ts_mult = get_thompson_allocator().get_allocation_multiplier(strategy_id)
+        effective_risk = max(0.003, min(0.025, effective_risk * ts_mult))
+    except Exception:
+        pass
     
     kqty = kelly_size(capital, entry_price, win_prob, avg_win_pct, avg_loss_pct)
     aqty = atr_size(capital, entry_price, atr, effective_risk)
@@ -223,7 +232,10 @@ class PositionSizer:
         if not is_intraday:
             is_intraday = strategy.upper().startswith("INTRADAY") or strategy.upper().find("SCALP") >= 0
 
-        result       = optimal_size(self.capital, entry_price, atr, wp, aw, al, self.risk_per_trade, regime, confidence, is_intraday)
+        result       = optimal_size(
+            self.capital, entry_price, atr, wp, aw, al,
+            self.risk_per_trade, regime, confidence, is_intraday, strategy_id=strategy
+        )
         result['qty'] = scale_by_vix(result['qty'], vix)
         
         # Apply Macro Reliability discounts

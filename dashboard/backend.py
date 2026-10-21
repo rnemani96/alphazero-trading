@@ -14,7 +14,7 @@ logger = logging.getLogger("DashboardBackend")
 
 # ── Safe imports ──────────────────────────────────────────────────────────────
 try:
-    from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+    from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
     from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.staticfiles import StaticFiles
@@ -178,6 +178,23 @@ def create_app(agents: Dict = None, data_fetcher=None, event_bus=None) -> Any:
             "T1": {"win_rate": 65, "total_pnl": 4500, "trades": 12},
             "M1": {"win_rate": 58, "total_pnl": 2100, "trades": 8}
         })
+
+    @app.post("/api/chat")
+    async def chat_endpoint(request: Request):
+        """Phase 7: Interactive Chatbot & Tool-calling API endpoint."""
+        try:
+            body = await request.json()
+            message = body.get("message", "").strip()
+            if not message:
+                return JSONResponse({"status": "error", "error": "Message is required"}, status_code=400)
+
+            from src.interfaces.trading_chatbot import TradingChatbot
+            chatbot = TradingChatbot(agents=_agents_ref, event_bus=_event_bus_ref)
+            result = chatbot.chat(message)
+            return JSONResponse(result)
+        except Exception as e:
+            logger.error(f"Chat endpoint error: {e}")
+            return JSONResponse({"status": "error", "error": str(e)}, status_code=500)
 
     @app.get("/evaluation/stats")
     async def evaluation_stats():

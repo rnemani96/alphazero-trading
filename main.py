@@ -1042,6 +1042,23 @@ def _update_positions(prices: Dict[str, float]):
             except Exception as _mp_exc:
                 logger.debug("Marketplace update error: %s", _mp_exc)
 
+        # ── Thompson Sampling Multi-Armed Bandit: update Bayesian posterior ─────
+        try:
+            from src.risk.thompson_sampling_allocator import get_thompson_allocator
+            strat_id = pos.get('strategy', 'general')
+            get_thompson_allocator().record_trade_outcome(
+                strategy_id=strat_id,
+                pnl=pnl,
+                symbol=sym,
+                action=pos.get('action', 'BUY'),
+                entry_price=pos.get('entry_price', 0.0),
+                exit_price=pos.get('exit_price', 0.0),
+                regime=_state.get('regime', 'TRENDING'),
+                vix=_state.get('macro', {}).get('vix', 15.0),
+            )
+        except Exception as _ts_exc:
+            logger.debug("ThompsonSampling record error: %s", _ts_exc)
+
         # ── Adaptive Profit & Loss Recovery: record outcome & trigger recovery plan ──
         if _recovery_engine:
             try:
