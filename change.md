@@ -143,7 +143,7 @@ In accordance with system reorganization:
   - `docs/TASKS_LIST.md`
   - `docs/README.md`
   - `docs/change.md`
-- Test files untracked from Git as requested.
+
 - `PENDING_CHANGES.md` archived into `docs/` and superseded by `docs/change.md`.
 
 ---
