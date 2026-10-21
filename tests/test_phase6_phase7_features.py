@@ -26,7 +26,7 @@ class TestPhase6And7Features(unittest.TestCase):
 
     def test_thompson_sampling_posterior_update(self):
         """Test Bayesian posterior updating on wins and losses."""
-        alloc = ThompsonSamplingAllocator(buffer_size=100)
+        alloc = ThompsonSamplingAllocator(buffer_size=100, state_file=False)
         alloc.register_strategy("TREND_MOMENTUM")
 
         initial_alpha = alloc.priors["TREND_MOMENTUM"]["alpha"]
@@ -61,7 +61,7 @@ class TestPhase6And7Features(unittest.TestCase):
 
     def test_experience_replay_buffer(self):
         """Test replay buffer sampling for online learning without catastrophic forgetting."""
-        alloc = ThompsonSamplingAllocator(buffer_size=50)
+        alloc = ThompsonSamplingAllocator(buffer_size=50, state_file=False)
         for i in range(10):
             alloc.record_trade_outcome(
                 strategy_id=f"STRAT_{i%3}",

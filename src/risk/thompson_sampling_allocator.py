@@ -81,15 +81,17 @@ class ThompsonSamplingAllocator:
     Bayesian Thompson Sampling Multi-Armed Bandit for Strategy Capital Allocation.
     """
 
-    def __init__(self, buffer_size: int = 500):
+    def __init__(self, buffer_size: int = 500, state_file: Any = None):
         self.buffer_size = buffer_size
+        self.state_file = _STATE_FILE if state_file is None else state_file
         # Strategy priors: {strategy_id: {'alpha': float, 'beta': float, 'pnl': float, 'sharpe': float}}
         self.priors: Dict[str, Dict[str, float]] = {}
         # Experience replay buffer
         self.replay_buffer: deque = deque(maxlen=buffer_size)
         # Allocation cache
         self.current_weights: Dict[str, float] = {}
-        self._load_state()
+        if self.state_file:
+            self._load_state()
 
     def register_strategy(self, strategy_id: str, initial_alpha: float = 2.0, initial_beta: float = 2.0):
         """Registers a new strategy with prior Beta(2, 2) (mean 0.50 win rate)."""
@@ -211,6 +213,8 @@ class ThompsonSamplingAllocator:
         self.sample_weights()
 
     def _save_state(self):
+        if not self.state_file:
+            return
         try:
             payload = {
                 "priors": self.priors,
@@ -218,16 +222,16 @@ class ThompsonSamplingAllocator:
                 "buffer_count": len(self.replay_buffer),
                 "updated_at": datetime.now().isoformat(),
             }
-            with open(_STATE_FILE, "w", encoding="utf-8") as f:
+            with open(self.state_file, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2)
         except Exception as e:
             logger.debug(f"Failed to save Thompson Sampling state: {e}")
 
     def _load_state(self):
-        if not _STATE_FILE.exists():
+        if not self.state_file or not Path(self.state_file).exists():
             return
         try:
-            with open(_STATE_FILE, "r", encoding="utf-8") as f:
+            with open(self.state_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 self.priors = data.get("priors", {})
                 self.current_weights = data.get("current_weights", {})
