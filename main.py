@@ -1087,30 +1087,135 @@ def _send_telegram(text: str):
         pass
 
 
+# ── Multi-Sector & Multi-Stock Diversification Allocator ────────────────────
+
+def _diversify_signals_across_sectors(
+    signals: List[Dict],
+    open_slots: int,
+    max_per_sector: int = 3,
+) -> List[Dict]:
+    """
+    Diversified Multi-Sector Round-Robin Signal Allocator.
+
+    Guarantee Requirement:
+      Ensures that trade execution is spread across MULTIPLE STOCKS and MULTIPLE SECTORS,
+      preventing portfolio concentration into a single rally (e.g. 5 banking stocks).
+
+    Algorithm:
+      1. Map all candidate symbols to their respective sectors via config.sectors.
+      2. Count currently held positions per sector in ActivePortfolio.
+      3. Group candidate signals into sector buckets, sorting each bucket by confidence descending.
+      4. Round-robin cycle across distinct sectors, taking the top candidate from each sector
+         with remaining sector capacity (enforcing max_per_sector limit).
+      5. Repeat until open portfolio slots are filled or all signals are exhausted.
+    """
+    if not signals or open_slots <= 0:
+        return []
+
+    from collections import defaultdict
+    from config.sectors import get_sector
+
+    # 1. Count current open position exposure per sector
+    current_sector_counts: Dict[str, int] = defaultdict(int)
+    if AP and AP.open_positions:
+        for pos in AP.open_positions.values():
+            p_sym = pos.get('symbol', '')
+            p_sec = pos.get('sector') or get_sector(p_sym)
+            current_sector_counts[p_sec] += 1
+
+    # 2. Group candidate signals into sector buckets
+    sector_buckets: Dict[str, List[Dict]] = defaultdict(list)
+    for sig in signals:
+        sym = sig.get('symbol', '')
+        sec = sig.get('sector') or get_sector(sym)
+        sig['sector'] = sec
+        sector_buckets[sec].append(sig)
+
+    # Sort each sector bucket by confidence descending
+    for sec in sector_buckets:
+        sector_buckets[sec].sort(key=lambda s: float(s.get('confidence', 0)), reverse=True)
+
+    # 3. Round-robin multi-sector selection
+    selected_signals: List[Dict] = []
+    selected_symbols: set = set()
+    active_sector_counts = dict(current_sector_counts)
+
+    # Order sectors by their highest-confidence candidate
+    sectors = list(sector_buckets.keys())
+    sectors.sort(key=lambda sec: float(sector_buckets[sec][0].get('confidence', 0)), reverse=True)
+
+    changed = True
+    while len(selected_signals) < open_slots and changed:
+        changed = False
+        for sec in sectors:
+            if len(selected_signals) >= open_slots:
+                break
+
+            # Enforce max positions per sector constraint
+            if active_sector_counts.get(sec, 0) >= max_per_sector:
+                continue
+
+            # Pick next available signal from this sector bucket
+            bucket = sector_buckets[sec]
+            while bucket:
+                candidate = bucket.pop(0)
+                c_sym = candidate.get('symbol', '')
+                if c_sym not in selected_symbols:
+                    selected_signals.append(candidate)
+                    selected_symbols.add(c_sym)
+                    active_sector_counts[sec] = active_sector_counts.get(sec, 0) + 1
+                    changed = True
+                    break
+
+    # Log multi-sector representation
+    sec_summary = defaultdict(int)
+    for s in selected_signals:
+        sec_summary[s.get('sector', 'OTHER')] += 1
+    logger.info(
+        "🌐 Multi-Sector Selection: Approved %d signals across %d distinct sectors: %s",
+        len(selected_signals), len(sec_summary), dict(sec_summary)
+    )
+
+    return selected_signals
+
+
 # ── Universe builder ──────────────────────────────────────────────────────────
 
 def _build_universe() -> List[str]:
-    """Return list of NSE symbols to scan this iteration. Tightened for Speed during Market Hours."""
+    """
+    Return list of NSE symbols to scan this iteration.
+    Constructs a balanced multi-sector universe across Banking, IT, Pharma, Auto,
+    Energy, Metals, FMCG, Infra, and Finance.
+    """
     market_hours = _is_market_hours()
-    
-    # ── High Velocity Target Universe ──
-    # During market hours, we prioritize speed (<1 min iterations).
-    # We limit the universe to the most liquid and high-performing stocks.
-    limit = 60 if market_hours else 100
-    
+    syms: List[str] = []
+
+    # ── Layer 1: Multi-Sector Core Basket (Cross-Sector Representation) ─────────
+    # Guarantee liquid leaders across all 9 NSE sectors are scanned on every iteration
+    try:
+        from config.sectors import SECTORS
+        sector_basket = []
+        for sec_name, sec_stocks in SECTORS.items():
+            if sec_name != 'MOMENTUM':
+                # Include top 3 liquid leaders per sector
+                sector_basket.extend(sec_stocks[:3])
+        syms += sector_basket
+    except Exception as _sec_err:
+        logger.debug("Sector basket injection: %s", _sec_err)
+
+    # ── Layer 2: High Velocity Discovery (Top Gainers/Volume) ───────────────────
+    limit = 40 if market_hours else 80
     try:
         from src.data.discovery import get_best_performing_stocks
-        # discovery.py has a 1-hour cache
         stocks = get_best_performing_stocks(limit=limit)
-        syms = list({s.get('symbol') for s in stocks if s.get('symbol')})
+        syms += [s.get('symbol') for s in stocks if s.get('symbol')]
     except Exception:
-        syms = []
+        pass
 
-    # Supplement with liquid NIFTY stocks
+    # ── Layer 3: Liquid NIFTY Constituents ─────────────────────────────────────
     try:
         from src.data.universe import get_nifty500_symbols
-        # Only take Top 40 from Nifty 500 list during hours to keep total universe < 100
-        n_limit = 40 if market_hours else 100
+        n_limit = 30 if market_hours else 80
         syms += get_nifty500_symbols()[:n_limit]
     except Exception:
         pass
@@ -1988,8 +2093,15 @@ def _run_iteration():
                         upgrades_done += 1
                         open_slots += 1
                 
-                # Truncate final_signals so we NEVER exceed maximum open portfolio slots
-                final_signals = final_signals[:max(0, open_slots)]
+            # ── Multi-Sector & Multi-Stock Allocation Filter (ALWAYS APPLIED) ─────────
+            # Apply round-robin sector quota to ensure trades occur across MULTIPLE distinct
+            # sectors (Banking, IT, Auto, Pharma, Energy, Metals, etc.) and multiple stocks.
+            max_sec = getattr(settings, 'MAX_POSITIONS_PER_SECTOR', 3)
+            final_signals = _diversify_signals_across_sectors(
+                final_signals,
+                open_slots=max(0, open_slots),
+                max_per_sector=max_sec,
+            )
 
     # ── Step 10: Execution ────────────────────────────────────────────────────
     executed = 0

@@ -200,6 +200,34 @@ $$\mathcal{B}_{\text{sample}} = \{e_i \sim \mathcal{U}(1, |\mathcal{D}|)\}_{i=1}
 
 ---
 
+### 2.7 Multi-Sector & Multi-Stock Round-Robin Diversification Allocator
+Files: `main.py` (`_diversify_signals_across_sectors`, `_build_universe`), `config/settings.py`, `config/sectors.py`
+
+To eliminate systemic portfolio concentration and prevent industry-specific clustering (e.g. 5 banking trades simultaneously hit by an RBI policy announcement), AlphaZero enforces a two-tier diversification constraint:
+
+#### 1. Core Universe Multi-Sector Basket
+During universe construction, `_build_universe()` injects the top liquid market leaders across all 9 primary NSE sectors (Banking, IT, Pharma, Auto, Energy, Metals, FMCG, Infra, Financial Services). This guarantees the scanner never starves non-trending sectors of scanning opportunities.
+
+#### 2. Round-Robin Sector Quota Allocation Algorithm
+Let $S = \{s_1, s_2, \dots, s_K\}$ be the set of sectors with candidate trade signals.
+Let $B_s = [m_{s,1}, m_{s,2}, \dots]$ be the candidate signals within sector $s$, sorted descending by ensemble confidence $C(m)$:
+$$C(m_{s,1}) \ge C(m_{s,2}) \ge \dots$$
+Let $O$ be the number of open portfolio slots, and $K_{\text{max}} = \text{MAX\_POSITIONS\_PER\_SECTOR} = 3$.
+
+The allocator iterates round-robin across sector buckets:
+$$\text{For } \text{round } r = 1, 2, \dots, K_{\text{max}}:$$
+$$\quad \text{For each sector } s \in S \text{ (ordered by } \max C(B_s)\text{):}$$
+$$\quad \quad \text{If } \text{ActivePositions}(s) < K_{\text{max}} \text{ and } |Selected| < O:$$
+$$\quad \quad \quad m^* = \text{pop\_highest\_confidence}(B_s)$$
+$$\quad \quad \quad Selected \leftarrow Selected \cup \{m^*\}$$
+$$\quad \quad \quad \text{ActivePositions}(s) \leftarrow \text{ActivePositions}(s) + 1$$
+
+This guarantees:
+1. **Multi-Stock Distribution**: No duplicate symbol entries.
+2. **Multi-Sector Diversity**: No sector holds more than 3 simultaneous positions, and trades are evenly distributed across sectors before any sector gets a second or third slot.
+
+---
+
 ## 3. Universal LLM Gateway Architecture
 
 AlphaZero v5.1 introduces a unified LLM layer in `src/agents/llm_provider.py` that abstracts away vendor SDKs. It provides zero-dependency native HTTP fallback alongside OpenAI SDK compatibility.
@@ -273,3 +301,16 @@ However, Full Kelly assumes perfect knowledge of $p$ and $b$. In live financial 
 2. If available, it executes locally at zero cost.
 3. If local servers are offline, it checks cloud API keys (OpenRouter $\to$ Groq $\to$ DeepSeek $\to$ OpenAI $\to$ Gemini $\to$ Claude).
 4. If all APIs fail or are rate-limited, the agent degrades gracefully without crashing: returning neutral confidence ($0.50$) and `WAIT` signals, ensuring the main trading loop continues uninterrupted.
+
+### Q5: How does AlphaZero ensure trades are diversified across multiple stocks and sectors rather than clustering in one industry?
+**Answer**: AlphaZero enforces cross-asset and cross-sector balance at two stages:
+1. **Universe Scanning**: The scanner seeds a core basket comprising the top 3 liquid leaders from all 9 primary NSE sectors (Banking, IT, Pharma, Auto, Energy, Metals, FMCG, Infra, Finance), ensuring no sector is starved of signal discovery.
+2. **Round-Robin Allocator (`_diversify_signals_across_sectors`)**: Even if 10 banking signals clear threshold during a sector rally, the round-robin allocator caps sector exposure to `MAX_POSITIONS_PER_SECTOR` (default 3) and cycles across distinct sectors (e.g. 1 Banking $\to$ 1 IT $\to$ 1 Auto $\to$ 1 Pharma) before awarding second slots. This eliminates idiosyncratic cluster risk and macro policy vulnerability.
+
+### Q6: How does the Adaptive Recovery Engine mathematically recover previous deficits back into profits?
+**Answer**: When an unrecovered deficit occurs (e.g. overnight gap-down), `AdaptiveRecoveryEngine`:
+1. Logs the exact accumulated debt $D = \text{Loss} + \sum \text{Charges}_{\text{roundtrip}}$.
+2. Elevates the operational mode to `RECOVERY_HURDLE`, raising minimum entry confidence from $0.52$ to $0.75+$ and minimum R:R to $2.50:1$.
+3. Dynamically calculates the required rupee profit hurdle per trade: $R_{\text{target}} = \frac{D}{N_{\text{trades}}} \times 1.25$.
+4. Tightens trade sizing and trailing stops so subsequent high-probability setups mathematically extinguish $100\%$ of the deficit plus statutory costs, restoring cumulative P&L to net profitability.
+
