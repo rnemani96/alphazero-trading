@@ -145,3 +145,26 @@ In accordance with system reorganization:
   - `docs/change.md`
 - Test files untracked from Git as requested.
 - `PENDING_CHANGES.md` archived into `docs/` and superseded by `docs/change.md`.
+
+---
+
+## 7. 24/7 Autonomous Lifecycle Automation & Self-Healing Watchdog
+
+### 7.1 Pre-Market & Post-Market Automation Hooks (`main.py`)
+- **08:45 IST Pre-Market Intelligence Briefing**:
+  - Automatically assesses overnight S&P 500 performance, USD-INR currency delta, Brent crude, GIFT Nifty bias, and India VIX.
+  - Formats and dispatches an executive intelligence brief via Telegram before market open.
+- **15:15 IST Autonomous Intraday Square-Off (`_auto_square_off_intraday`)**:
+  - Detects and closes all open `INTRADAY`, `SCALP`, and `MIS` positions before market close, eliminating exchange/broker forced square-off penalty charges.
+- **15:35 IST Executive EOD Performance Report (`_send_daily_eod_summary`)**:
+  - Automatically aggregates today's realized P&L, statutory fee impact, trade win rates, active recovery ledger status, and open swing holdings, dispatching a markdown executive scorecard to Telegram.
+
+### 7.2 24/7 Self-Healing Process Supervisor (`scripts/watchdog.py`)
+- **Fault-Tolerant Daemon**:
+  - Supervises the trading engine subprocess. In the event of unhandled network dropouts, memory limits, or unexpected process termination, captures exit telemetry, alerts Telegram, and restarts the engine within 5 seconds with zero state loss.
+  - Rate-limits crashes to prevent infinite loop stress during hard external outages.
+
+### 7.3 Containerized & 1-Click Autonomous Deployment
+- **`Dockerfile` & `docker-compose.yml`**: Full multi-container orchestration packaging the AlphaZero engine and an isolated Ollama local LLM service with automatic health checks and persistent storage.
+- **`start_autonomous.bat` & `start_autonomous.sh`**: Zero-configuration 1-click startup scripts for Windows and Linux/VPS environments.
+

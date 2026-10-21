@@ -2259,6 +2259,108 @@ def _get_us_market_bias() -> float:
         return 0.0
 
 
+# ── Autonomous Lifecycle Automation ─────────────────────────────────────────
+
+def _auto_square_off_intraday():
+    """
+    Autonomous 15:15 IST Intraday Square-off.
+    Closes all intraday/MIS/scalp positions before exchange session ends to avoid broker penalty fees.
+    """
+    logger.info("⏰ 15:15 IST REACHED: Executing Autonomous Intraday Square-off...")
+    if not AP or not AP.open_positions:
+        return
+    
+    intraday_closed = 0
+    for key, pos in list(AP.open_positions.items()):
+        tt = str(pos.get("trade_type", "")).upper()
+        prod = str(pos.get("product", "")).upper()
+        if tt in ("INTRADAY", "SCALP") or prod == "MIS":
+            sym = pos.get("symbol")
+            curr_p = float(pos.get("current_price", pos.get("entry_price", 0)))
+            closed_pos = AP.force_close(sym, curr_p, reason="15:15 IST Intraday Session Square-off")
+            if closed_pos:
+                intraday_closed += 1
+                logger.info("⚡ AUTO SQUARE-OFF: Closed %s %s @ ₹%.2f (P&L: ₹%.2f)",
+                            pos.get("direction", "BUY"), sym, curr_p, closed_pos.get("realised_pnl", 0))
+
+    if intraday_closed > 0:
+        _send_telegram(f"⏰ [AlphaZero] 15:15 IST Auto-Square-off completed: Closed {intraday_closed} intraday positions.")
+
+
+def _send_daily_eod_summary():
+    """
+    Broadcasts the end-of-day executive P&L and performance report to Telegram.
+    """
+    try:
+        today_str = datetime.now(IST).strftime("%d-%b-%Y")
+        if not AP:
+            return
+        summ = AP.get_summary()
+        hist = AP.history or []
+        today_iso = datetime.now(IST).strftime("%Y-%m-%d")
+        today_trades = [h for h in hist if str(h.get("closed_at", "")).startswith(today_iso)]
+        
+        wins = [t for t in today_trades if t.get("realised_pnl", 0) > 0]
+        losses = [t for t in today_trades if t.get("realised_pnl", 0) <= 0]
+        today_pnl = sum(t.get("realised_pnl", 0) for t in today_trades)
+        today_charges = sum(t.get("charges", 40.0) for t in today_trades)
+        net_today = today_pnl - today_charges
+        
+        rec_info = "BALANCED_GROWTH (Deficit: ₹0.00)"
+        if _rec_engine:
+            rec_state = _rec_engine.get_state_summary()
+            rec_info = f"{rec_state.get('mode', 'BALANCED_GROWTH')} (Deficit: ₹{rec_state.get('current_deficit', 0):.2f})"
+
+        trade_stats = f"• *Today's Closed Trades*: {len(today_trades)} ({len(wins)}W / {len(losses)}L)\n• *Win Rate*: {(len(wins)/len(today_trades)*100):.1f}%\n" if today_trades else "• *Today's Trades*: No positions closed today\n"
+
+        report = (
+            f"📊 *AlphaZero Capital — Daily EOD Performance Report*\n"
+            f"📅 Date: {today_str} | Mode: {settings.MODE}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"• *Net Realized P&L*: ₹{net_today:+,.2f}\n"
+            f"• *Gross P&L*: ₹{today_pnl:+,.2f} | Est. Charges: ₹{today_charges:,.2f}\n"
+            f"{trade_stats}"
+            f"• *Open Portfolio Slots*: {summ.get('total_open', 0)} / {settings.MAX_POSITIONS} active\n"
+            f"• *Recovery Engine*: {rec_info}\n"
+            f"• *Macro Regime*: {_state.get('regime', 'TRENDING')} (VIX: {_state.get('macro', {}).get('vix', 15.0):.1f})\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"🤖 *System Status*: Autonomous AI Engine Active"
+        )
+        _send_telegram(report)
+        logger.info("📤 Broadcasted Daily EOD Executive Report to Telegram.")
+    except Exception as e:
+        logger.debug(f"Failed to send Daily EOD Telegram report: {e}")
+
+
+def _run_pre_market_brief():
+    """
+    Broadcasts pre-market macro intelligence brief at 08:45 IST before market opens.
+    """
+    try:
+        macro = _state.get('macro', {})
+        vix = macro.get('vix', 15.0)
+        gift_nifty = _state.get('sgx', {}).get('bias', 0.0)
+        sentiment = _state.get('sentiment', 0.5)
+        
+        bias_label = "🟢 BULLISH" if gift_nifty > 0.2 else ("🔴 BEARISH" if gift_nifty < -0.2 else "⚪ NEUTRAL")
+        
+        brief = (
+            f"🌅 *AlphaZero Capital — Pre-Market Intelligence Brief*\n"
+            f"📅 Date: {datetime.now(IST).strftime('%d-%b-%Y')} (08:45 IST)\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"• *GIFT Nifty Bias*: {bias_label} ({gift_nifty:+.2f}%)\n"
+            f"• *India VIX*: {vix:.2f} ({'CALM' if vix < 16 else ('ELEVATED' if vix < 22 else 'HIGH VOLATILITY')})\n"
+            f"• *Global Sentiment Score*: {sentiment:.2f}\n"
+            f"• *Active Core Baskets*: 9 Sectors Pre-seeded\n"
+            f"• *Autonomous Execution*: Standing by for 09:15 IST opening bell\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━"
+        )
+        _send_telegram(brief)
+        logger.info("🌅 Broadcasted Pre-Market Intelligence Brief to Telegram.")
+    except Exception as e:
+        logger.debug(f"Failed to send Pre-market brief: {e}")
+
+
 def _run_nightly_tasks():
     """Requirement 2.1: Dynamic Universe Training & 2.2: Parallel Stress Test."""
     logger.info("🌙 STARTING NIGHTLY STRATEGY TRAINING & STRESS TEST...")
@@ -2393,6 +2495,9 @@ def _run_nightly_tasks():
             logger.warning("openpyxl not installed — skipping Excel export (pip install openpyxl)")
         except Exception as _xe:
             logger.warning("Excel export failed: %s", _xe)
+
+        # 6. Broadcast Daily Executive P&L Report to Telegram
+        _send_daily_eod_summary()
 
     except Exception as e:
         logger.error(f"Failed to complete nightly tasks: {e}", exc_info=True)
@@ -2722,6 +2827,13 @@ def main():
             # 🌙 Nightly Intelligence Refresh (Requirement #2.1, #2.2)
             now_ist = datetime.now(IST)
             
+            # 🌅 08:45 IST Pre-Market Intelligence Brief
+            if now_ist.hour == 8 and 45 <= now_ist.minute <= 55 and not _state.get('pre_market_brief_done_today'):
+                _run_pre_market_brief()
+                _state['pre_market_brief_done_today'] = True
+            elif now_ist.hour != 8:
+                _state['pre_market_brief_done_today'] = False
+
             # 🕒 Chronos Morning Analysis (09:00 - 09:10 IST)
             if now_ist.hour == 9 and 0 <= now_ist.minute <= 10 and not _state.get('chronos_done_today'):
                 _run_chronos_analysis()
@@ -2729,6 +2841,14 @@ def main():
             elif now_ist.hour != 9:
                 _state['chronos_done_today'] = False
 
+            # ⏰ 15:15 IST Autonomous Intraday Square-off
+            if now_ist.hour == 15 and 15 <= now_ist.minute <= 25 and not _state.get('intraday_squareoff_done_today'):
+                _auto_square_off_intraday()
+                _state['intraday_squareoff_done_today'] = True
+            elif now_ist.hour != 15:
+                _state['intraday_squareoff_done_today'] = False
+
+            # 🌙 15:35 IST Nightly Tasks & Model Refinement
             if (now_ist.hour > 15 or (now_ist.hour == 15 and now_ist.minute >= 35)) and not _state.get('nightly_training_done'):
                 _run_nightly_tasks()
                 _state['nightly_training_done'] = True

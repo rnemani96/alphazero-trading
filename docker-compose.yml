@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  alphazero-core:
+    build: .
+    container_name: alphazero-engine
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./models:/app/models
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    environment:
+      - MODE=PAPER
+      - TZ=Asia/Kolkata
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: alphazero-ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+
+volumes:
+  ollama_models:
