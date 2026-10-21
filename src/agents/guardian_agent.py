@@ -97,7 +97,7 @@ class GuardianAgent(BaseAgent):
         self.consec_losses      = 0
         self.kill_switch_active = False
         self.cooldown_until: Optional[datetime] = None
-        self.max_strategy_positions = 4
+        self.max_strategy_positions = int(config.get('MAX_STRATEGY_POSITIONS', 3))
         self.last_trade_time: Optional[datetime] = None
         self.trade_decisions    = 0
         self.last_reset_date    = date.today()
@@ -106,7 +106,15 @@ class GuardianAgent(BaseAgent):
         # Per-strategy win-rate tracking for Kelly sizing
         self._strategy_history: Dict[str, List[float]] = {}
 
-        logger.info("GUARDIAN initialised — all risk limits active")
+        # ── Adaptive Profit & Loss Recovery Engine ───────────────────────────
+        try:
+            from src.risk.adaptive_recovery_engine import get_adaptive_recovery_engine
+            self.recovery_engine = get_adaptive_recovery_engine(capital=self.initial_capital)
+        except Exception as _re_exc:
+            self.recovery_engine = None
+            logger.debug("Recovery engine not loaded in Guardian: %s", _re_exc)
+
+        logger.info("GUARDIAN initialised — all risk limits & adaptive recovery active")
 
     # ── Core entry point ──────────────────────────────────────────────────────
 
@@ -169,10 +177,23 @@ class GuardianAgent(BaseAgent):
 
             # ── Dynamic SL / Target from ATR (Regime-Aware) ───────────────────
             regime  = signal.get('regime', 'SIDEWAYS').upper()
-            sl, tgt = self._compute_sl_target(price, action, atr, regime)
+            explicit_sl = float(signal.get('stop_loss') or 0.0)
+            explicit_tgt = float(signal.get('target') or 0.0)
+            if explicit_sl > 0 and explicit_tgt > 0:
+                sl, tgt = explicit_sl, explicit_tgt
+            else:
+                sl, tgt = self._compute_sl_target(price, action, atr, regime)
             rr      = self._compute_rr(price, sl, tgt)
             if rr < self.min_rr:
                 return self._reject(f'LOW_RR ({rr:.2f} < {self.min_rr})')
+
+            # ── Adaptive Threshold & Loss Recovery Gating ─────────────────────
+            if self.recovery_engine:
+                sig_eval = dict(signal)
+                sig_eval.update({'rr_ratio': rr, 'price': price, 'target': tgt, 'stop_loss': sl})
+                approved_by_rec, rec_reason = self.recovery_engine.validate_candidate_signal(sig_eval)
+                if not approved_by_rec:
+                    return self._reject(f'ADAPTIVE_ENGINE: {rec_reason}')
 
             # ── Position sizing ────────────────────────────────────────────────
             pos_size = self._compute_position_size(
@@ -476,6 +497,7 @@ class GuardianAgent(BaseAgent):
                 'vix':               self._current_vix,
                 'kpi':               'Max drawdown < 8%',
                 'last_activity':     self.last_activity,
+                'adaptive_recovery': self.recovery_engine.get_stats() if self.recovery_engine else {},
             }
 
     # ── Dashboard Control ────────────────────────────────────────────────────

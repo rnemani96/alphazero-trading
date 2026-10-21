@@ -1,5 +1,11 @@
 import sys
 import os
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -72,7 +78,10 @@ def test_guardian_correlation_limit():
         "action": "BUY",
         "price": 100,
         "atr": 5,
-        "confidence": 0.8,
+        "confidence": 0.85,
+        "target": 125,
+        "stop_loss": 90,
+        "agent_agreement": 2,
         "top_strategy": "T10"
     }
     

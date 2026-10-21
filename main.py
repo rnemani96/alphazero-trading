@@ -245,6 +245,15 @@ try:
 except Exception as _mp_exc:
     logger.debug("StrategyMarketplace not available: %s", _mp_exc)
 
+# ── Adaptive Profit Harvesting & Zero-Loss Recovery Engine ─────────────────
+_recovery_engine = None
+try:
+    from src.risk.adaptive_recovery_engine import get_adaptive_recovery_engine
+    _recovery_engine = get_adaptive_recovery_engine(capital=settings.INITIAL_CAPITAL)
+    logger.info("AdaptiveRecoveryEngine: self-adjusting thresholds & zero-loss recovery active")
+except Exception as _re_exc:
+    logger.debug("AdaptiveRecoveryEngine not available: %s", _re_exc)
+
 # ── Monte Carlo stress engine (instantiated per-run with actual returns) ──────
 # MonteCarloEngine takes returns[] at construction, so we import the class here
 # and instantiate it inside _post_market_tasks with real trade returns.
@@ -410,6 +419,7 @@ def _write_state():
             "candidates": _state.get("candidates", [])[:20],
             "karma": agents['KARMA'].get_knowledge_summary() if agents.get('KARMA') else {},
             "agent_scores": agents['LENS'].evaluator.get_agent_scores() if agents.get('LENS') and hasattr(agents['LENS'], 'evaluator') else {},
+            "adaptive_recovery": _recovery_engine.get_stats() if _recovery_engine else {},
         }
         # Heartbeat for SENTINEL
         status["heartbeat"] = datetime.now(IST).isoformat()
@@ -957,6 +967,17 @@ def _update_positions(prices: Dict[str, float]):
             except Exception as _mp_exc:
                 logger.debug("Marketplace update error: %s", _mp_exc)
 
+        # ── Adaptive Profit & Loss Recovery: record outcome & trigger recovery plan ──
+        if _recovery_engine:
+            try:
+                rec_res = _recovery_engine.register_trade_outcome(pos)
+                if rec_res.get("status") == "RECOVERY_COMPLETE":
+                    _send_telegram(
+                        f"🎉 *AlphaZero Recovery Complete*\nDeficit erased! Surplus Profit: Rs{rec_res.get('surplus_profit', 0):,.2f}"
+                    )
+            except Exception as _re_exc:
+                logger.debug("Adaptive recovery record_outcome error: %s", _re_exc)
+
         _send_telegram(f"*{sym}* {status}\nP&L: Rs{pnl:+,.0f}")
 
 
@@ -1411,6 +1432,25 @@ def _run_iteration():
             _state['regime'] = regime
         except Exception as exc:
             logger.debug("NEXUS: %s", exc)
+
+    # ── Update Self-Adjusting Thresholds in Recovery Engine ────────────────────
+    if _recovery_engine:
+        try:
+            ap_summ = AP.get_summary() if AP else {}
+            vix_val = float(_state.get("market_indices", {}).get("INDIA VIX", {}).get("ltp", vix))
+            wr_val = ap_summ.get("win_rate_pct", 58.0) / 100.0
+            cl_val = getattr(agents.get('GUARDIAN'), 'consec_losses', 0) if agents.get('GUARDIAN') else 0
+            cur_th = _recovery_engine.update_market_context(
+                regime=regime,
+                vix=vix_val,
+                win_rate_20=wr_val,
+                consecutive_losses=cl_val,
+            )
+            _state['adaptive_thresholds'] = asdict(cur_th)
+            logger.info("Adaptive Thresholds: [%s] min_conf=%.2f  min_RR=%.1f  agreed=%d",
+                        cur_th.mode_label, cur_th.min_confidence, cur_th.min_rr_ratio, cur_th.min_agent_agreement)
+        except Exception as _th_exc:
+            logger.debug("Adaptive thresholds update error: %s", _th_exc)
 
     # ── Step 6: Stock scoring (SIGMA & ATLAS) ─────────────────────────────────
     sigma_scores: Dict[str, float] = _state.get('sigma_scores', {})

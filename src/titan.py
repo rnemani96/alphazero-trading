@@ -133,10 +133,10 @@ class TitanStrategyEngine:
         r = {}
         if df.empty:
             return r
-        c = df["close"].values
-        h = df["high"].values
-        l = df["low"].values
-        v = df["volume"].values if "volume" in df.columns else np.ones(len(c))
+        c = df["close"].values.astype(float)
+        h = df["high"].values.astype(float)
+        l = df["low"].values.astype(float)
+        v = df["volume"].values.astype(float) if "volume" in df.columns else np.ones(len(c), dtype=float)
 
         # EMAs
         def ema(x, p):

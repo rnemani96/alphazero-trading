@@ -95,15 +95,15 @@ class TrailingStopManager:
                 profit_pct = (current_price - entry_price) / entry_price
             else:  # SHORT
                 profit_pct = (entry_price - current_price) / entry_price
-            
-                # 1. Break-even move (Safety Logic)
-                # Move to break-even as soon as we hit 0.8% profit to prevent losses
-                if profit_pct >= 0.008:
-                    be_stop = round(entry_price * 1.001 if position['side'] == 'LONG' else entry_price * 0.999, 2)
-                    if position['side'] == 'LONG':
-                        current_stop = max(current_stop, be_stop)
-                    else:
-                        current_stop = min(current_stop, be_stop)
+
+            # 1. Break-even move (Safety Logic)
+            # Move to break-even as soon as we hit 0.8% profit to prevent losses
+            if profit_pct >= 0.008:
+                be_stop = round(entry_price * 1.001 if position['side'] == 'LONG' else entry_price * 0.999, 2)
+                if position['side'] == 'LONG':
+                    current_stop = max(current_stop, be_stop)
+                else:
+                    current_stop = min(current_stop, be_stop)
 
                 # 2. Main Trailing Activation (Adaptive Tightening)
                 if profit_pct >= self.activation_profit_pct:

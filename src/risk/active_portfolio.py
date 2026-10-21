@@ -302,14 +302,35 @@ class ActivePortfolio:
                 if price > highest: pos["highest_price"] = round(price, 2)
                 if price < lowest:  pos["lowest_price"]  = round(price, 2)
 
-                # ── 🚀 AGGRESSIVE PROFIT PRESERVATION (User Request) ──────────────────
-                # Rule 1: Instant Breakeven at +1.0% profit (Protects Capital)
-                if not pos.get("breakeven_done") and pnl_pct >= 1.0:
-                    new_sl = round(ep * 1.002 if is_long else ep * 0.998, 2) # Entry + 0.2%
-                    pos["stop_loss"] = new_sl
-                    pos["breakeven_done"] = True
-                    updated_stops.append({"symbol": sym, "new_sl": new_sl, "broker_id": pos.get("broker_id")})
-                    logger.info("🛡️ BREAKEVEN LOCKED: %s %s moved to entry+ after 1%% gain.", side, sym)
+                # ── 🚀 ZERO-LOSS GUARANTEE & ADAPTIVE PROFIT HARVESTING ───────────────
+                atr = pos.get("atr", ep * 0.02)
+                try:
+                    from src.risk.adaptive_recovery_engine import get_adaptive_recovery_engine
+                    rec_engine = get_adaptive_recovery_engine()
+                    prot = rec_engine.evaluate_position_protection(pos, price, atr=atr)
+
+                    if prot["action"] == "MOVE_TO_BREAKEVEN" and prot.get("new_sl"):
+                        new_sl = prot["new_sl"]
+                        pos["stop_loss"] = new_sl
+                        pos["breakeven_done"] = True
+                        updated_stops.append({"symbol": sym, "new_sl": new_sl, "broker_id": pos.get("broker_id")})
+                        logger.info("🛡️ ZERO-LOSS RATCHET: %s %s moved to cost-covered SL ₹%.2f (%s)",
+                                    side, sym, new_sl, prot.get("reason", ""))
+
+                    elif prot["action"] == "TRAIL_PROFIT" and prot.get("new_sl"):
+                        new_sl = prot["new_sl"]
+                        pos["stop_loss"] = new_sl
+                        updated_stops.append({"symbol": sym, "new_sl": new_sl, "broker_id": pos.get("broker_id")})
+                        logger.info("📈 PROFIT LADDER LOCKED: %s %s new SL ₹%.2f (%s)",
+                                    side, sym, new_sl, prot.get("reason", ""))
+                except Exception as _pe_exc:
+                    # Fallback to local rule if engine lookup fails
+                    if not pos.get("breakeven_done") and pnl_pct >= 1.0:
+                        new_sl = round(ep * 1.002 if is_long else ep * 0.998, 2)
+                        pos["stop_loss"] = new_sl
+                        pos["breakeven_done"] = True
+                        updated_stops.append({"symbol": sym, "new_sl": new_sl, "broker_id": pos.get("broker_id")})
+                        logger.info("🛡️ BREAKEVEN LOCKED: %s %s moved to entry+ after 1%% gain.", side, sym)
 
                 # Rule 2: 0.5R Move -> Scale Out (Requirement #6 legacy)
                 initial_risk_dist = pos.get("sl_dist", abs(ep - sl))
@@ -603,11 +624,14 @@ from typing import Tuple  # ensure Tuple is imported for can_add_position type h
 _AP_INSTANCE: Optional[ActivePortfolio] = None
 _AP_LOCK = threading.Lock()
 
-def get_active_portfolio(max_positions: int = 10, initial_capital: float = 1000000) -> ActivePortfolio:
+def get_active_portfolio(max_positions: int = 10, initial_capital: float = 1000000, force_new: bool = False) -> ActivePortfolio:
     global _AP_INSTANCE
     with _AP_LOCK:
-        if _AP_INSTANCE is None:
-            _AP_INSTANCE = ActivePortfolio(max_positions=max_positions, initial_capital=initial_capital)
+        if force_new or _AP_INSTANCE is None:
+            inst = ActivePortfolio(max_positions=max_positions, initial_capital=initial_capital)
+            if not force_new:
+                _AP_INSTANCE = inst
+            return inst
     return _AP_INSTANCE
 
 
