@@ -319,13 +319,27 @@ class MultiSourceData:
         return False
 
     def _record_failure(self, symbol: str):
-        """Record a data fetch failure for a symbol."""
+        """
+        Record a data fetch failure for a symbol.
+        After _max_fail consecutive failures the symbol is blacklisted in both
+        the in-process _dead_tickers dict AND the persistent universe blacklist
+        (src.data.universe.add_to_blacklist), so future runs also skip it.
+        """
         with self._lock:
             self._ticker_failures[symbol] = self._ticker_failures.get(symbol, 0) + 1
             if self._ticker_failures[symbol] >= self._max_fail:
-                logger.warning(f"🚫 BLACKLISTING: {symbol} due to {self._max_fail} consecutive failures.")
-                # Blacklist for 24 hours
+                logger.warning(
+                    "BLACKLISTING %s after %d consecutive failures -- likely delisted/renamed on NSE.",
+                    symbol, self._max_fail,
+                )
+                # Blacklist in-process for 24 hours
                 self._dead_tickers[symbol] = time.time() + 86400
+                # Persist to universe blacklist so future runs skip it too
+                try:
+                    from src.data.universe import add_to_blacklist
+                    add_to_blacklist(symbol)
+                except Exception:
+                    pass
 
     # ── Public: Fundamentals ──────────────────────────────────────────────────
 

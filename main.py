@@ -2380,6 +2380,22 @@ def _run_nightly_tasks():
             return True
         return False
     
+    # -- 0a. Nightly NSE Universe Refresh ----------------------------------
+    # Clear the 24-hour universe cache so tonight's download picks up any
+    # new additions or removals from the NIFTY 500 index. Also runs live
+    # yfinance validation to automatically blacklist delisted symbols.
+    try:
+        import src.data.universe as _uni
+        _uni._cached_sector_map = None   # clear in-memory sector cache
+        if _uni.UNIVERSE_CACHE.exists():
+            _uni.UNIVERSE_CACHE.unlink()
+            logger.info("NSE universe cache cleared -- re-downloading from NSE archives tonight")
+        fresh_syms = _uni.get_nifty500_symbols(use_cache=False, validate=True)
+        logger.info("Nightly universe refresh complete: %d valid NSE symbols", len(fresh_syms))
+        from config.sectors import refresh_sectors
+        refresh_sectors()
+    except Exception as _e:
+        logger.warning("Nightly universe refresh failed: %s", _e)
     try:
         # 0. Download new data (after market hours are done, followed by trainings)
         try:

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-AlphaZero Capital — Standalone Paper Trading Engine
+AlphaZero Capital â€” Standalone Paper Trading Engine
 run_paper.py
 
 Runs identically to LIVE mode but routes through PaperExecutor.
-No dependency on any broken imports — this file is self-contained.
+No dependency on any broken imports â€” this file is self-contained.
 
 Usage:
     python run_paper.py                  # starts the engine
@@ -12,23 +12,23 @@ Usage:
     python run_paper.py --interval 60    # faster iterations for testing
 
 Flow per iteration:
-  1. ORACLE  → macro context (VIX, FII, USD/INR)
-  2. NEXUS   → regime detection (TRENDING/SIDEWAYS/VOLATILE/RISK_OFF)
-  3. Scan    → fetch live data for ALL 50 NIFTY stocks via yfinance
-  4. HERMES  → sentiment per symbol from RSS + yfinance news
-  5. SIGMA   → score every stock using 8 factors
-  6. CHIEF   → select top 5 with sector diversification
-  7. TITAN   → run strategies on selected stocks
-  8. GUARD   → risk checks (daily loss, positions, sector limits)
-  9. MERCURY → paper execute with realistic slippage
-  10. Write  → logs/status.json (dashboard polls this)
+  1. ORACLE  â†’ macro context (VIX, FII, USD/INR)
+  2. NEXUS   â†’ regime detection (TRENDING/SIDEWAYS/VOLATILE/RISK_OFF)
+  3. Scan    â†’ fetch live data for ALL 50 NIFTY stocks via yfinance
+  4. HERMES  â†’ sentiment per symbol from RSS + yfinance news
+  5. SIGMA   â†’ score every stock using 8 factors
+  6. CHIEF   â†’ select top 5 with sector diversification
+  7. TITAN   â†’ run strategies on selected stocks
+  8. GUARD   â†’ risk checks (daily loss, positions, sector limits)
+  9. MERCURY â†’ paper execute with realistic slippage
+  10. Write  â†’ logs/status.json (dashboard polls this)
 """
 
 import os, sys, json, time, logging, argparse, random, threading
 from datetime import datetime, date
 from typing import Dict, List, Any, Optional, Tuple
 
-# ── Setup ─────────────────────────────────────────────────────────────────────
+# â”€â”€ Setup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 os.makedirs(os.path.join(ROOT, 'logs'), exist_ok=True)
@@ -43,15 +43,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger('PAPER_ENGINE')
 
-# ── Optional deps ─────────────────────────────────────────────────────────────
+# â”€â”€ Optional deps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 try:
     import yfinance as yf
     _YF = True
-    logger.info("yfinance ✓")
+    logger.info("yfinance âœ“")
 except ImportError:
     _YF = False
-    logger.warning("yfinance not installed — run: pip install yfinance")
+    logger.warning("yfinance not installed â€” run: pip install yfinance")
 
 try:
     import pandas as pd
@@ -65,41 +65,82 @@ try:
 except ImportError:
     _NP = False
 
-# ── Universe ──────────────────────────────────────────────────────────────────
+# â”€â”€ Universe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Universe (Dynamic — loaded from NSE at startup, no hardcoded lists) ────────
 
-NIFTY50 = [
-    'RELIANCE','TCS','HDFCBANK','ICICIBANK','INFOSYS','HINDUNILVR','ITC',
-    'KOTAKBANK','SBIN','BHARTIARTL','LT','AXISBANK','BAJFINANCE','ASIANPAINT',
-    'MARUTI','SUNPHARMA','TITAN','NESTLEIND','WIPRO','ULTRACEMCO',
-    'BAJAJFINSV','POWERGRID','NTPC','TATAMOTORS','TATASTEEL','HCLTECH',
-    'TECHM','INDUSINDBK','HINDALCO','COALINDIA','GRASIM','DIVISLAB',
-    'DRREDDY','CIPLA','APOLLOHOSP','ADANIENT','ADANIPORTS','JSWSTEEL',
-    'ONGC','BPCL','EICHERMOT','HEROMOTOCO','BRITANNIA','BAJAJ-AUTO',
-    'SHREECEM','UPL','VEDL','DABUR','MUTHOOTFIN','CHOLAFIN',
-]
+def _load_dynamic_universe():
+    """
+    Load the active trading universe from NSE at startup.
 
-SECTORS = {
-    'BANKING':  ['HDFCBANK','ICICIBANK','KOTAKBANK','AXISBANK','SBIN','INDUSINDBK'],
-    'IT':       ['TCS','INFOSYS','WIPRO','HCLTECH','TECHM'],
-    'FMCG':     ['HINDUNILVR','ITC','NESTLEIND','BRITANNIA','DABUR'],
-    'AUTO':     ['MARUTI','TATAMOTORS','BAJAJ-AUTO','HEROMOTOCO','EICHERMOT'],
-    'PHARMA':   ['SUNPHARMA','DRREDDY','CIPLA','DIVISLAB','APOLLOHOSP'],
-    'ENERGY':   ['RELIANCE','ONGC','NTPC','POWERGRID','COALINDIA','BPCL'],
-    'METALS':   ['TATASTEEL','HINDALCO','JSWSTEEL','VEDL'],
-    'FINANCE':  ['BAJFINANCE','BAJAJFINSV','MUTHOOTFIN','CHOLAFIN'],
-    'INFRA':    ['LT','ULTRACEMCO','GRASIM','ADANIPORTS','ADANIENT'],
-    'CONSUMER': ['ASIANPAINT','TITAN','SHREECEM','UPL'],
-    'TELECOM':  ['BHARTIARTL'],
-}
+    Tries in order:
+      1. Live NSE CSV download (archives.nseindia.com) -> full Nifty 500
+      2. Local 24-hour file cache in data/cache/nifty500_universe.json
+      3. 100-stock liquid fallback baked into universe.py
 
-SYMBOL_SECTOR = {sym: sec for sec, syms in SECTORS.items() for sym in syms}
+    Also builds SECTORS (str->list) and SYMBOL_SECTOR (str->str) from the
+    NSE 'Industry' column -- no static hardcoding at all.
 
-STATUS_FILE = os.path.join(ROOT, 'logs', 'status.json')
+    Returns:
+        (symbols: list, SECTORS: dict, SYMBOL_SECTOR: dict)
+    """
+    try:
+        from src.data.universe import get_nifty500_symbols, get_sector_map
+        symbols = get_nifty500_symbols(use_cache=True)
+        sector_lookup = get_sector_map()
+        sectors = {}
+        for sym in symbols:
+            sec = sector_lookup.get(sym, "OTHER")
+            sectors.setdefault(sec, []).append(sym)
+        symbol_sector = {sym: sec for sec, syms in sectors.items() for sym in syms}
+        logger.info(
+            "Dynamic universe loaded: %d symbols across %d sectors (NSE live)",
+            len(symbols), len(sectors)
+        )
+        return symbols, sectors, symbol_sector
+    except Exception as e:
+        logger.warning("Dynamic universe load failed (%s) -- using fallback", e)
+        fallback = [
+            "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "BHARTIARTL",
+            "SBIN", "ITC", "HINDUNILVR", "LT", "BAJFINANCE", "HCLTECH",
+            "ADANIENT", "MARUTI", "SUNPHARMA", "AXISBANK", "KOTAKBANK", "TITAN",
+            "ONGC", "ULTRACEMCO", "NTPC", "ADANIPORTS", "JSWSTEEL", "POWERGRID",
+            "ASIANPAINT", "TATASTEEL", "COALINDIA", "BAJAJ-AUTO", "M&M",
+            "NESTLEIND", "GRASIM", "BAJAJFINSV", "SIEMENS", "INDUSINDBK",
+            "DLF", "BRITANNIA", "SBILIFE", "HAL", "BEL", "PFC", "RECLTD",
+            "HINDALCO", "BPCL", "VBL", "IOC", "CIPLA", "TRENT", "EICHERMOT",
+            "TATACONSUM", "TVSMOTOR", "HDFCLIFE", "ZOMATO", "GAIL",
+            "DRREDDY", "HAVELLS", "DIVISLAB", "APOLLOHOSP", "GODREJCP",
+            "PIDILITIND", "CHOLAFIN", "INDIGO", "SRF", "DABUR", "AMBUJACEM",
+            "POLYCAB", "LTIM", "ABB", "TATAPOWER", "JINDALSTEL", "HINDPETRO",
+            "TORNTPHARM", "MAXHEALTH", "PAGEIND", "COLPAL", "MUTHOOTFIN",
+            "AUROPHARMA", "LUPIN", "BALKRISIND", "MRF", "PETRONET",
+            "CONCOR", "UPL", "IGL", "MGL", "CUMMINSIND", "TIINDIA",
+            "ASHOKLEY", "BHEL", "BOSCHLTD", "SHRIRAMFIN", "LICI",
+        ]
+        fb_sectors = {
+            "BANKING":  ["HDFCBANK", "ICICIBANK", "KOTAKBANK", "AXISBANK", "SBIN"],
+            "IT":       ["TCS", "INFY", "HCLTECH", "TECHM", "LTIM"],
+            "FMCG":     ["HINDUNILVR", "ITC", "NESTLEIND", "BRITANNIA", "DABUR"],
+            "AUTO":     ["MARUTI", "M&M", "BAJAJ-AUTO", "TVSMOTOR", "EICHERMOT"],
+            "PHARMA":   ["SUNPHARMA", "DRREDDY", "CIPLA", "DIVISLAB", "APOLLOHOSP"],
+            "ENERGY":   ["RELIANCE", "ONGC", "NTPC", "POWERGRID", "BPCL", "IOC"],
+            "METALS":   ["TATASTEEL", "HINDALCO", "JSWSTEEL", "JINDALSTEL"],
+            "FINANCE":  ["BAJFINANCE", "BAJAJFINSV", "MUTHOOTFIN", "CHOLAFIN"],
+            "INFRA":    ["LT", "ULTRACEMCO", "GRASIM", "ADANIPORTS", "SIEMENS"],
+            "CONSUMER": ["ASIANPAINT", "TITAN", "ZOMATO", "TRENT"],
+            "TELECOM":  ["BHARTIARTL"],
+        }
+        fs = {sym: sec for sec, syms in fb_sectors.items() for sym in syms}
+        return fallback, fb_sectors, fs
 
 
-# ═════════════════════════════════════════════════════════════════════════════
+# Build universe at module load time -- dynamic, no hardcoded names
+NIFTY50, SECTORS, SYMBOL_SECTOR = _load_dynamic_universe()
+
+
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # DATA LAYER
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class DataFetcher:
     """Fetches real NSE data via yfinance with simulation fallback."""
@@ -127,11 +168,17 @@ class DataFetcher:
         return data
 
     def _fetch_live(self, symbol: str) -> Optional[Dict]:
-        """Real yfinance fetch — NSE ticker format."""
+        """Real yfinance fetch â€” NSE ticker format."""
         try:
             ticker = yf.Ticker(f"{symbol}.NS")
             hist   = ticker.history(period="60d", interval="1d")
             if hist is None or len(hist) < 20:
+                # No price data returned -- symbol likely delisted or renamed on NSE
+                try:
+                    from src.data.universe import add_to_blacklist as _abl
+                    _abl(symbol)
+                except Exception:
+                    pass
                 return self._simulate(symbol)
 
             closes  = hist['Close'].tolist()
@@ -142,7 +189,7 @@ class DataFetcher:
             prev    = closes[-2] if len(closes) > 1 else price
             change_pct = (price - prev) / prev * 100 if prev else 0
 
-            # Technical indicators (manual — no ta-lib dep)
+            # Technical indicators (manual â€” no ta-lib dep)
             ema20 = self._ema(closes, 20)
             ema50 = self._ema(closes, 50)
             rsi   = self._rsi(closes, 14)
@@ -164,7 +211,7 @@ class DataFetcher:
             # Volatility (normalised ATR)
             volatility = min(1.0, (atr / price * 100) / 3.0) if atr and price else 0.3
 
-            # Fundamental proxies (from yfinance info — best-effort)
+            # Fundamental proxies (from yfinance info â€” best-effort)
             try:
                 info = ticker.info
                 pe   = info.get('trailingPE', 0) or 0
@@ -200,7 +247,7 @@ class DataFetcher:
                 'volume':          int(volumes[-1]),
                 'volume_avg':      int(vol_avg),
                 'vol_ratio':       round(vol_ratio, 2),
-                # scoring factors (0–1)
+                # scoring factors (0â€“1)
                 'momentum':        round(momentum, 3),
                 'trend_strength':  round(trend_strength, 3),
                 'relative_strength': round(rs, 3),
@@ -219,7 +266,14 @@ class DataFetcher:
                 'timestamp':       datetime.now().isoformat(),
             }
         except Exception as e:
-            logger.debug(f"yfinance fetch failed for {symbol}: {e}")
+            err_s = str(e).lower()
+            if "404" in err_s or "not found" in err_s or "delisted" in err_s:
+                try:
+                    from src.data.universe import add_to_blacklist as _abl2
+                    _abl2(symbol)
+                except Exception:
+                    pass
+            logger.debug("yfinance error for %s: %s", symbol, e)
             return self._simulate(symbol)
 
     def _simulate(self, symbol: str) -> Dict:
@@ -266,7 +320,7 @@ class DataFetcher:
             'timestamp':        datetime.now().isoformat(),
         }
 
-    # ── Indicator helpers (pure Python, no external deps) ─────────────────────
+    # â”€â”€ Indicator helpers (pure Python, no external deps) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     @staticmethod
     def _ema(prices: list, period: int) -> float:
@@ -323,9 +377,9 @@ class DataFetcher:
         return sum(dx_list[-period:]) / min(period, len(dx_list))
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# ORACLE — Macro Intelligence
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# ORACLE â€” Macro Intelligence
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class Oracle:
     def analyze(self) -> Dict:
@@ -367,9 +421,9 @@ class Oracle:
                 'macro_bias': bias, 'risk_level': risk, 'size_mult': mult, 'score': score}
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# NEXUS — Regime Detection
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# NEXUS â€” Regime Detection
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class Nexus:
     def detect(self, stocks: List[Dict], vix: float) -> str:
@@ -403,9 +457,9 @@ class Nexus:
         return max(votes, key=votes.get)
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# HERMES — News Sentiment
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# HERMES â€” News Sentiment
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class Hermes:
     POSITIVE = ['profit', 'growth', 'beat', 'surge', 'rally', 'gain', 'record',
@@ -434,9 +488,9 @@ class Hermes:
                 ('NEGATIVE' if overall < -0.1 else 'NEUTRAL'), 'score': round(overall, 3)}
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# SIGMA — 8-Factor Stock Scorer
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# SIGMA â€” 8-Factor Stock Scorer
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class Sigma:
     REGIME_WEIGHTS = {
@@ -463,7 +517,7 @@ class Sigma:
         for s in stocks:
             sym  = s['symbol']
             sent = sentiment.get('scores', {}).get(sym, 0.5)
-            s['news_sentiment'] = (sent + 1) / 2   # -1..1 → 0..1
+            s['news_sentiment'] = (sent + 1) / 2   # -1..1 â†’ 0..1
 
             score = (s.get('momentum',0)         * w['momentum'] +
                      s.get('trend_strength',0)    * w['trend_strength'] +
@@ -490,31 +544,31 @@ class Sigma:
         vol_ratio = s.get('vol_ratio', 1.0)
 
         if ema20 > ema50 and price > ema20:
-            r.append(f"✅ Price ₹{price} above EMA20({round(ema20,0)}) & EMA50({round(ema50,0)}) — bullish alignment")
+            r.append(f"âœ… Price â‚¹{price} above EMA20({round(ema20,0)}) & EMA50({round(ema50,0)}) â€” bullish alignment")
         elif price < ema20 < ema50:
-            r.append(f"⚠️ Price below both EMAs — bearish structure")
+            r.append(f"âš ï¸ Price below both EMAs â€” bearish structure")
 
         if rsi < 35:
-            r.append(f"📉 RSI {round(rsi,1)} oversold — potential reversal entry")
+            r.append(f"ðŸ“‰ RSI {round(rsi,1)} oversold â€” potential reversal entry")
         elif rsi > 65:
-            r.append(f"📈 RSI {round(rsi,1)} overbought — momentum extreme, trail stop tight")
+            r.append(f"ðŸ“ˆ RSI {round(rsi,1)} overbought â€” momentum extreme, trail stop tight")
         else:
-            r.append(f"✅ RSI {round(rsi,1)} in healthy mid-range — room to run")
+            r.append(f"âœ… RSI {round(rsi,1)} in healthy mid-range â€” room to run")
 
         if adx > 25:
-            r.append(f"✅ ADX {round(adx,1)} strong trend — high conviction directional move")
+            r.append(f"âœ… ADX {round(adx,1)} strong trend â€” high conviction directional move")
         elif adx < 18:
-            r.append(f"⚠️ ADX {round(adx,1)} weak — choppy, low conviction")
+            r.append(f"âš ï¸ ADX {round(adx,1)} weak â€” choppy, low conviction")
 
         if vol_ratio > 1.5:
-            r.append(f"✅ Volume {round(vol_ratio,1)}× above average — institutional participation")
+            r.append(f"âœ… Volume {round(vol_ratio,1)}Ã— above average â€” institutional participation")
         elif vol_ratio < 0.7:
-            r.append(f"⚠️ Volume below average — weak confirmation")
+            r.append(f"âš ï¸ Volume below average â€” weak confirmation")
 
         atr = s.get('atr', 0)
         if atr > 0 and price > 0:
             atr_pct = atr / price * 100
-            r.append(f"📊 ATR ₹{round(atr,1)} ({round(atr_pct,1)}%) — position SL range")
+            r.append(f"ðŸ“Š ATR â‚¹{round(atr,1)} ({round(atr_pct,1)}%) â€” position SL range")
 
         return r
 
@@ -529,36 +583,36 @@ class Sigma:
         sec = s.get('sector', 'OTHER')
 
         if pe > 0:
-            if pe < 15:   r.append(f"✅ P/E {pe} — undervalued relative to sector")
-            elif pe < 30: r.append(f"✅ P/E {pe} — fairly valued")
-            else:         r.append(f"⚠️ P/E {pe} — premium valuation, needs strong growth")
+            if pe < 15:   r.append(f"âœ… P/E {pe} â€” undervalued relative to sector")
+            elif pe < 30: r.append(f"âœ… P/E {pe} â€” fairly valued")
+            else:         r.append(f"âš ï¸ P/E {pe} â€” premium valuation, needs strong growth")
 
-        if rg > 15:   r.append(f"✅ Revenue growth {rg}% YoY — strong business momentum")
-        elif rg > 5:  r.append(f"✅ Revenue growth {rg}% — steady expansion")
-        elif rg < 0:  r.append(f"⚠️ Revenue declining {abs(rg)}% — monitor closely")
+        if rg > 15:   r.append(f"âœ… Revenue growth {rg}% YoY â€” strong business momentum")
+        elif rg > 5:  r.append(f"âœ… Revenue growth {rg}% â€” steady expansion")
+        elif rg < 0:  r.append(f"âš ï¸ Revenue declining {abs(rg)}% â€” monitor closely")
 
-        if roe > 20: r.append(f"✅ ROE {roe}% — excellent capital efficiency")
-        elif roe > 12: r.append(f"✅ ROE {roe}% — above average returns")
+        if roe > 20: r.append(f"âœ… ROE {roe}% â€” excellent capital efficiency")
+        elif roe > 12: r.append(f"âœ… ROE {roe}% â€” above average returns")
 
         if de > 0:
-            if de < 0.5:  r.append(f"✅ Low debt/equity {de} — strong balance sheet")
-            elif de > 2:  r.append(f"⚠️ High debt/equity {de} — leverage risk")
+            if de < 0.5:  r.append(f"âœ… Low debt/equity {de} â€” strong balance sheet")
+            elif de > 2:  r.append(f"âš ï¸ High debt/equity {de} â€” leverage risk")
 
-        if mc > 100000: r.append(f"🏢 Large-cap ₹{int(mc/100):,}Cr — high liquidity")
-        elif mc > 20000: r.append(f"🏢 Mid-cap ₹{int(mc/100):,}Cr")
+        if mc > 100000: r.append(f"ðŸ¢ Large-cap â‚¹{int(mc/100):,}Cr â€” high liquidity")
+        elif mc > 20000: r.append(f"ðŸ¢ Mid-cap â‚¹{int(mc/100):,}Cr")
 
-        r.append(f"🏭 Sector: {sec}")
+        r.append(f"ðŸ­ Sector: {sec}")
 
         sent = s.get('news_sentiment', 0.5)
-        if sent > 0.6:   r.append("✅ Positive news sentiment — favorable macro backdrop")
-        elif sent < 0.4: r.append("⚠️ Negative news flow — watch for catalysts")
+        if sent > 0.6:   r.append("âœ… Positive news sentiment â€” favorable macro backdrop")
+        elif sent < 0.4: r.append("âš ï¸ Negative news flow â€” watch for catalysts")
 
         return r
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# CHIEF — Portfolio Selector
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# CHIEF â€” Portfolio Selector
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class Chief:
     def __init__(self, max_positions=5, max_same_sector=2):
@@ -598,9 +652,9 @@ class Chief:
         return selected
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# TITAN — Signal Generation (simplified — real version in titan.py)
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# TITAN â€” Signal Generation (simplified â€” real version in titan.py)
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class TitanSignals:
     def generate(self, stock: Dict, regime: str) -> Optional[Dict]:
@@ -619,25 +673,25 @@ class TitanSignals:
         signals = []
         reasons = []
 
-        # T1 — EMA Cross
+        # T1 â€” EMA Cross
         if ema20 > ema50 and price > ema20:
             signals.append(1); reasons.append("EMA20>EMA50 bullish cross")
         elif ema20 < ema50 and price < ema20:
             signals.append(-1); reasons.append("EMA20<EMA50 bearish cross")
 
-        # M1 — RSI Reversal
+        # M1 â€” RSI Reversal
         if rsi < 35 and regime != 'RISK_OFF':
             signals.append(1); reasons.append(f"RSI {round(rsi,1)} oversold bounce")
         elif rsi > 70:
             signals.append(-1); reasons.append(f"RSI {round(rsi,1)} overbought")
 
-        # T5 — ADX Trend Strength
+        # T5 â€” ADX Trend Strength
         if adx > 25 and ema20 > ema50:
             signals.append(1); reasons.append(f"ADX {round(adx,1)} strong uptrend")
 
-        # V1 — Volume Breakout
+        # V1 â€” Volume Breakout
         if vol_r > 1.5 and price > ema20:
-            signals.append(1); reasons.append(f"Volume {round(vol_r,1)}× surge with price breakout")
+            signals.append(1); reasons.append(f"Volume {round(vol_r,1)}Ã— surge with price breakout")
 
         # Regime filter
         if regime == 'RISK_OFF':
@@ -681,9 +735,9 @@ class TitanSignals:
         }
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# GUARDIAN — Risk Manager
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# GUARDIAN â€” Risk Manager
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class Guardian:
     def __init__(self, cfg: Dict):
@@ -717,7 +771,7 @@ class Guardian:
             return False, "Max trades per day reached", 0
 
         if self.consecutive_losses >= self.consecutive_limit:
-            return False, f"{self.consecutive_losses} consecutive losses — cooling off", 0
+            return False, f"{self.consecutive_losses} consecutive losses â€” cooling off", 0
 
         sym = signal['symbol']
         if sym in positions:
@@ -744,9 +798,9 @@ class Guardian:
         self.trades_today = 0
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# MERCURY — Paper Executor
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# MERCURY â€” Paper Executor
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class Mercury:
     """Paper executor with realistic slippage + position tracking."""
@@ -818,7 +872,7 @@ class Mercury:
         }
         self.positions[sym] = pos
         self.trade_history.append({**pos, 'event': 'OPEN', 'fill': fill})
-        logger.info(f"[PAPER] BUY {sym} ×{qty} @₹{fill} (slip={slip_bps}bps)")
+        logger.info(f"[PAPER] BUY {sym} Ã—{qty} @â‚¹{fill} (slip={slip_bps}bps)")
         return pos
 
     def update_prices(self, prices: Dict[str, float]) -> List[Dict]:
@@ -850,7 +904,7 @@ class Mercury:
         result = {**pos, 'close_price': price, 'pnl': pnl, 'close_reason': reason,
                   'close_time': datetime.now().isoformat(), 'event': 'CLOSE'}
         self.trade_history.append(result)
-        logger.info(f"[PAPER] CLOSE {sym} @₹{price} → P&L ₹{pnl:+,.0f} ({reason})")
+        logger.info(f"[PAPER] CLOSE {sym} @â‚¹{price} â†’ P&L â‚¹{pnl:+,.0f} ({reason})")
         return result
 
     def get_stats(self) -> Dict:
@@ -863,9 +917,9 @@ class Mercury:
                 'total_pnl': round(total_pnl, 0), 'open_positions': len(self.positions)}
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# KARMA — Learning (weight updater)
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# KARMA â€” Learning (weight updater)
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class Karma:
     def __init__(self):
@@ -886,9 +940,9 @@ class Karma:
             self.strategy_weights[k] = round(self.strategy_weights[k] / total * 4, 3)
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# LENS — Performance Tracker
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# LENS â€” Performance Tracker
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class Lens:
     def __init__(self):
@@ -911,9 +965,9 @@ class Lens:
                 'win_rate': round(self.winning_trades / max(total, 1), 3)}
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# PAPER ENGINE — Main Orchestrator
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# PAPER ENGINE â€” Main Orchestrator
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 class PaperEngine:
     def __init__(self, cfg: Dict):
@@ -942,12 +996,12 @@ class PaperEngine:
         self.recent_signals:  List[Dict] = []
         self.activity_log:    List[str]  = []
         self.agent_status:    Dict       = {
-            n: {'active': True, 'cycles': 0, 'last': '—'}
+            n: {'active': True, 'cycles': 0, 'last': 'â€”'}
             for n in ['ORACLE','NEXUS','HERMES','SIGMA','CHIEF',
                       'TITAN','GUARDIAN','MERCURY','KARMA','LENS']
         }
 
-        logger.info(f"PaperEngine ready — capital ₹{cfg['initial_capital']:,.0f}")
+        logger.info(f"PaperEngine ready â€” capital â‚¹{cfg['initial_capital']:,.0f}")
 
     def log(self, msg: str):
         ts = datetime.now().strftime('%H:%M:%S')
@@ -958,8 +1012,8 @@ class PaperEngine:
     def run(self):
         self.running = True
         interval     = self.cfg.get('interval', 300)
-        logger.info(f"▶  Starting paper trading loop (every {interval}s)\n")
-        self.log("🚀 AlphaZero Paper Engine started")
+        logger.info(f"â–¶  Starting paper trading loop (every {interval}s)\n")
+        self.log("ðŸš€ AlphaZero Paper Engine started")
         while self.running:
             try:
                 self._run_iteration()
@@ -967,74 +1021,74 @@ class PaperEngine:
                 break
             except Exception as e:
                 logger.error(f"Iteration error: {e}", exc_info=True)
-                self.log(f"⚠️ Iteration error: {e}")
+                self.log(f"âš ï¸ Iteration error: {e}")
             self._write_state()
             if self.running:
                 time.sleep(interval)
-        self.log("⛔ Engine stopped")
+        self.log("â›” Engine stopped")
         self._write_state()
 
     def _run_iteration(self):
         self.iteration += 1
         t0 = time.time()
-        logger.info(f"\n{'─'*60}\nIteration {self.iteration}  |  {datetime.now().strftime('%H:%M:%S IST')}")
-        self.log(f"📊 Starting iteration {self.iteration}")
+        logger.info(f"\n{'â”€'*60}\nIteration {self.iteration}  |  {datetime.now().strftime('%H:%M:%S IST')}")
+        self.log(f"ðŸ“Š Starting iteration {self.iteration}")
 
-        # ── 1. ORACLE: macro context ──────────────────────────────────────────
+        # â”€â”€ 1. ORACLE: macro context â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.macro_context = self.oracle.analyze()
         self.agent_status['ORACLE']['cycles'] += 1
         self.agent_status['ORACLE']['last'] = f"VIX={self.macro_context['vix']} bias={self.macro_context['macro_bias']}"
-        logger.info(f"  🔭 ORACLE: {self.macro_context['macro_bias']} | VIX={self.macro_context['vix']} | mult={self.macro_context['size_mult']}")
-        self.log(f"🔭 ORACLE: {self.macro_context['macro_bias']}, VIX={self.macro_context['vix']}, size×{self.macro_context['size_mult']}")
+        logger.info(f"  ðŸ”­ ORACLE: {self.macro_context['macro_bias']} | VIX={self.macro_context['vix']} | mult={self.macro_context['size_mult']}")
+        self.log(f"ðŸ”­ ORACLE: {self.macro_context['macro_bias']}, VIX={self.macro_context['vix']}, sizeÃ—{self.macro_context['size_mult']}")
 
-        # ── 2. Scan all NIFTY50 stocks ────────────────────────────────────────
-        logger.info(f"  📡 Scanning {len(NIFTY50)} stocks...")
-        self.log(f"📡 Scanning {len(NIFTY50)} NIFTY50 stocks...")
+        # â”€â”€ 2. Scan all NIFTY50 stocks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        logger.info(f"  ðŸ“¡ Scanning {len(NIFTY50)} stocks...")
+        self.log(f"ðŸ“¡ Scanning {len(NIFTY50)} NIFTY50 stocks...")
         all_stocks = []
         for sym in NIFTY50:
             d = self.fetcher.get_stock_data(sym)
             if d:
                 all_stocks.append(d)
-        logger.info(f"  ✓ Fetched {len(all_stocks)} stocks")
+        logger.info(f"  âœ“ Fetched {len(all_stocks)} stocks")
 
-        # ── 3. NEXUS: regime ─────────────────────────────────────────────────
+        # â”€â”€ 3. NEXUS: regime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.regime = self.nexus.detect(all_stocks, self.macro_context['vix'])
         self.agent_status['NEXUS']['cycles'] += 1
         self.agent_status['NEXUS']['last'] = self.regime
-        logger.info(f"  🔮 NEXUS: {self.regime}")
-        self.log(f"🔮 NEXUS regime: {self.regime}")
+        logger.info(f"  ðŸ”® NEXUS: {self.regime}")
+        self.log(f"ðŸ”® NEXUS regime: {self.regime}")
 
-        # ── 4. HERMES: sentiment ──────────────────────────────────────────────
+        # â”€â”€ 4. HERMES: sentiment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         sentiment = self.hermes.score(NIFTY50[:20])  # cap for speed
         self.agent_status['HERMES']['cycles'] += 1
         self.agent_status['HERMES']['last'] = sentiment.get('overall', 'NEUTRAL')
 
-        # ── 5. SIGMA: score all stocks ────────────────────────────────────────
+        # â”€â”€ 5. SIGMA: score all stocks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         scored = self.sigma.score_all(all_stocks, sentiment, self.regime)
         self.agent_status['SIGMA']['cycles'] += 1
-        self.agent_status['SIGMA']['last'] = f"Top: {scored[0]['symbol'] if scored else '—'}"
+        self.agent_status['SIGMA']['last'] = f"Top: {scored[0]['symbol'] if scored else 'â€”'}"
         top5_syms = [s['symbol'] for s in scored[:5]]
-        logger.info(f"  📊 SIGMA top 5: {top5_syms}")
-        self.log(f"📊 SIGMA ranked top 5: {', '.join(top5_syms)}")
+        logger.info(f"  ðŸ“Š SIGMA top 5: {top5_syms}")
+        self.log(f"ðŸ“Š SIGMA ranked top 5: {', '.join(top5_syms)}")
 
-        # ── 6. CHIEF: select portfolio ────────────────────────────────────────
+        # â”€â”€ 6. CHIEF: select portfolio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.selected_stocks = self.chief.select(scored, self.regime)
         self.agent_status['CHIEF']['cycles'] += 1
         selected_syms = [s['symbol'] for s in self.selected_stocks]
         self.agent_status['CHIEF']['last'] = ', '.join(selected_syms)
-        logger.info(f"  🎯 CHIEF selected: {selected_syms}")
-        self.log(f"🎯 CHIEF portfolio: {', '.join(selected_syms)}")
+        logger.info(f"  ðŸŽ¯ CHIEF selected: {selected_syms}")
+        self.log(f"ðŸŽ¯ CHIEF portfolio: {', '.join(selected_syms)}")
 
-        # ── 7. Update prices in existing positions ────────────────────────────
+        # â”€â”€ 7. Update prices in existing positions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         prices = {s['symbol']: s['price'] for s in all_stocks}
         closed = self.mercury.update_prices(prices)
         for trade in closed:
             self.lens.record(trade)
             self.karma.learn(trade, trade.get('pnl', 0))
-            pnl_str = f"₹{trade['pnl']:+,.0f}" if trade.get('pnl') else ""
-            self.log(f"{'✅' if trade.get('pnl',0)>0 else '❌'} CLOSED {trade['symbol']} → {trade['close_reason']} {pnl_str}")
+            pnl_str = f"â‚¹{trade['pnl']:+,.0f}" if trade.get('pnl') else ""
+            self.log(f"{'âœ…' if trade.get('pnl',0)>0 else 'âŒ'} CLOSED {trade['symbol']} â†’ {trade['close_reason']} {pnl_str}")
 
-        # ── 8. TITAN + GUARDIAN + MERCURY: generate & execute signals ────────
+        # â”€â”€ 8. TITAN + GUARDIAN + MERCURY: generate & execute signals â”€â”€â”€â”€â”€â”€â”€â”€
         capital     = self.cfg['initial_capital'] + self.lens.summary()['total_pnl']
         size_mult   = self.macro_context.get('size_mult', 1.0)
         sector_exp: Dict[str, float] = {}
@@ -1063,10 +1117,10 @@ class PaperEngine:
                     self.guardian.record_trade(0)
                     new_signals.append({**signal, 'status': 'EXECUTED',
                                         'position_size': round(pos_size, 0)})
-                    self.log(f"⚡ {sym} {signal['signal']} @₹{signal['price']} | conf={signal['confidence']} | ₹{pos_size:,.0f}")
+                    self.log(f"âš¡ {sym} {signal['signal']} @â‚¹{signal['price']} | conf={signal['confidence']} | â‚¹{pos_size:,.0f}")
             else:
                 new_signals.append({**signal, 'status': 'BLOCKED', 'block_reason': reason})
-                logger.info(f"  ⛔ {sym} blocked: {reason}")
+                logger.info(f"  â›” {sym} blocked: {reason}")
 
             self.recent_signals.insert(0, new_signals[-1])
 
@@ -1077,8 +1131,8 @@ class PaperEngine:
         self.agent_status['KARMA']['cycles']    += 1
 
         elapsed = round(time.time() - t0, 1)
-        logger.info(f"  ✓ Done in {elapsed}s | {len(new_signals)} signals | {len(self.mercury.positions)} open positions")
-        self.log(f"✓ Iteration {self.iteration} done in {elapsed}s — {len(new_signals)} signals")
+        logger.info(f"  âœ“ Done in {elapsed}s | {len(new_signals)} signals | {len(self.mercury.positions)} open positions")
+        self.log(f"âœ“ Iteration {self.iteration} done in {elapsed}s â€” {len(new_signals)} signals")
 
     def _write_state(self):
         """Write full state to logs/status.json for dashboard polling."""
@@ -1164,20 +1218,20 @@ class PaperEngine:
             logger.warning(f"State write failed: {e}")
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# API SERVER (minimal Flask — dashboard polling)
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+# API SERVER (minimal Flask â€” dashboard polling)
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 def start_api_server(port: int = 5001):
     """
     Minimal API server so dashboard can poll /api/status.
-    Runs in a daemon thread — does not block the engine.
+    Runs in a daemon thread â€” does not block the engine.
     """
     try:
         from flask import Flask, jsonify, send_from_directory
         from flask_cors import CORS
     except ImportError:
-        logger.warning("Flask/flask-cors not installed — API server disabled")
+        logger.warning("Flask/flask-cors not installed â€” API server disabled")
         logger.warning("Install: pip install flask flask-cors")
         return
 
@@ -1223,16 +1277,16 @@ def start_api_server(port: int = 5001):
         daemon=True
     )
     thread.start()
-    logger.info(f"API server → http://localhost:{port}/api/status")
-    logger.info(f"Dashboard → http://localhost:{port}/")
+    logger.info(f"API server â†’ http://localhost:{port}/api/status")
+    logger.info(f"Dashboard â†’ http://localhost:{port}/")
 
 
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 # ENTRY POINT
-# ═════════════════════════════════════════════════════════════════════════════
+# â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='AlphaZero Capital — Paper Trading Engine')
+    parser = argparse.ArgumentParser(description='AlphaZero Capital â€” Paper Trading Engine')
     parser.add_argument('--capital',  type=float, default=1_000_000, help='Initial capital in INR')
     parser.add_argument('--interval', type=int,   default=300,       help='Iteration interval seconds')
     parser.add_argument('--positions',type=int,   default=5,         help='Max open positions')
